@@ -41,3 +41,15 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: tile
+    uniqueID: 1714919355
+    locked: 0
+  - name: enemy
+    uniqueID: 3016150497
+    locked: 0
+  - name: wave
+    uniqueID: 595781035
+    locked: 0
+  - name: ui
+    uniqueID: 2438571047
+    locked: 0
