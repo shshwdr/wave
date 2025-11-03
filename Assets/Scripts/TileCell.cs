@@ -8,6 +8,8 @@ public class TileCell : MonoBehaviour
 {
     [Header("视觉组件")]
     public SpriteRenderer spriteRenderer;
+    [Header("框显示")]
+    public GameObject frameObject; // 框的GameObject（可以是一个带SpriteRenderer的子对象）
     
     private TileColor currentColor;
     private Vector2Int gridPosition;
@@ -118,6 +120,17 @@ public class TileCell : MonoBehaviour
     public Tween DestroyAnimation(float duration = 0.2f)
     {
         return transform.DOScale(Vector3.zero, duration).SetEase(Ease.InBack);
+    }
+
+    /// <summary>
+    /// 显示/隐藏框
+    /// </summary>
+    public void ShowFrame(bool show)
+    {
+        if (frameObject != null)
+        {
+            frameObject.SetActive(show);
+        }
     }
 }
 

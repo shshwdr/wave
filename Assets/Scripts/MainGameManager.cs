@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 一场战斗的游戏控制 - 回合制战斗系统
@@ -35,6 +36,7 @@ public class MainGameManager : MonoBehaviour
     private Vector2Int selectedTilePos = new Vector2Int(-1, -1);
     private Vector2Int dragStartPos = new Vector2Int(-1, -1);
     private bool isDragging = false;
+    private Vector2Int currentHoverTilePos = new Vector2Int(-1, -1); // 当前鼠标悬停的格子
     
     // 任意位置交换相关
     private Vector2Int firstSwapTilePos = new Vector2Int(-1, -1);
@@ -92,6 +94,10 @@ public class MainGameManager : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            Restart();
+        }
         if (currentState == GameState.GameOver)
             return;
 
@@ -175,7 +181,7 @@ public class MainGameManager : MonoBehaviour
                 firstSwapTilePos = new Vector2Int(-1, -1);
             }
 
-            // 鼠标左键 - 拖动交换（相邻）
+            // 鼠标左键 - 拖动交换（任意位置）
             if (Input.GetMouseButtonDown(0))
             {
                 Vector2Int gridPos = GetMouseGridPosition();
@@ -184,31 +190,108 @@ public class MainGameManager : MonoBehaviour
                     dragStartPos = gridPos;
                     isDragging = true;
                     selectedTilePos = gridPos;
+                    
+                    // 显示开始格子的框
+                    TileCell startTile = boardManager.GetTile(gridPos);
+                    if (startTile != null)
+                    {
+                        startTile.ShowFrame(true);
+                    }
+                }
+            }
+            else if (Input.GetMouseButton(0) && isDragging)
+            {
+                // 拖动中：跟踪鼠标所在的新格子
+                Vector2Int gridPos = GetMouseGridPosition();
+                if (boardManager != null && boardManager.IsValidPosition(gridPos))
+                {
+                    // 如果鼠标移动到新的格子上
+                    if (gridPos != currentHoverTilePos)
+                    {
+                        // 隐藏之前格子的框（如果不是开始格子）
+                        if (currentHoverTilePos.x >= 0 && currentHoverTilePos != dragStartPos)
+                        {
+                            TileCell prevTile = boardManager.GetTile(currentHoverTilePos);
+                            if (prevTile != null)
+                            {
+                                prevTile.ShowFrame(false);
+                            }
+                        }
+                        
+                        // 显示新格子的框（如果不是开始格子）
+                        if (gridPos != dragStartPos)
+                        {
+                            TileCell newTile = boardManager.GetTile(gridPos);
+                            if (newTile != null)
+                            {
+                                newTile.ShowFrame(true);
+                            }
+                        }
+                        
+                        currentHoverTilePos = gridPos;
+                    }
+                }
+                else
+                {
+                    // 鼠标不在有效位置上，隐藏当前悬停格子的框
+                    if (currentHoverTilePos.x >= 0 && currentHoverTilePos != dragStartPos)
+                    {
+                        TileCell hoverTile = boardManager.GetTile(currentHoverTilePos);
+                        if (hoverTile != null)
+                        {
+                            hoverTile.ShowFrame(false);
+                        }
+                    }
+                    currentHoverTilePos = new Vector2Int(-1, -1);
                 }
             }
             else if (Input.GetMouseButtonUp(0) && isDragging)
             {
                 Vector2Int gridPos = GetMouseGridPosition();
+                
+                // 隐藏开始格子的框
+                if (dragStartPos.x >= 0)
+                {
+                    TileCell startTile = boardManager.GetTile(dragStartPos);
+                    if (startTile != null)
+                    {
+                        startTile.ShowFrame(false);
+                    }
+                }
+                
+                // 隐藏当前悬停格子的框（如果不是开始格子）
+                if (currentHoverTilePos.x >= 0 && currentHoverTilePos != dragStartPos)
+                {
+                    TileCell hoverTile = boardManager.GetTile(currentHoverTilePos);
+                    if (hoverTile != null)
+                    {
+                        hoverTile.ShowFrame(false);
+                    }
+                }
+                
+                // 如果选中了两个不同的格子，交换位置
                 if (boardManager != null && 
                     boardManager.IsValidPosition(gridPos) && 
-                    gridPos != dragStartPos &&
-                    IsAdjacent(gridPos, dragStartPos))
+                    gridPos != dragStartPos)
                 {
-                // 标记为处理中
-                isProcessing = true;
-                currentState = GameState.Processing;
+                    // 标记为处理中
+                    isProcessing = true;
+                    currentState = GameState.Processing;
 
-                // 交换格子
-                boardManager.SwapTiles(dragStartPos, gridPos);
-                
-                // 等待动画完成后进入敌人回合
-                DOVirtual.DelayedCall(0.5f, () =>
-                {
-                    isProcessing = false;
-                    EndPlayerTurn();
-                });
+                    // 交换格子
+                    boardManager.SwapTiles(dragStartPos, gridPos);
+                    
+                    // 等待动画完成后进入敌人回合
+                    DOVirtual.DelayedCall(0.5f, () =>
+                    {
+                        isProcessing = false;
+                        EndPlayerTurn();
+                    });
                 }
+                
+                // 重置拖拽状态
                 isDragging = false;
+                currentHoverTilePos = new Vector2Int(-1, -1);
             }
         }
 
@@ -443,7 +526,8 @@ public class MainGameManager : MonoBehaviour
                 onRestart: () =>
                 {
                     // 重新开始游戏
-                    StartBattle();
+                    //StartBattle();
+                    Restart();
                 },
                 onQuit: () =>
                 {
@@ -456,6 +540,12 @@ public class MainGameManager : MonoBehaviour
                 }
             );
         });
+    }
+
+    public void Restart()
+    {
+        
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
 

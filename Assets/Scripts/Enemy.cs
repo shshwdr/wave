@@ -12,6 +12,10 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float knockbackForce = 2f;
     [SerializeField] private float knockbackDuration = 0.3f;
 
+    [Header("受击动画")]
+    [SerializeField] private float jumpHeight = 0.2f; // 跳起高度
+    [SerializeField] private float jumpDuration = 0.2f; // 跳起持续时间
+
     [Header("组件")]
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Collider2D enemyCollider;
@@ -21,6 +25,8 @@ public class Enemy : MonoBehaviour
     private int maxHealth;
     private Vector2Int gridPosition;
     private bool isDead = false;
+    private Vector3 spriteRendererOriginalLocalPos; // spriteRenderer的原始本地位置
+    private Tween jumpTween; // 当前的跳跃动画
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
@@ -75,6 +81,9 @@ public class Enemy : MonoBehaviour
         if (spriteRenderer != null)
         {
             spriteRenderer.enabled = true;
+            // 记录spriteRenderer的原始本地位置（如果spriteRenderer是transform的子对象）
+            // 如果spriteRenderer直接挂载在transform上，使用localPosition
+            spriteRendererOriginalLocalPos = spriteRenderer.transform.localPosition;
         }
         if (enemyCollider != null)
         {
@@ -103,6 +112,9 @@ public class Enemy : MonoBehaviour
         // 击退效果
         ApplyKnockback(attackDirection);
 
+        // 跳起动画
+        ApplyJumpAnimation();
+
         // 更新视觉（可以添加血条等）
         UpdateVisual();
 
@@ -117,6 +129,50 @@ public class Enemy : MonoBehaviour
         {
             Die();
         }
+    }
+
+    /// <summary>
+    /// 应用跳起动画（spriteRenderer向上跳起然后落回原处）
+    /// </summary>
+    private void ApplyJumpAnimation()
+    {
+        if (spriteRenderer == null || isDead)
+            return;
+
+        // 获取spriteRenderer的transform（可能是transform本身或子对象）
+        Transform spriteTransform = spriteRenderer.transform;
+        Vector3 currentLocalPos = spriteTransform.localPosition;
+
+        // 取消之前的跳跃动画，但保存当前的位置偏移
+        if (jumpTween != null && jumpTween.IsActive())
+        {
+            jumpTween.Kill();
+            // 获取当前实际位置，用于计算新的起点
+            currentLocalPos = spriteTransform.localPosition;
+        }
+
+        // 计算跳起的目标位置（向上）
+        Vector3 jumpTargetPos = spriteRendererOriginalLocalPos + Vector3.up * jumpHeight;
+
+        // 创建跳跃序列：向上 -> 向下回到原处
+        Sequence jumpSequence = DOTween.Sequence();
+        
+        // 向上跳起
+        jumpSequence.Append(spriteTransform.DOLocalMove(jumpTargetPos, jumpDuration * 0.5f)
+            .SetEase(Ease.OutQuad));
+        
+        // 向下落回原处
+        jumpSequence.Append(spriteTransform.DOLocalMove(spriteRendererOriginalLocalPos, jumpDuration * 0.5f)
+            .SetEase(Ease.InQuad));
+        
+        jumpSequence.OnComplete(() =>
+        {
+            // 确保最终位置正确
+            spriteTransform.localPosition = spriteRendererOriginalLocalPos;
+            jumpTween = null;
+        });
+
+        jumpTween = jumpSequence;
     }
 
     /// <summary>
@@ -176,6 +232,17 @@ public class Enemy : MonoBehaviour
 
         isDead = true;
 
+        // 取消跳起动画并确保位置正确
+        if (jumpTween != null && jumpTween.IsActive())
+        {
+            jumpTween.Kill();
+            jumpTween = null;
+        }
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.transform.localPosition = spriteRendererOriginalLocalPos;
+        }
+
         // 隐藏血条
         if (healthBar != null)
         {
@@ -192,6 +259,16 @@ public class Enemy : MonoBehaviour
                 if (enemyCollider != null)
                     enemyCollider.enabled = false;
             });
+    }
+
+    private void OnDestroy()
+    {
+        // 清理动画
+        if (jumpTween != null)
+        {
+            jumpTween.Kill();
+            jumpTween = null;
+        }
     }
 
     /// <summary>
