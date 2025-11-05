@@ -33,6 +33,12 @@ public class GameManager : Singleton<GameManager>
         {
             LevelManager.Instance.Init();
         }
+
+        // 初始化玩家管理器
+        if (PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.Init();
+        }
         
         // 如果引用为空，尝试自动查找
         if (mainGameManager == null)

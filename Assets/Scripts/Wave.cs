@@ -192,6 +192,12 @@ public class Wave : MonoBehaviour
                 {
                     penetrateCount--;
                 }
+                
+                // 如果没有穿透能力或穿透次数为0，销毁波浪
+                if (penetrateCount <= 0)
+                {
+                    DestroyWave();
+                }
             }
         }
     }

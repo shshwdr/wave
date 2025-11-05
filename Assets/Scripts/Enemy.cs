@@ -27,11 +27,13 @@ public class Enemy : MonoBehaviour
     private bool isDead = false;
     private Vector3 spriteRendererOriginalLocalPos; // spriteRenderer的原始本地位置
     private Tween jumpTween; // 当前的跳跃动画
+    private EnemyInfo enemyInfo; // 敌人信息
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
     public bool IsDead => isDead;
     public Vector2Int GridPosition => gridPosition;
+    public EnemyInfo EnemyInfo => enemyInfo;
 
     private void Awake()
     {
@@ -71,12 +73,13 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// 初始化敌人
     /// </summary>
-    public void Init(Vector2Int gridPos, int health = -1)
+    public void Init(Vector2Int gridPos, int health = -1, EnemyInfo info = null)
     {
         gridPosition = gridPos;
         maxHealth = health > 0 ? health : defaultMaxHealth;
         currentHealth = maxHealth;
         isDead = false;
+        enemyInfo = info;
         
         if (spriteRenderer != null)
         {
@@ -108,6 +111,9 @@ public class Enemy : MonoBehaviour
 
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);
+
+        // 显示伤害数字
+        DamageNumber.CreateDamageNumber(damage, transform.position + Vector3.up * 0.5f, false);
 
         // 击退效果
         ApplyKnockback(attackDirection);
@@ -225,7 +231,7 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// 死亡
     /// </summary>
-    private void Die()
+    public void Die()
     {
         if (isDead)
             return;

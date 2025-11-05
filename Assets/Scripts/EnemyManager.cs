@@ -161,7 +161,7 @@ public class EnemyManager : MonoBehaviour
                 }
 
                 // 使用enemyInfo中的hp初始化
-                enemy.Init(gridPos, enemyInfo.hp);
+                enemy.Init(gridPos, enemyInfo.hp, enemyInfo);
                 
                 // 创建血条
                 CreateHealthBar(enemy);

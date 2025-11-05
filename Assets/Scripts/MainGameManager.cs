@@ -141,6 +141,12 @@ public class MainGameManager : MonoBehaviour
     /// </summary>
     public void StartBattle()
     {
+        // 初始化PlayerManager并恢复交换次数
+        if (PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.StartBattle();
+        }
+
         // 清空棋盘
         if (boardManager != null)
         {
@@ -179,8 +185,14 @@ public class MainGameManager : MonoBehaviour
         if (currentState == GameState.GameOver)
             return;
 
-        // 检查游戏结束条件
+        // 检查敌人到达最左边，攻击玩家
         if (enemyManager != null && enemyManager.HasEnemyAtLeftEdge())
+        {
+            AttackPlayer();
+        }
+
+        // 检查玩家是否死亡
+        if (PlayerManager.Instance != null && PlayerManager.Instance.IsDead)
         {
             GameOver();
             return;
@@ -235,7 +247,22 @@ public class MainGameManager : MonoBehaviour
                         // 选择第二个格子并交换
                         if (gridPos != firstSwapTilePos)
                         {
+                            // 检查是否可以交换
+                            if (PlayerManager.Instance != null && !PlayerManager.Instance.CanSwap())
+                            {
+                                Debug.Log("交换次数不足！");
+                                waitingForSecondSwap = false;
+                                firstSwapTilePos = new Vector2Int(-1, -1);
+                                return;
+                            }
+
                             ClearHighlights();
+                            
+                            // 消耗交换次数
+                            if (PlayerManager.Instance != null)
+                            {
+                                PlayerManager.Instance.ConsumeSwap();
+                            }
                             
                             // 标记为处理中
                             isProcessing = true;
@@ -243,11 +270,11 @@ public class MainGameManager : MonoBehaviour
                             
                             boardManager.SwapTiles(firstSwapTilePos, gridPos);
                             
-                            // 等待动画完成后进入敌人回合
+                            // 交换不进入敌人回合，直接完成
                             DOVirtual.DelayedCall(0.5f, () =>
                             {
                                 isProcessing = false;
-                                EndPlayerTurn();
+                                currentState = GameState.PlayerTurn;
                             });
                         }
                         waitingForSecondSwap = false;
@@ -359,6 +386,21 @@ public class MainGameManager : MonoBehaviour
                     boardManager.IsValidPosition(gridPos) && 
                     gridPos != dragStartPos)
                 {
+                    // 检查是否可以交换
+                    if (PlayerManager.Instance != null && !PlayerManager.Instance.CanSwap())
+                    {
+                        Debug.Log("交换次数不足！");
+                        isDragging = false;
+                        currentHoverTilePos = new Vector2Int(-1, -1);
+                        return;
+                    }
+
+                    // 消耗交换次数
+                    if (PlayerManager.Instance != null)
+                    {
+                        PlayerManager.Instance.ConsumeSwap();
+                    }
+
                     // 标记为处理中
                     isProcessing = true;
                     currentState = GameState.Processing;
@@ -366,11 +408,11 @@ public class MainGameManager : MonoBehaviour
                     // 交换格子
                     boardManager.SwapTiles(dragStartPos, gridPos);
                     
-                    // 等待动画完成后进入敌人回合
+                    // 交换不进入敌人回合，直接完成
                     DOVirtual.DelayedCall(0.5f, () =>
                     {
                         isProcessing = false;
-                        EndPlayerTurn();
+                        currentState = GameState.PlayerTurn;
                     });
                 }
                 
@@ -673,6 +715,12 @@ public class MainGameManager : MonoBehaviour
     {
         currentState = GameState.GameOver;
         isProcessing = true; // 游戏结束时禁止操作
+
+        // 关闭技能显示
+        if (skillDisplayPanel != null)
+        {
+            skillDisplayPanel.SetActive(false);
+        }
         
         // 等待敌人移动动画完成后显示弹窗
         DOVirtual.DelayedCall(0.5f, () =>
@@ -705,6 +753,12 @@ public class MainGameManager : MonoBehaviour
         currentState = GameState.LevelComplete;
         isProcessing = true;
 
+        // 关闭技能显示
+        if (skillDisplayPanel != null)
+        {
+            skillDisplayPanel.SetActive(false);
+        }
+
         // 显示技能选择界面
         SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
         if (skillMenu == null)
@@ -720,6 +774,54 @@ public class MainGameManager : MonoBehaviour
             LevelManager.Instance.NextLevel();
             StartBattle();
         });
+    }
+
+    /// <summary>
+    /// 敌人攻击玩家
+    /// </summary>
+    private void AttackPlayer()
+    {
+        if (PlayerManager.Instance == null || enemyManager == null)
+            return;
+
+        // 计算到达最左边的敌人数量
+        int attackCount = 0;
+        List<Enemy> enemiesToRemove = new List<Enemy>();
+        
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead && enemy.IsAtLeftEdge())
+            {
+                attackCount++;
+                // 从敌人的EnemyInfo中获取攻击伤害
+                int damage = 10; // 默认伤害
+                if (enemy.EnemyInfo != null)
+                {
+                    damage = enemy.EnemyInfo.attack;
+                }
+                
+                PlayerManager.Instance.TakeDamage(damage);
+                
+                // 显示伤害数字
+                Vector3 attackPos = enemy.transform.position;
+                DamageNumber.CreateDamageNumber(damage, attackPos + Vector3.left * 0.5f, false);
+                
+                // 销毁到达最左边的敌人
+                enemy.Die();
+                enemiesToRemove.Add(enemy);
+            }
+        }
+
+        // 从列表中移除已死亡的敌人
+        foreach (var enemy in enemiesToRemove)
+        {
+            enemyManager.ActiveEnemies.Remove(enemy);
+        }
+
+        if (attackCount > 0)
+        {
+            Debug.Log($"玩家受到 {attackCount} 个敌人攻击");
+        }
     }
 
     public void Restart()
