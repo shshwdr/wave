@@ -1,8 +1,8 @@
 ﻿identifier,name,description,color,isStart,effect,values,maxLevel,available
 damageIncrease,damageIncrease,Damage increase {0}%,red,0,damageIncrease,50|100,2,1
-damageBottom,damageBottom,"When hit the most right line, hit enemy on the whole right line with {0}% damage",red,,damageBottom,100,1,0
 healWhenHit,healWhenHit,Heal {0}% HP when hit enemy,green,0,healWhenHit,20|40,2,1
 buffNextDamage,buffNextDamage,Next wave took {0}% more damage,blue,0,buffNextDamage,50,1,1
 hitEnemyBack,hitEnemyBack,"When hit enemy, push them back {0} tile",yellow,0,hitEnemyBack,1,1,1
 wavePenetrate,wavePenetrate,"When hit enemy, penetrate {0} more enemy.",red,,wavePenetrate,1,1,1
 hitTakeDamage,hitTakeDamage,"When enemy hit other enemy or wall while get hit back, take damage equal to {0}% red wave",red,0,hitTakeDamage,100,1,1
+damageBottom,damageBottom,"When hit the most right line, hit enemy on the whole right line with {0}% damage",red,,damageBottom,100,1,0
