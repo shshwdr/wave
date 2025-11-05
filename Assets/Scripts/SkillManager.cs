@@ -134,7 +134,7 @@ public class SkillManager : Singleton<SkillManager>
     }
 
     /// <summary>
-    /// 获取所有可选择的技能（未拥有的和可升级的）
+    /// 获取所有可选择的技能（未拥有的和可升级的，且available为true）
     /// </summary>
     public List<SkillInfo> GetAvailableSkillsForSelection()
     {
@@ -143,7 +143,8 @@ public class SkillManager : Singleton<SkillManager>
         {
             foreach (var skillInfo in CSVLoader.Instance.cardInfoMap.Values)
             {
-                if (CanUpgradeSkill(skillInfo.identifier))
+                // 只有available为true且可以升级的技能才能被选择
+                if (skillInfo.available && CanUpgradeSkill(skillInfo.identifier))
                 {
                     result.Add(skillInfo);
                 }

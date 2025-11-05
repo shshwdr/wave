@@ -24,6 +24,18 @@ public class Wave : MonoBehaviour
     private TileColor waveColor; // 波浪颜色
     private int penetrateCount = 0; // 穿透次数（用于wavePenetrate技能）
     private bool buffNextDamage = false; // 下一个波浪伤害加成（用于buffNextDamage技能）
+    private bool hasHitEnemyBack = false; // 是否有击退技能
+    private int knockbackTiles = 0; // 击退格子数
+    private bool hasHealWhenHit = false; // 是否有击中回血技能
+    private int healAmount = 0; // 回血量
+    private bool hasDamageBottom = false; // 是否有damageBottom技能
+    private bool damageBottomTriggered = false; // damageBottom是否已触发
+    private Vector2Int spawnGridPos; // 波浪生成的网格位置
+    private BoardManager boardManager; // 棋盘管理器
+    private int waveGroupId = 0; // 波浪组ID（用于damageBottom）
+    private bool isFirstWave = false; // 是否是第一个wave（用于damageBottom）
+    private bool hasDamageBottomSkill = false; // 是否有damageBottom技能（外部传入）
+    private float damageMultiplier = 1f; // 伤害倍数（来自buffNextDamage）
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -63,7 +75,7 @@ public class Wave : MonoBehaviour
     /// <summary>
     /// 初始化波浪
     /// </summary>
-    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f)
+    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f)
     {
         startPosition = spawnPosition;
         travelDistance = distance;
@@ -71,9 +83,21 @@ public class Wave : MonoBehaviour
         hitEnemies.Clear();
         waveColor = color;
         penetrateCount = 0;
+        spawnGridPos = gridPos;
+        damageBottomTriggered = false;
+        waveGroupId = groupId;
+        isFirstWave = firstWave;
+        hasDamageBottomSkill = hasDamageBottomSkillFlag;
+        damageMultiplier = damageMult;
 
         transform.position = spawnPosition;
         gameObject.SetActive(true);
+
+        // 获取BoardManager
+        if (boardManager == null)
+        {
+            boardManager = FindObjectOfType<BoardManager>();
+        }
 
         // 确保Collider2D设置为Trigger
         if (waveCollider != null)
@@ -81,7 +105,7 @@ public class Wave : MonoBehaviour
             waveCollider.isTrigger = true;
         }
 
-        // 应用技能效果
+        // 应用技能效果（包括buffNextDamage的加成）
         ApplySkillEffects();
 
         // 开始移动
@@ -95,12 +119,52 @@ public class Wave : MonoBehaviour
     {
         waveDuration = travelDistance / moveSpeed;
 
+        // 如果有damageBottom技能且是第一个wave，监听是否离开最右列
+        if (hasDamageBottomSkill && isFirstWave && boardManager != null)
+        {
+            CheckDamageBottomTrigger();
+        }
+
         transform.DOMove(targetPosition, waveDuration)
             .SetEase(Ease.Linear)
             .OnComplete(() =>
             {
                 DestroyWave();
             });
+    }
+
+    /// <summary>
+    /// 检查damageBottom触发条件（波浪离开最右列时）
+    /// </summary>
+    private void CheckDamageBottomTrigger()
+    {
+        if (damageBottomTriggered || boardManager == null)
+            return;
+
+        // 使用Update检测位置变化
+        InvokeRepeating(nameof(CheckPositionForDamageBottom), 0.05f, 0.05f);
+    }
+
+    /// <summary>
+    /// 检查位置以触发damageBottom
+    /// </summary>
+    private void CheckPositionForDamageBottom()
+    {
+        if (damageBottomTriggered || boardManager == null || !isFirstWave)
+            return;
+
+        Vector2Int currentGridPos = boardManager.WorldToGridPosition(transform.position);
+        int rightmostX = boardManager.Width - 1;
+
+        // 如果从最右列离开（当前位置x > 最右列x，且生成位置x == 最右列x）
+        // 注意：波浪向右移动，所以当前x会增大
+        if (spawnGridPos.x == rightmostX && currentGridPos.x > rightmostX)
+        {
+            // 调用MainGameManager的静态方法触发damageBottom
+            MainGameManager.TriggerDamageBottom(rightmostX, damage, waveColor);
+            damageBottomTriggered = true;
+            CancelInvoke(nameof(CheckPositionForDamageBottom)); // 停止检查
+        }
     }
 
     /// <summary>
@@ -114,6 +178,9 @@ public class Wave : MonoBehaviour
         string colorStr = GetColorString(waveColor);
         List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
 
+        // 先应用buffNextDamage的伤害加成
+        damage = damage * damageMultiplier;
+
         foreach (var skill in skills)
         {
             int value = SkillManager.Instance.GetSkillValue(skill.identifier);
@@ -126,13 +193,30 @@ public class Wave : MonoBehaviour
                     break;
                     
                 case "buffNextDamage":
-                    // 下一个波浪伤害加成（这个需要在MainGameManager中处理）
+                    // 下一个波浪伤害加成（已在MainGameManager中处理）
                     buffNextDamage = true;
                     break;
                     
                 case "wavePenetrate":
                     // 穿透次数增加
                     penetrateCount = value;
+                    break;
+                    
+                case "hitEnemyBack":
+                    // 击退敌人
+                    hasHitEnemyBack = true;
+                    knockbackTiles = value;
+                    break;
+                    
+                case "healWhenHit":
+                    // 击中回血
+                    hasHealWhenHit = true;
+                    healAmount = value;
+                    break;
+                    
+                case "damageBottom":
+                    // 最右列爆炸（由外部传入标志控制）
+                    hasDamageBottom = hasDamageBottomSkill;
                     break;
             }
         }
@@ -185,12 +269,45 @@ public class Wave : MonoBehaviour
                 ApplyHitSkillEffects(enemy, ref finalDamage, direction);
                 
                 Debug.Log($"Wave hit enemy: {enemy.name}, dealing {finalDamage} damage");
-                enemy.TakeDamage((int)finalDamage, direction);
                 
-                // 穿透次数减1
-                if (penetrateCount > 0)
+                // 应用击退和回血效果
+                bool shouldKnockback = hasHitEnemyBack;
+                int knockbackTiles = hasHitEnemyBack ? this.knockbackTiles : 0;
+                
+                // 获取红色wave的基础伤害（用于hitTakeDamage）
+                float redWaveBaseDamage = 20f; // 默认基础伤害
+                if (waveColor == TileColor.Red)
                 {
-                    penetrateCount--;
+                    // 如果是红色wave，使用当前伤害（已应用所有加成）
+                    redWaveBaseDamage = finalDamage;
+                }
+                else
+                {
+                    // 如果不是红色wave，需要获取红色wave的基础伤害
+                    if (SkillManager.Instance != null)
+                    {
+                        List<SkillInfo> redSkills = SkillManager.Instance.GetOwnedSkillsByColor("red");
+                        float redDamage = 20f; // 基础伤害
+                        foreach (var skill in redSkills)
+                        {
+                            int value = SkillManager.Instance.GetSkillValue(skill.identifier);
+                            if (skill.effect == "damageIncrease")
+                            {
+                                redDamage = redDamage * (1f + value / 100f);
+                            }
+                        }
+                        redWaveBaseDamage = redDamage;
+                    }
+                }
+                
+                enemy.TakeDamage((int)finalDamage, direction, shouldKnockback, knockbackTiles, redWaveBaseDamage);
+                
+                // 击中回血
+                if (hasHealWhenHit && PlayerManager.Instance != null)
+                {
+                    int healValue = (int)(finalDamage * healAmount / 100f);
+                    PlayerManager.Instance.Heal(healValue);
+                    DamageNumber.CreateDamageNumber(healValue, transform.position, true);
                 }
                 
                 // 如果没有穿透能力或穿透次数为0，销毁波浪
@@ -198,6 +315,12 @@ public class Wave : MonoBehaviour
                 {
                     DestroyWave();
                 }
+                // 穿透次数减1
+                if (penetrateCount > 0)
+                {
+                    penetrateCount--;
+                }
+                
             }
         }
     }
@@ -219,25 +342,6 @@ public class Wave : MonoBehaviour
             
             switch (skill.effect)
             {
-                case "damageBottom":
-                    // 如果击中最右侧，对整行敌人造成伤害
-                    BoardManager boardManager = FindObjectOfType<BoardManager>();
-                    if (boardManager != null && enemy.GridPosition.x >= boardManager.Width - 1)
-                    {
-                        // 这个效果需要在MainGameManager中处理，因为需要知道整行的敌人
-                        // 这里暂时只增加伤害
-                        finalDamage = finalDamage * (1f + value / 100f);
-                    }
-                    break;
-                    
-                case "hitEnemyBack":
-                    // 击退敌人
-                    // 这个效果在Enemy.TakeDamage中已经有击退，这里可以调整力度
-                    break;
-                    
-                case "healWhenHit":
-                    // 击中敌人时回血（这个需要在MainGameManager中处理）
-                    break;
             }
         }
     }

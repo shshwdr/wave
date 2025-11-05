@@ -13,6 +13,7 @@ public class SkillInfo
     public string effect;
     public List<int> values; //count equals level
     public int maxLevel;
+    public bool available;
 
 }
 
@@ -26,6 +27,7 @@ public class EnemyInfo
     public int attack;
     public int speed;
     public List<string> skill;
+    public Sprite icon=> Resources.Load<Sprite>("enemy/"+identifier);
 
 }
 
@@ -33,6 +35,7 @@ public class LevelInfo
 {
     public string enemies;
     public int level;
+    public int startEnemyCount;
 }
 public class CSVLoader : Singleton<CSVLoader>
 {

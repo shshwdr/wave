@@ -23,19 +23,45 @@ public class LevelManager : Singleton<LevelManager>
     }
 
     /// <summary>
-    /// 获取下一个关卡
+    /// 获取下一个关卡（根据玩家等级）
     /// </summary>
-    public LevelInfo GetNextLevel()
+    public LevelInfo GetNextLevel(int playerLevel)
     {
-        // 随机从所有关卡中选择一个
-        if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
+        if (CSVLoader.Instance == null || CSVLoader.Instance.levelInfoMap == null || CSVLoader.Instance.levelInfoMap.Count == 0)
         {
-            var levels = CSVLoader.Instance.levelInfoMap.Values.ToList();
-            int randomIndex = Random.Range(0, levels.Count);
-            return levels[randomIndex];
+            return null;
         }
-        
-        return null;
+
+        // 查找所有匹配玩家等级的关卡
+        List<LevelInfo> matchingLevels = new List<LevelInfo>();
+        foreach (var levelInfo in CSVLoader.Instance.levelInfoMap.Values)
+        {
+            if (levelInfo.level == playerLevel)
+            {
+                matchingLevels.Add(levelInfo);
+            }
+        }
+
+        // 如果找到匹配的关卡，随机选择一个
+        if (matchingLevels.Count > 0)
+        {
+            int randomIndex = Random.Range(0, matchingLevels.Count);
+            return matchingLevels[randomIndex];
+        }
+
+        // 如果没有找到匹配的关卡，选择等级最高的那个
+        LevelInfo highestLevel = null;
+        int highestLevelValue = -1;
+        foreach (var levelInfo in CSVLoader.Instance.levelInfoMap.Values)
+        {
+            if (levelInfo.level > highestLevelValue)
+            {
+                highestLevelValue = levelInfo.level;
+                highestLevel = levelInfo;
+            }
+        }
+
+        return highestLevel;
     }
 
     /// <summary>

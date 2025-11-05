@@ -56,6 +56,17 @@ public class MainGameManager : MonoBehaviour
     // 技能显示相关
     private TileColor currentDisplayColor = TileColor.Red;
 
+    // 玩家等级（起始为0，打一场架升一级）
+    private int playerLevel = 0;
+    public int PlayerLevel => playerLevel;
+
+    // damageBottom技能触发管理（确保整个wave只触发一次）
+    private static bool damageBottomTriggeredThisWave = false;
+    private static int currentWaveGroupId = 0;
+
+    // buffNextDamage技能管理（下一个wave的伤害加成）
+    private static float nextWaveDamageMultiplier = 1f;
+
     private void Start()
     {
         if (mainCamera == null)
@@ -111,7 +122,7 @@ public class MainGameManager : MonoBehaviour
 
             // 添加背景
             Image bg = skillDisplayPanel.AddComponent<Image>();
-            bg.color = new Color(0, 0, 0, 1f);
+            bg.color = new Color(0, 0, 0, 0.7f);
 
             // 添加文本
             GameObject textObj = new GameObject("SkillText");
@@ -173,7 +184,7 @@ public class MainGameManager : MonoBehaviour
         }
 
         // 从关卡管理器获取关卡信息并生成敌人
-        LevelInfo levelInfo = LevelManager.Instance.GetNextLevel();
+        LevelInfo levelInfo = LevelManager.Instance.GetNextLevel(playerLevel);
         if (levelInfo != null && enemyManager != null)
         {
             enemyManager.SpawnEnemiesFromLevel(levelInfo);
@@ -651,15 +662,60 @@ public class MainGameManager : MonoBehaviour
         TileCell startTile = boardManager.GetTile(startPos);
         TileColor waveColor = startTile != null ? startTile.Color : TileColor.Red;
 
+        // 检查是否有damageBottom技能
+        bool hasDamageBottom = false;
+        if (SkillManager.Instance != null)
+        {
+            string colorStr = GetColorString(waveColor);
+            List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
+            foreach (var skill in skills)
+            {
+                if (skill.effect == "damageBottom")
+                {
+                    hasDamageBottom = true;
+                    break;
+                }
+            }
+        }
+
+        // 重置damageBottom触发标志（新的wave group）
+        currentWaveGroupId++;
+        damageBottomTriggeredThisWave = false;
+
+        // 检查是否有buffNextDamage技能（用于下一个wave group）
+        // 注意：这个检查的是当前wave group的技能，buff会应用到下一个wave group
+        float damageMultiplier = 1f;
+        if (SkillManager.Instance != null)
+        {
+            string colorStr = GetColorString(waveColor);
+            List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
+            foreach (var skill in skills)
+            {
+                if (skill.effect == "buffNextDamage")
+                {
+                    int value = SkillManager.Instance.GetSkillValue(skill.identifier);
+                    damageMultiplier = 1f + value / 100f;
+                    break;
+                }
+            }
+        }
+
+        // 应用当前wave group的伤害加成（来自上一个wave group的buffNextDamage）
+        float currentWaveDamageMultiplier = nextWaveDamageMultiplier;
+        nextWaveDamageMultiplier = damageMultiplier; // 设置下一个wave group的加成
+
         // 消除所有连通的格子并创建波浪
         float waveDuration = 2f; // 波浪移动持续时间
         
+        int waveIndex = 0;
         foreach (var pos in connectedTiles)
         {
             Vector3 worldPos = boardManager.GridToWorldPosition(pos);
-            CreateWave(worldPos, waveColor);
+            bool isFirstWave = (waveIndex == 0);
+            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier);
 
             boardManager.RemoveTile(pos);
+            waveIndex++;
         }
 
         // 立即应用重力（与波浪移动同时进行）
@@ -681,7 +737,7 @@ public class MainGameManager : MonoBehaviour
     /// <summary>
     /// 创建波浪攻击
     /// </summary>
-    private void CreateWave(Vector3 spawnPosition, TileColor color)
+    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f)
     {
         if (wavePrefab == null)
             return;
@@ -693,7 +749,133 @@ public class MainGameManager : MonoBehaviour
             wave = waveObj.AddComponent<Wave>();
         }
 
-        wave.Init(spawnPosition, color);
+        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier);
+    }
+
+    /// <summary>
+    /// 触发damageBottom效果（最右列上下爆炸）
+    /// </summary>
+    public static void TriggerDamageBottom(int rightmostX, float damage, TileColor waveColor)
+    {
+        if (damageBottomTriggeredThisWave)
+            return;
+
+        damageBottomTriggeredThisWave = true;
+
+        BoardManager boardManager = FindObjectOfType<BoardManager>();
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        
+        if (boardManager == null || enemyManager == null)
+            return;
+
+        int value = 0;
+        if (SkillManager.Instance != null)
+        {
+            string colorStr = GetColorStringStatic(waveColor);
+            List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
+            foreach (var skill in skills)
+            {
+                if (skill.effect == "damageBottom")
+                {
+                    value = SkillManager.Instance.GetSkillValue(skill.identifier);
+                    break;
+                }
+            }
+        }
+
+        // 对最右列的所有格子创建上下爆炸效果，并对敌人造成伤害
+        int boardHeight = boardManager.Height;
+        
+        for (int y = 0; y < boardHeight; y++)
+        {
+            Vector2Int gridPos = new Vector2Int(rightmostX, y);
+            Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
+            
+            // 创建爆炸效果（向上下扩展）
+            CreateExplosionEffect(worldPos, boardManager);
+        }
+        
+        // 对最右列的所有敌人造成伤害
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead && enemy.GridPosition.x == rightmostX)
+            {
+                float finalDamage = damage * (1f + value / 100f);
+                // 获取红色wave的基础伤害（用于hitTakeDamage）
+                float redWaveBaseDamage = (waveColor == TileColor.Red) ? finalDamage : damage;
+                enemy.TakeDamage((int)finalDamage, Vector3.right, false, 0, redWaveBaseDamage);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 创建爆炸效果（向上下扩展）
+    /// </summary>
+    private static void CreateExplosionEffect(Vector3 position, BoardManager boardManager)
+    {
+        GameObject explosion = new GameObject("Explosion");
+        explosion.transform.position = position;
+        
+        SpriteRenderer sr = explosion.AddComponent<SpriteRenderer>();
+        sr.color = new Color(1f, 0.5f, 0f, 0.8f); // 橙红色
+        sr.sortingOrder = 10;
+        
+        explosion.transform.localScale = Vector3.zero;
+        
+        Sequence explosionSeq = DOTween.Sequence();
+        
+        // 向上扩展
+        GameObject explosionUp = new GameObject("ExplosionUp");
+        explosionUp.transform.position = position;
+        explosionUp.transform.SetParent(explosion.transform);
+        SpriteRenderer srUp = explosionUp.AddComponent<SpriteRenderer>();
+        srUp.color = new Color(1f, 0.3f, 0f, 0.8f);
+        srUp.sortingOrder = 11;
+        explosionUp.transform.localScale = Vector3.zero;
+        
+        // 向下扩展
+        GameObject explosionDown = new GameObject("ExplosionDown");
+        explosionDown.transform.position = position;
+        explosionDown.transform.SetParent(explosion.transform);
+        SpriteRenderer srDown = explosionDown.AddComponent<SpriteRenderer>();
+        srDown.color = new Color(1f, 0.3f, 0f, 0.8f);
+        srDown.sortingOrder = 11;
+        explosionDown.transform.localScale = Vector3.zero;
+        
+        // 主爆炸缩放
+        explosionSeq.Append(explosion.transform.DOScale(Vector3.one * 1.5f, 0.15f).SetEase(Ease.OutQuad));
+        
+        // 向上扩展
+        float tileSize = boardManager != null ? 1f : 1f; // 使用BoardManager的tileSize
+        explosionSeq.Join(explosionUp.transform.DOMoveY(position.y + tileSize, 0.2f).SetEase(Ease.OutQuad));
+        explosionSeq.Join(explosionUp.transform.DOScale(Vector3.one * 1.2f, 0.2f).SetEase(Ease.OutQuad));
+        
+        // 向下扩展
+        explosionSeq.Join(explosionDown.transform.DOMoveY(position.y - tileSize, 0.2f).SetEase(Ease.OutQuad));
+        explosionSeq.Join(explosionDown.transform.DOScale(Vector3.one * 1.2f, 0.2f).SetEase(Ease.OutQuad));
+        
+        // 淡出
+        explosionSeq.Append(explosion.transform.DOScale(Vector3.zero, 0.1f).SetEase(Ease.InQuad));
+        explosionSeq.Join(sr.DOFade(0f, 0.1f));
+        explosionSeq.Join(srUp.DOFade(0f, 0.1f));
+        explosionSeq.Join(srDown.DOFade(0f, 0.1f));
+        
+        explosionSeq.OnComplete(() => Destroy(explosion));
+    }
+
+    /// <summary>
+    /// 将TileColor转换为字符串（静态方法）
+    /// </summary>
+    private static string GetColorStringStatic(TileColor color)
+    {
+        switch (color)
+        {
+            case TileColor.Red: return "red";
+            case TileColor.Yellow: return "yellow";
+            case TileColor.Blue: return "blue";
+            case TileColor.Green: return "green";
+            default: return "";
+        }
     }
 
     /// <summary>
@@ -709,11 +891,17 @@ public class MainGameManager : MonoBehaviour
         {
             enemyManager.MoveAllEnemiesLeft(enemyMoveDistance, enemyMoveDuration);
 
-            // 进入下一回合（不再自动生成敌人，由关卡系统控制）
+            // 每回合生成一个新敌人
             DOVirtual.DelayedCall(enemyMoveDuration + 0.1f, () =>
             {
-                isProcessing = false;
-                currentState = GameState.PlayerTurn;
+                enemyManager.SpawnEnemyEachTurn();
+                
+                // 进入下一回合
+                DOVirtual.DelayedCall(0.1f, () =>
+                {
+                    isProcessing = false;
+                    currentState = GameState.PlayerTurn;
+                });
             });
         }
         else
@@ -785,7 +973,8 @@ public class MainGameManager : MonoBehaviour
 
         skillMenu.ShowSkillSelection((selectedSkill) =>
         {
-            // 技能选择完成，进入下一关
+            // 技能选择完成，玩家等级+1，进入下一关
+            playerLevel++;
             LevelManager.Instance.NextLevel();
             StartBattle();
         });

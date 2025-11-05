@@ -10,10 +10,12 @@ public class BattleUI : MonoBehaviour
     [Header("UI组件")]
     [SerializeField] private TMP_Text healthText;
     [SerializeField] private TMP_Text swapCountText;
+    [SerializeField] private TMP_Text levelText;
     [SerializeField] private Image healthBarFill;
     [SerializeField] private Image swapCountBarFill;
 
     private PlayerManager playerManager;
+    private MainGameManager mainGameManager;
 
     private void Start()
     {
@@ -21,6 +23,12 @@ public class BattleUI : MonoBehaviour
         if (playerManager == null)
         {
             Debug.LogWarning("PlayerManager未找到！");
+        }
+        
+        mainGameManager = FindObjectOfType<MainGameManager>();
+        if (mainGameManager == null)
+        {
+            Debug.LogWarning("MainGameManager未找到！");
         }
     }
 
@@ -59,6 +67,12 @@ public class BattleUI : MonoBehaviour
         {
             float swapPercent = (float)playerManager.CurrentSwapCount / playerManager.MaxSwapCount;
             swapCountBarFill.fillAmount = swapPercent;
+        }
+
+        // 更新等级显示
+        if (levelText != null && mainGameManager != null)
+        {
+            levelText.text = $"Level: {mainGameManager.PlayerLevel}";
         }
     }
 }

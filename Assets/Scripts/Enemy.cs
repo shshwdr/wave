@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 
@@ -28,6 +29,7 @@ public class Enemy : MonoBehaviour
     private Vector3 spriteRendererOriginalLocalPos; // spriteRenderer的原始本地位置
     private Tween jumpTween; // 当前的跳跃动画
     private EnemyInfo enemyInfo; // 敌人信息
+    private BoardManager boardManager; // 棋盘管理器引用
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
@@ -84,6 +86,7 @@ public class Enemy : MonoBehaviour
         if (spriteRenderer != null)
         {
             spriteRenderer.enabled = true;
+            spriteRenderer.sprite = info.icon;
             // 记录spriteRenderer的原始本地位置（如果spriteRenderer是transform的子对象）
             // 如果spriteRenderer直接挂载在transform上，使用localPosition
             spriteRendererOriginalLocalPos = spriteRenderer.transform.localPosition;
@@ -104,7 +107,7 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// 受到伤害
     /// </summary>
-    public void TakeDamage(int damage, Vector3 attackDirection)
+    public void TakeDamage(int damage, Vector3 attackDirection, bool shouldKnockback = false, int knockbackTiles = 0, float redWaveDamage = 0f)
     {
         if (isDead)
             return;
@@ -115,8 +118,11 @@ public class Enemy : MonoBehaviour
         // 显示伤害数字
         DamageNumber.CreateDamageNumber(damage, transform.position + Vector3.up * 0.5f, false);
 
-        // 击退效果
-        ApplyKnockback(attackDirection);
+        // 击退效果（只有shouldKnockback为true时才击退）
+        if (shouldKnockback && knockbackTiles > 0)
+        {
+            ApplyKnockback(attackDirection, knockbackTiles, redWaveDamage);
+        }
 
         // 跳起动画
         ApplyJumpAnimation();
@@ -182,22 +188,118 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 击退效果
+    /// 击退效果（整数格子，检测碰撞和边界）
     /// </summary>
-    private void ApplyKnockback(Vector3 direction)
+    private void ApplyKnockback(Vector3 direction, int tiles, float redWaveDamage)
     {
-        return;
-        direction.Normalize();
-        Vector3 knockbackPos = transform.position + direction * knockbackForce;
+        if (boardManager == null)
+        {
+            boardManager = FindObjectOfType<BoardManager>();
+        }
         
-        transform.DOMove(knockbackPos, knockbackDuration)
-            .SetEase(Ease.OutQuad)
-            .OnComplete(() =>
+        if (boardManager == null)
+            return;
+
+        direction.Normalize();
+        
+        // 逐步检查每个格子，如果遇到敌人或边界则停止
+        Vector2Int currentPos = gridPosition;
+        Vector2Int finalPos = currentPos;
+        Enemy collidedEnemy = null;
+        
+        for (int i = 1; i <= tiles; i++)
+        {
+            Vector2Int checkPos = gridPosition;
+            checkPos.x += i; // 向右击退
+            
+            // 检查是否超出边界
+            if (checkPos.x >= boardManager.Width)
             {
-                // 击退后可以添加回弹效果
-                transform.DOMove(transform.position - direction * (knockbackForce * 0.3f), knockbackDuration * 0.5f)
-                    .SetEase(Ease.InQuad);
-            });
+                break; // 到达边界，停止
+            }
+            
+            // 检查该位置是否有其他敌人
+            EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+            if (enemyManager != null)
+            {
+                bool hasEnemy = false;
+                foreach (var enemy in enemyManager.ActiveEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead && enemy != this && 
+                        enemy.GridPosition.x == checkPos.x && enemy.GridPosition.y == checkPos.y)
+                    {
+                        collidedEnemy = enemy;
+                        hasEnemy = true;
+                        break;
+                    }
+                }
+                if (hasEnemy)
+                {
+                    break; // 遇到敌人，停止
+                }
+            }
+            
+            finalPos = checkPos;
+        }
+        
+        // 计算世界坐标
+        Vector3 targetWorldPos = boardManager.GridToWorldPosition(finalPos);
+        // 敌人应该在格子上方，需要加上Y偏移（从EnemyManager获取）
+        EnemyManager em = FindObjectOfType<EnemyManager>();
+        if (em != null)
+        {
+            targetWorldPos += new Vector3(0, em.SpawnOffsetY, 0);
+        }
+        else
+        {
+            targetWorldPos += new Vector3(0, 0.5f, 0); // 默认偏移
+        }
+        
+        // 更新网格位置
+        gridPosition = finalPos;
+        
+        // 移动到新位置
+        transform.DOMove(targetWorldPos, knockbackDuration)
+            .SetEase(Ease.OutQuad);
+        
+        // 如果有hitTakeDamage技能，对自己和碰撞的敌人造成伤害
+        if (SkillManager.Instance != null)
+        {
+            bool hasHitTakeDamage = false;
+            int hitTakeDamageValue = 0;
+            
+            // 检查所有颜色的hitTakeDamage技能
+            List<SkillInfo> allSkills = new List<SkillInfo>();
+            foreach (var color in new[] { "red", "yellow", "blue", "green" })
+            {
+                allSkills.AddRange(SkillManager.Instance.GetOwnedSkillsByColor(color));
+            }
+            
+            foreach (var skill in allSkills)
+            {
+                if (skill.effect == "hitTakeDamage")
+                {
+                    hasHitTakeDamage = true;
+                    hitTakeDamageValue = SkillManager.Instance.GetSkillValue(skill.identifier);
+                    break;
+                }
+            }
+            
+            if (hasHitTakeDamage && hitTakeDamageValue > 0 && redWaveDamage > 0)
+            {
+                // 计算伤害：红色wave伤害 * value%
+                float collisionDamage = redWaveDamage * (hitTakeDamageValue / 100f);
+                
+                // 对自己造成伤害（不触发击退，避免无限循环）
+                TakeDamage((int)collisionDamage, Vector3.right, false, 0, 0f);
+                
+                // 对碰撞的敌人造成伤害
+                if (collidedEnemy != null && !collidedEnemy.IsDead)
+                {
+                    collidedEnemy.TakeDamage((int)collisionDamage, Vector3.left, false, 0, 0f);
+                }
+            }
+        }
     }
 
     /// <summary>

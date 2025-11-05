@@ -16,6 +16,8 @@ public class EnemyManager : MonoBehaviour
     [SerializeField] private float spawnOffsetX = 1f;
     [SerializeField] private float spawnOffsetY = 1f;
 
+    public float SpawnOffsetY => spawnOffsetY;
+
     [Header("血条设置")]
     [SerializeField] private GameObject healthBarPrefab;
     [SerializeField] private Canvas healthBarCanvas;
@@ -23,6 +25,11 @@ public class EnemyManager : MonoBehaviour
     private List<Enemy> activeEnemies = new List<Enemy>();
     private BoardManager boardManager;
     private Transform enemyParent;
+    
+    // 分批次加载敌人相关
+    private LevelInfo currentLevelInfo;
+    private List<EnemySpawnInfo> remainingEnemies = new List<EnemySpawnInfo>(); // 剩余的敌人列表
+    private int currentSpawnIndex = 0; // 当前生成索引
 
     public List<Enemy> ActiveEnemies => activeEnemies;
     public int EnemyCount => activeEnemies.Count;
@@ -113,7 +120,7 @@ public class EnemyManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 根据关卡信息生成敌人
+    /// 根据关卡信息生成敌人（分批次加载）
     /// </summary>
     public void SpawnEnemiesFromLevel(LevelInfo levelInfo)
     {
@@ -123,51 +130,99 @@ public class EnemyManager : MonoBehaviour
             return;
         }
 
-        // 解析敌人信息
-        List<EnemySpawnInfo> spawnInfos = LevelManager.Instance.ParseEnemies(levelInfo.enemies);
+        currentLevelInfo = levelInfo;
         
-        int boardWidth = boardManager.Width;
-        int boardHeight = boardManager.Height;
-        int rightHalfStartX = boardWidth / 2;
-        int rightHalfEndX = boardWidth - 1;
-
-        foreach (var spawnInfo in spawnInfos)
+        // 解析敌人信息
+        List<EnemySpawnInfo> allSpawnInfos = LevelManager.Instance.ParseEnemies(levelInfo.enemies);
+        
+        // 初始化剩余敌人列表（展开所有敌人）
+        remainingEnemies.Clear();
+        foreach (var spawnInfo in allSpawnInfos)
         {
-            // 从enemyInfoMap获取敌人信息
             if (!CSVLoader.Instance.enemyInfoMap.ContainsKey(spawnInfo.identifier))
             {
                 Debug.LogWarning($"Enemy identifier not found: {spawnInfo.identifier}");
                 continue;
             }
-
-            EnemyInfo enemyInfo = CSVLoader.Instance.enemyInfoMap[spawnInfo.identifier];
-
-            // 生成指定数量的敌人
+            
+            // 将每个敌人展开到列表中
             for (int i = 0; i < spawnInfo.count; i++)
             {
-                // 随机在右半部分生成
-                int x = Random.Range(rightHalfStartX, rightHalfEndX + 1);
-                int y = Random.Range(0, boardHeight);
-
-                Vector2Int gridPos = new Vector2Int(x, y);
-                Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
-                worldPos += new Vector3(0, spawnOffsetY, 0);
-
-                GameObject enemyObj = Instantiate(enemyPrefab, worldPos, Quaternion.identity, enemyParent);
-                Enemy enemy = enemyObj.GetComponent<Enemy>();
-                if (enemy == null)
+                remainingEnemies.Add(new EnemySpawnInfo
                 {
-                    enemy = enemyObj.AddComponent<Enemy>();
-                }
-
-                // 使用enemyInfo中的hp初始化
-                enemy.Init(gridPos, enemyInfo.hp, enemyInfo);
-                
-                // 创建血条
-                CreateHealthBar(enemy);
-                
-                activeEnemies.Add(enemy);
+                    identifier = spawnInfo.identifier,
+                    count = 1
+                });
             }
+        }
+        
+        currentSpawnIndex = 0;
+        
+        // 根据startEnemyCount先加载初始敌人
+        int startCount = Mathf.Min(levelInfo.startEnemyCount, remainingEnemies.Count);
+        for (int i = 0; i < startCount; i++)
+        {
+            SpawnNextEnemy();
+        }
+    }
+
+    /// <summary>
+    /// 生成下一个敌人（从剩余列表中）
+    /// </summary>
+    private void SpawnNextEnemy()
+    {
+        if (currentSpawnIndex >= remainingEnemies.Count || boardManager == null || enemyPrefab == null)
+            return;
+
+        EnemySpawnInfo spawnInfo = remainingEnemies[currentSpawnIndex];
+        currentSpawnIndex++;
+
+        // 从enemyInfoMap获取敌人信息
+        if (!CSVLoader.Instance.enemyInfoMap.ContainsKey(spawnInfo.identifier))
+        {
+            Debug.LogWarning($"Enemy identifier not found: {spawnInfo.identifier}");
+            return;
+        }
+
+        EnemyInfo enemyInfo = CSVLoader.Instance.enemyInfoMap[spawnInfo.identifier];
+
+        int boardWidth = boardManager.Width;
+        int boardHeight = boardManager.Height;
+        int rightHalfStartX = boardWidth / 2;
+        int rightHalfEndX = boardWidth - 1;
+
+        // 随机在右半部分生成
+        int x = Random.Range(rightHalfStartX, rightHalfEndX + 1);
+        int y = Random.Range(0, boardHeight);
+
+        Vector2Int gridPos = new Vector2Int(x, y);
+        Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
+        worldPos += new Vector3(0, spawnOffsetY, 0);
+
+        GameObject enemyObj = Instantiate(enemyPrefab, worldPos, Quaternion.identity, enemyParent);
+        Enemy enemy = enemyObj.GetComponent<Enemy>();
+        if (enemy == null)
+        {
+            enemy = enemyObj.AddComponent<Enemy>();
+        }
+
+        // 使用enemyInfo中的hp初始化
+        enemy.Init(gridPos, enemyInfo.hp, enemyInfo);
+        
+        // 创建血条
+        CreateHealthBar(enemy);
+        
+        activeEnemies.Add(enemy);
+    }
+
+    /// <summary>
+    /// 每回合生成一个新敌人
+    /// </summary>
+    public void SpawnEnemyEachTurn()
+    {
+        if (currentSpawnIndex < remainingEnemies.Count)
+        {
+            SpawnNextEnemy();
         }
     }
 
