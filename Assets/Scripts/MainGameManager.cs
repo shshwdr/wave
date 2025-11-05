@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using UnityEngine.SceneManagement;
+using TMPro;
+using UnityEngine.UI;
 
 /// <summary>
 /// 一场战斗的游戏控制 - 回合制战斗系统
@@ -23,12 +25,17 @@ public class MainGameManager : MonoBehaviour
     [SerializeField] private float enemyMoveDistance = 1f;
     [SerializeField] private float enemyMoveDuration = 0.5f;
 
+    [Header("技能显示UI")]
+    [SerializeField] private GameObject skillDisplayPanel;
+    [SerializeField] private TMP_Text skillDisplayText;
+
     private enum GameState
     {
         PlayerTurn,
         EnemyTurn,
         Processing,        // 处理中（波浪攻击、敌人移动等）
-        GameOver
+        GameOver,
+        LevelComplete      // 关卡完成
     }
 
     private GameState currentState = GameState.PlayerTurn;
@@ -45,6 +52,9 @@ public class MainGameManager : MonoBehaviour
     // 高亮显示相关
     private Vector2Int lastHighlightPos = new Vector2Int(-1, -1);
     private List<Vector2Int> highlightedTiles = new List<Vector2Int>();
+
+    // 技能显示相关
+    private TileColor currentDisplayColor = TileColor.Red;
 
     private void Start()
     {
@@ -66,7 +76,64 @@ public class MainGameManager : MonoBehaviour
             waveParent = waveParentObj.transform;
         }
 
+        // 初始化技能显示UI
+        InitSkillDisplayUI();
+
         StartBattle();
+    }
+
+    /// <summary>
+    /// 初始化技能显示UI
+    /// </summary>
+    private void InitSkillDisplayUI()
+    {
+        if (skillDisplayPanel == null)
+        {
+            // 创建技能显示面板
+            GameObject canvasObj = GameObject.Find("Canvas");
+            if (canvasObj == null)
+            {
+                canvasObj = new GameObject("Canvas");
+                Canvas canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObj.AddComponent<CanvasScaler>();
+                canvasObj.AddComponent<GraphicRaycaster>();
+            }
+
+            skillDisplayPanel = new GameObject("SkillDisplayPanel");
+            skillDisplayPanel.transform.SetParent(canvasObj.transform);
+            RectTransform rectTransform = skillDisplayPanel.AddComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0, 1);
+            rectTransform.anchorMax = new Vector2(0, 1);
+            rectTransform.pivot = new Vector2(0, 1);
+            rectTransform.anchoredPosition = new Vector2(20, -20);
+            rectTransform.sizeDelta = new Vector2(400, 300);
+
+            // 添加背景
+            Image bg = skillDisplayPanel.AddComponent<Image>();
+            bg.color = new Color(0, 0, 0, 0.7f);
+
+            // 添加文本
+            GameObject textObj = new GameObject("SkillText");
+            textObj.transform.SetParent(skillDisplayPanel.transform);
+            RectTransform textRect = textObj.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.anchoredPosition = Vector2.zero;
+            textRect.offsetMin = new Vector2(10, 10);
+            textRect.offsetMax = new Vector2(-10, -10);
+
+            skillDisplayText = textObj.AddComponent<TextMeshProUGUI>();
+            skillDisplayText.fontSize = 24;
+            skillDisplayText.color = Color.white;
+            skillDisplayText.alignment = TextAlignmentOptions.TopLeft;
+        }
+
+        if (skillDisplayPanel != null)
+        {
+            skillDisplayPanel.SetActive(false);
+        }
     }
 
     /// <summary>
@@ -86,6 +153,17 @@ public class MainGameManager : MonoBehaviour
         if (enemyManager != null)
         {
             enemyManager.ClearAllEnemies();
+        }
+
+        // 从关卡管理器获取关卡信息并生成敌人
+        LevelInfo levelInfo = LevelManager.Instance.GetNextLevel();
+        if (levelInfo != null && enemyManager != null)
+        {
+            enemyManager.SpawnEnemiesFromLevel(levelInfo);
+        }
+        else if (enemyManager != null)
+        {
+            // 如果没有关卡信息，使用随机生成
             enemyManager.SpawnEnemiesRandomly();
         }
 
@@ -105,6 +183,13 @@ public class MainGameManager : MonoBehaviour
         if (enemyManager != null && enemyManager.HasEnemyAtLeftEdge())
         {
             GameOver();
+            return;
+        }
+
+        // 检查关卡完成条件（所有敌人死亡）
+        if (enemyManager != null && enemyManager.AreAllEnemiesDead() && currentState != GameState.LevelComplete)
+        {
+            CompleteLevel();
             return;
         }
 
@@ -315,12 +400,84 @@ public class MainGameManager : MonoBehaviour
         Vector2Int gridPos = GetMouseGridPosition();
         if (boardManager != null && boardManager.IsValidPosition(gridPos))
         {
-            // 如果鼠标位置改变了，更新高亮
+            // 如果鼠标位置改变了，更新高亮和技能显示
             if (gridPos != lastHighlightPos && !waitingForSecondSwap)
             {
                 UpdateHighlightTiles(gridPos);
+                UpdateSkillDisplay(gridPos);
                 lastHighlightPos = gridPos;
             }
+        }
+        else
+        {
+            // 鼠标不在有效位置，隐藏技能显示
+            if (skillDisplayPanel != null)
+            {
+                skillDisplayPanel.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 更新技能显示
+    /// </summary>
+    private void UpdateSkillDisplay(Vector2Int gridPos)
+    {
+        if (boardManager == null || skillDisplayPanel == null || skillDisplayText == null)
+            return;
+
+        TileCell tile = boardManager.GetTile(gridPos);
+        if (tile == null)
+        {
+            skillDisplayPanel.SetActive(false);
+            return;
+        }
+
+        // 获取当前格子的颜色
+        TileColor tileColor = tile.Color;
+        string colorStr = GetColorString(tileColor);
+
+        // 获取该颜色的所有已拥有技能
+        if (SkillManager.Instance != null)
+        {
+            List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
+
+            if (skills.Count > 0)
+            {
+                // 显示技能描述
+                string skillText = "";
+                foreach (var skill in skills)
+                {
+                    string description = SkillManager.Instance.GetSkillDescription(skill.identifier,false);
+                    skillText += description + "\n";
+                }
+
+                skillDisplayText.text = skillText;
+                skillDisplayPanel.SetActive(true);
+            }
+            else
+            {
+                skillDisplayPanel.SetActive(false);
+            }
+        }
+        else
+        {
+            skillDisplayPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 将TileColor转换为字符串
+    /// </summary>
+    private string GetColorString(TileColor color)
+    {
+        switch (color)
+        {
+            case TileColor.Red: return "red";
+            case TileColor.Yellow: return "yellow";
+            case TileColor.Blue: return "blue";
+            case TileColor.Green: return "green";
+            default: return "";
         }
     }
 
@@ -433,13 +590,17 @@ public class MainGameManager : MonoBehaviour
         isProcessing = true;
         currentState = GameState.Processing;
 
+        // 获取起始格子的颜色
+        TileCell startTile = boardManager.GetTile(startPos);
+        TileColor waveColor = startTile != null ? startTile.Color : TileColor.Red;
+
         // 消除所有连通的格子并创建波浪
         float waveDuration = 2f; // 波浪移动持续时间
         
         foreach (var pos in connectedTiles)
         {
             Vector3 worldPos = boardManager.GridToWorldPosition(pos);
-            CreateWave(worldPos);
+            CreateWave(worldPos, waveColor);
 
             boardManager.RemoveTile(pos);
         }
@@ -463,7 +624,7 @@ public class MainGameManager : MonoBehaviour
     /// <summary>
     /// 创建波浪攻击
     /// </summary>
-    private void CreateWave(Vector3 spawnPosition)
+    private void CreateWave(Vector3 spawnPosition, TileColor color)
     {
         if (wavePrefab == null)
             return;
@@ -475,7 +636,7 @@ public class MainGameManager : MonoBehaviour
             wave = waveObj.AddComponent<Wave>();
         }
 
-        wave.Init(spawnPosition);
+        wave.Init(spawnPosition, color);
     }
 
     /// <summary>
@@ -491,17 +652,11 @@ public class MainGameManager : MonoBehaviour
         {
             enemyManager.MoveAllEnemiesLeft(enemyMoveDistance, enemyMoveDuration);
 
-            // 刷新新敌人
+            // 进入下一回合（不再自动生成敌人，由关卡系统控制）
             DOVirtual.DelayedCall(enemyMoveDuration + 0.1f, () =>
             {
-                enemyManager.SpawnNewEnemy();
-
-                // 进入下一回合
-                DOVirtual.DelayedCall(0.2f, () =>
-                {
-                    isProcessing = false;
-                    currentState = GameState.PlayerTurn;
-                });
+                isProcessing = false;
+                currentState = GameState.PlayerTurn;
             });
         }
         else
@@ -542,9 +697,33 @@ public class MainGameManager : MonoBehaviour
         });
     }
 
+    /// <summary>
+    /// 关卡完成
+    /// </summary>
+    private void CompleteLevel()
+    {
+        currentState = GameState.LevelComplete;
+        isProcessing = true;
+
+        // 显示技能选择界面
+        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+        if (skillMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("SkillSelectMenu");
+            skillMenu = menuObj.AddComponent<SkillSelectMenu>();
+        }
+
+        skillMenu.ShowSkillSelection((selectedSkill) =>
+        {
+            // 技能选择完成，进入下一关
+            LevelManager.Instance.NextLevel();
+            StartBattle();
+        });
+    }
+
     public void Restart()
     {
-        
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

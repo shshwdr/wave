@@ -113,6 +113,65 @@ public class EnemyManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 根据关卡信息生成敌人
+    /// </summary>
+    public void SpawnEnemiesFromLevel(LevelInfo levelInfo)
+    {
+        if (boardManager == null || enemyPrefab == null || levelInfo == null)
+        {
+            Debug.LogError("BoardManager, enemyPrefab or levelInfo not set!");
+            return;
+        }
+
+        // 解析敌人信息
+        List<EnemySpawnInfo> spawnInfos = LevelManager.Instance.ParseEnemies(levelInfo.enemies);
+        
+        int boardWidth = boardManager.Width;
+        int boardHeight = boardManager.Height;
+        int rightHalfStartX = boardWidth / 2;
+        int rightHalfEndX = boardWidth - 1;
+
+        foreach (var spawnInfo in spawnInfos)
+        {
+            // 从enemyInfoMap获取敌人信息
+            if (!CSVLoader.Instance.enemyInfoMap.ContainsKey(spawnInfo.identifier))
+            {
+                Debug.LogWarning($"Enemy identifier not found: {spawnInfo.identifier}");
+                continue;
+            }
+
+            EnemyInfo enemyInfo = CSVLoader.Instance.enemyInfoMap[spawnInfo.identifier];
+
+            // 生成指定数量的敌人
+            for (int i = 0; i < spawnInfo.count; i++)
+            {
+                // 随机在右半部分生成
+                int x = Random.Range(rightHalfStartX, rightHalfEndX + 1);
+                int y = Random.Range(0, boardHeight);
+
+                Vector2Int gridPos = new Vector2Int(x, y);
+                Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
+                worldPos += new Vector3(0, spawnOffsetY, 0);
+
+                GameObject enemyObj = Instantiate(enemyPrefab, worldPos, Quaternion.identity, enemyParent);
+                Enemy enemy = enemyObj.GetComponent<Enemy>();
+                if (enemy == null)
+                {
+                    enemy = enemyObj.AddComponent<Enemy>();
+                }
+
+                // 使用enemyInfo中的hp初始化
+                enemy.Init(gridPos, enemyInfo.hp);
+                
+                // 创建血条
+                CreateHealthBar(enemy);
+                
+                activeEnemies.Add(enemy);
+            }
+        }
+    }
+
+    /// <summary>
     /// 刷新一个新敌人
     /// </summary>
     public void SpawnNewEnemy()
@@ -225,6 +284,26 @@ public class EnemyManager : MonoBehaviour
             }
         }
         return false;
+    }
+
+    /// <summary>
+    /// 检查是否所有敌人都已死亡
+    /// </summary>
+    public bool AreAllEnemiesDead()
+    {
+        if (activeEnemies.Count == 0)
+        {
+            return true;
+        }
+
+        foreach (var enemy in activeEnemies)
+        {
+            if (enemy != null && !enemy.IsDead)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }
 

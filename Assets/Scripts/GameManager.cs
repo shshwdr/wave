@@ -20,6 +20,20 @@ public class GameManager : Singleton<GameManager>
     /// </summary>
     private void InitializeManagers()
     {
+        CSVLoader.Instance.Init();
+        
+        // 初始化技能管理器
+        if (SkillManager.Instance != null)
+        {
+            SkillManager.Instance.Init();
+        }
+        
+        // 初始化关卡管理器
+        if (LevelManager.Instance != null)
+        {
+            LevelManager.Instance.Init();
+        }
+        
         // 如果引用为空，尝试自动查找
         if (mainGameManager == null)
             mainGameManager = FindObjectOfType<MainGameManager>();
