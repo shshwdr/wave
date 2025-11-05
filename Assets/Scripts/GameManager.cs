@@ -10,7 +10,7 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private BoardManager boardManager;
     [SerializeField] private EnemyManager enemyManager;
 
-    private void Start()
+    private void Awake()
     {
         InitializeManagers();
     }

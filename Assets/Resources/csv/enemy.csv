@@ -1,2 +1,3 @@
 ﻿identifier,name,description,hp,attack,speed,skill
 normal,normal,normal,100,10,1,
+hp,hp,hp,500,20,1,

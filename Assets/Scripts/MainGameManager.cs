@@ -111,7 +111,7 @@ public class MainGameManager : MonoBehaviour
 
             // 添加背景
             Image bg = skillDisplayPanel.AddComponent<Image>();
-            bg.color = new Color(0, 0, 0, 0.7f);
+            bg.color = new Color(0, 0, 0, 1f);
 
             // 添加文本
             GameObject textObj = new GameObject("SkillText");
@@ -141,6 +141,17 @@ public class MainGameManager : MonoBehaviour
     /// </summary>
     public void StartBattle()
     {
+        // 重置游戏状态
+        isProcessing = false;
+        currentState = GameState.PlayerTurn;
+        isDragging = false;
+        waitingForSecondSwap = false;
+        dragStartPos = new Vector2Int(-1, -1);
+        firstSwapTilePos = new Vector2Int(-1, -1);
+        currentHoverTilePos = new Vector2Int(-1, -1);
+        lastHighlightPos = new Vector2Int(-1, -1);
+        ClearHighlights();
+
         // 初始化PlayerManager并恢复交换次数
         if (PlayerManager.Instance != null)
         {
@@ -199,7 +210,11 @@ public class MainGameManager : MonoBehaviour
         }
 
         // 检查关卡完成条件（所有敌人死亡）
-        if (enemyManager != null && enemyManager.AreAllEnemiesDead() && currentState != GameState.LevelComplete)
+        // 只有在玩家回合且不在处理中时才检查，避免重复触发
+        if (currentState == GameState.PlayerTurn && 
+            !isProcessing && 
+            enemyManager != null && 
+            enemyManager.AreAllEnemiesDead())
         {
             CompleteLevel();
             return;

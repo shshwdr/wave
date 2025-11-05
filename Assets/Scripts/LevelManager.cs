@@ -51,19 +51,25 @@ public class LevelManager : Singleton<LevelManager>
             return result;
         }
 
+        
         string[] parts = enemiesString.Split('|');
         
         // 每两个元素为一组：identifier和数量
         for (int i = 0; i < parts.Length - 1; i += 2)
         {
             string identifier = parts[i].Trim();
-            if (int.TryParse(parts[i + 1].Trim(), out int count))
+            string countStr = parts[i + 1].Trim().TrimEnd(',', ' '); // 移除可能的逗号
+            if (int.TryParse(countStr, out int count))
             {
                 result.Add(new EnemySpawnInfo
                 {
                     identifier = identifier,
                     count = count
                 });
+            }
+            else
+            {
+                Debug.LogWarning($"无法解析敌人数量: {countStr}");
             }
         }
 
