@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using DG.Tweening;
 
@@ -8,7 +9,7 @@ using DG.Tweening;
 public class EnemyManager : MonoBehaviour
 {
     [Header("设置")]
-    [SerializeField] private GameObject enemyPrefab;
+    [SerializeField] public GameObject enemyPrefab; // 改为public以便Enemy类访问
     [SerializeField] private int minEnemyCount = 1;
     [SerializeField] private int maxEnemyCount = 3;
 
@@ -188,10 +189,10 @@ public class EnemyManager : MonoBehaviour
 
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
+        
+        // 初始加载的敌人可以在右侧任意位置
         int rightHalfStartX = boardWidth / 2;
         int rightHalfEndX = boardWidth - 1;
-
-        // 随机在右半部分生成
         int x = Random.Range(rightHalfStartX, rightHalfEndX + 1);
         int y = Random.Range(0, boardHeight);
 
@@ -227,7 +228,7 @@ public class EnemyManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 刷新一个新敌人
+    /// 刷新一个新敌人（从最右端右边生成，走到最右侧格子）
     /// </summary>
     public void SpawnNewEnemy()
     {
@@ -237,34 +238,43 @@ public class EnemyManager : MonoBehaviour
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
 
-        // 在最右侧随机位置生成
-        int x = boardWidth - 1;
+        // 在最右侧随机位置
+        int targetX = boardWidth - 1;
         int y = Random.Range(0, boardHeight);
+        Vector2Int targetGridPos = new Vector2Int(targetX, y);
 
-        Vector2Int gridPos = new Vector2Int(x, y);
-        Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
-        // 敌人应该在格子上方或旁边，但spawnOffsetX应该设置为0或很小的值
-        worldPos += new Vector3(0, spawnOffsetY, 0); // 只在Y方向偏移（上方），X方向不偏移
+        // 从最右端右边生成（在棋盘外面）
+        Vector3 spawnWorldPos = boardManager.GridToWorldPosition(new Vector2Int(boardWidth, y));
+        spawnWorldPos += new Vector3(0, spawnOffsetY, 0);
 
-        GameObject enemyObj = Instantiate(enemyPrefab, worldPos, Quaternion.identity, enemyParent);
+        GameObject enemyObj = Instantiate(enemyPrefab, spawnWorldPos, Quaternion.identity, enemyParent);
         Enemy enemy = enemyObj.GetComponent<Enemy>();
         if (enemy == null)
         {
             enemy = enemyObj.AddComponent<Enemy>();
         }
 
-        enemy.Init(gridPos);
+        // 初始化敌人（使用目标位置）
+        enemy.Init(targetGridPos);
         
         // 创建血条
         CreateHealthBar(enemy);
         
         activeEnemies.Add(enemy);
+        
+        // 移动到目标位置
+        Vector3 targetWorldPos = boardManager.GridToWorldPosition(targetGridPos);
+        targetWorldPos += new Vector3(0, spawnOffsetY, 0);
+        
+        float moveDuration = 0.5f;
+        enemyObj.transform.DOMove(targetWorldPos, moveDuration)
+            .SetEase(Ease.OutQuad);
     }
 
     /// <summary>
     /// 为敌人创建血条
     /// </summary>
-    private void CreateHealthBar(Enemy enemy)
+    public void CreateHealthBar(Enemy enemy)
     {
         if (healthBarPrefab == null || healthBarCanvas == null)
         {
@@ -283,13 +293,13 @@ public class EnemyManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 所有敌人向左移动
+    /// 所有敌人行动（每回合调用）
     /// </summary>
-    public void MoveAllEnemiesLeft(float distance = 1f, float duration = 0.5f)
+    public void AllEnemiesTakeAction(float duration = 0.5f)
     {
         List<Enemy> enemiesToRemove = new List<Enemy>();
 
-        foreach (var enemy in activeEnemies)
+        foreach (var enemy in activeEnemies.ToList())
         {
             if (enemy == null || enemy.IsDead)
             {
@@ -297,10 +307,11 @@ public class EnemyManager : MonoBehaviour
                 continue;
             }
 
-            enemy.MoveLeft(distance, duration);
+            // 使用新的TakeAction方法
+            enemy.TakeAction();
         }
 
-        // 等待移动完成后检查边缘
+        // 等待行动完成后检查边缘和死亡
         DOVirtual.DelayedCall(duration + 0.1f, () =>
         {
             foreach (var enemy in activeEnemies)
@@ -324,6 +335,15 @@ public class EnemyManager : MonoBehaviour
                 }
             }
         });
+    }
+    
+    /// <summary>
+    /// 所有敌人向左移动（保留旧方法以兼容）
+    /// </summary>
+    public void MoveAllEnemiesLeft(float distance = 1f, float duration = 0.5f)
+    {
+        // 使用新的行动系统
+        AllEnemiesTakeAction(duration);
     }
 
     /// <summary>

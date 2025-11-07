@@ -36,6 +36,7 @@ public class Wave : MonoBehaviour
     private bool isFirstWave = false; // 是否是第一个wave（用于damageBottom）
     private bool hasDamageBottomSkill = false; // 是否有damageBottom技能（外部传入）
     private float damageMultiplier = 1f; // 伤害倍数（来自buffNextDamage）
+    private HashSet<Vector2Int> clearedTiles = new HashSet<Vector2Int>(); // 已清除fog/dirt的tile
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -81,6 +82,7 @@ public class Wave : MonoBehaviour
         travelDistance = distance;
         targetPosition = spawnPosition + Vector3.right * travelDistance;
         hitEnemies.Clear();
+        clearedTiles.Clear(); // 重置已清除的tile列表
         waveColor = color;
         penetrateCount = 0;
         spawnGridPos = gridPos;
@@ -124,13 +126,70 @@ public class Wave : MonoBehaviour
         {
             CheckDamageBottomTrigger();
         }
+        
+        // 开始检测位置变化，清除经过的tile的fog和dirt
+        if (boardManager != null)
+        {
+            InvokeRepeating(nameof(CheckAndClearFogDirt), 0.05f, 0.05f);
+        }
 
         transform.DOMove(targetPosition, waveDuration)
             .SetEase(Ease.Linear)
             .OnComplete(() =>
             {
+                CancelInvoke(nameof(CheckAndClearFogDirt));
                 DestroyWave();
             });
+    }
+    
+    /// <summary>
+    /// 检测并清除经过的tile的fog和dirt（只清除wave实际重叠的tile）
+    /// </summary>
+    private void CheckAndClearFogDirt()
+    {
+        if (boardManager == null)
+            return;
+            
+        // 获取当前wave所在的网格位置
+        Vector2Int currentGridPos = boardManager.WorldToGridPosition(transform.position);
+        
+        // 检查位置是否有效
+        if (!boardManager.IsValidPosition(currentGridPos))
+            return;
+        
+        // 如果这个tile已经清除过，跳过
+        if (clearedTiles.Contains(currentGridPos))
+            return;
+        
+        // 获取当前tile
+        TileCell tile = boardManager.GetTile(currentGridPos);
+        if (tile != null)
+        {
+            // 检查wave是否真的与tile重叠（使用bounds检测）
+            Vector3 tileWorldPos = boardManager.GridToWorldPosition(currentGridPos);
+            float tileSize = 1f; // 假设tile大小为1
+            
+            // 计算wave和tile的距离
+            float distanceX = Mathf.Abs(transform.position.x - tileWorldPos.x);
+            float distanceY = Mathf.Abs(transform.position.y - tileWorldPos.y);
+            
+            // 如果wave在tile的范围内（考虑tile大小和wave大小）
+            if (distanceX <= tileSize * 0.5f && distanceY <= tileSize * 0.5f)
+            {
+                // 清除fog和dirt
+                if (tile.HasFog)
+                {
+                    tile.SetFog(false);
+                }
+                if (tile.IsDirty)
+                {
+                    tile.SetDirty(false);
+                }
+                
+                // 记录已清除的tile
+                clearedTiles.Add(currentGridPos);
+            }
+        }
     }
 
     /// <summary>

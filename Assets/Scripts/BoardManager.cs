@@ -207,6 +207,13 @@ public class BoardManager : MonoBehaviour
         {
             return;
         }
+        
+        // 检查是否有dirty的tile，dirty的tile不能参与交换
+        if (tile1.IsDirty || tile2.IsDirty)
+        {
+            Debug.LogWarning("Cannot swap dirty tiles!");
+            return;
+        }
 
         // 交换数据
         board[pos1.x, pos1.y] = tile2;
@@ -232,6 +239,12 @@ public class BoardManager : MonoBehaviour
         TileCell startTile = GetTile(startPos);
         
         if (startTile == null)
+        {
+            return connected;
+        }
+        
+        // 如果起始tile是dirty，不能参与wave生成
+        if (startTile.IsDirty)
         {
             return connected;
         }
@@ -264,7 +277,8 @@ public class BoardManager : MonoBehaviour
                     continue;
 
                 TileCell tile = GetTile(next);
-                if (tile != null && tile.Color == targetColor)
+                // dirty的tile不能参与wave生成
+                if (tile != null && tile.Color == targetColor && !tile.IsDirty)
                 {
                     visited.Add(next);
                     queue.Enqueue(next);

@@ -30,6 +30,12 @@ public class Enemy : MonoBehaviour
     private Tween jumpTween; // 当前的跳跃动画
     private EnemyInfo enemyInfo; // 敌人信息
     private BoardManager boardManager; // 棋盘管理器引用
+    
+    // 技能系统
+    private string currentSkill = ""; // 当前技能名称
+    private int skillValue = 0; // 技能值
+    private int skillCooldown = 0; // 技能冷却时间（0表示被动技能，>0表示主动技能）
+    private int currentCooldown = 0; // 当前冷却时间
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
@@ -83,6 +89,25 @@ public class Enemy : MonoBehaviour
         isDead = false;
         enemyInfo = info;
         
+        // 初始化技能系统
+        if (enemyInfo != null)
+        {
+            if (enemyInfo.skill != null && enemyInfo.skill.Count > 0 && !string.IsNullOrEmpty(enemyInfo.skill[0]))
+            {
+                currentSkill = enemyInfo.skill[0];
+                skillValue = enemyInfo.skillValue;
+                // 解析技能冷却时间（如果技能名称包含"|cooldown"格式）
+                skillCooldown = enemyInfo.skillCD;
+            }
+            else
+            {
+                currentSkill = "";
+                skillValue = 0;
+                skillCooldown = 0;
+            }
+            currentCooldown = skillCooldown; // 初始冷却时间等于技能冷却时间
+        }
+        
         if (spriteRenderer != null)
         {
             spriteRenderer.enabled = true;
@@ -101,6 +126,44 @@ public class Enemy : MonoBehaviour
         {
             healthBar.Init(this, maxHealth);
             healthBar.UpdateHealthBar(currentHealth, maxHealth);
+        }
+    }
+    
+    /// <summary>
+    /// 解析技能冷却时间（从技能名称中解析，格式：skillName|cooldown 或 summon|identifier）
+    /// </summary>
+    private void ParseSkillCooldown()
+    {
+        skillCooldown = 0; // 默认为0（被动技能）
+        
+        if (string.IsNullOrEmpty(currentSkill))
+            return;
+            
+        // 检查是否有"|"分隔符
+        string[] parts = currentSkill.Split('|');
+        if (parts.Length >= 2)
+        {
+            // 第一部分是技能名称
+            string skillName = parts[0];
+            
+            // 对于summon技能，格式是summon|identifier，不需要解析冷却时间
+            if (skillName == "summon")
+            {
+                // 保持currentSkill为完整格式，以便UseSummonSkill使用
+                // currentSkill保持不变
+                skillCooldown = 0; // summon技能默认无冷却（或根据需求设置）
+            }
+            else
+            {
+                // 其他技能，第二部分可能是冷却时间
+                currentSkill = skillName; // 只保留技能名称
+                
+                // 尝试解析为冷却时间（数字）
+                if (int.TryParse(parts[1], out int cooldown))
+                {
+                    skillCooldown = cooldown;
+                }
+            }
         }
     }
 
@@ -303,18 +366,506 @@ public class Enemy : MonoBehaviour
     }
 
     /// <summary>
-    /// 向左移动
+    /// 向左移动（基于speed快速跳跃多次）
     /// </summary>
-    public void MoveLeft(float distance, float duration)
+    public void MoveLeft(float duration = 0.5f)
+    {
+        if (isDead || enemyInfo == null)
+            return;
+
+        int speed = enemyInfo.speed;
+        if (speed <= 0)
+            speed = 1; // 默认移动1格
+
+        // 获取EnemyManager和BoardManager
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (boardManager == null)
+        {
+            boardManager = FindObjectOfType<BoardManager>();
+        }
+        
+        if (boardManager == null)
+            return;
+
+        // 计算实际可以移动的步数（检查碰撞）
+        int actualSteps = 0;
+        for (int step = 1; step <= speed; step++)
+        {
+            int checkX = gridPosition.x - step;
+            if (checkX < 0)
+                break; // 超出左边界
+                
+            // 检查该位置是否有其他敌人
+            bool hasEnemy = false;
+            if (enemyManager != null)
+            {
+                foreach (var enemy in enemyManager.ActiveEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead && enemy != this && 
+                        enemy.GridPosition.x == checkX && enemy.GridPosition.y == gridPosition.y)
+                    {
+                        hasEnemy = true;
+                        break;
+                    }
+                }
+            }
+            if (hasEnemy)
+                break;
+                
+            actualSteps = step;
+        }
+        
+        if (actualSteps == 0)
+            return; // 无法移动
+
+        // 每次跳跃的持续时间（快速跳跃）
+        float singleJumpDuration = duration / actualSteps;
+        float jumpHeight = 0.3f;
+        float jumpUpDuration = singleJumpDuration * 0.4f;
+        float jumpDownDuration = singleJumpDuration * 0.6f;
+        
+        Sequence moveSequence = DOTween.Sequence();
+        
+        // 进行多次快速跳跃
+        for (int i = 0; i < actualSteps; i++)
+        {
+            int newX = gridPosition.x - (i + 1);
+            Vector2Int newGridPos = new Vector2Int(newX, gridPosition.y);
+            
+            // 计算世界坐标
+            Vector3 targetWorldPos = boardManager.GridToWorldPosition(newGridPos);
+            if (enemyManager != null)
+            {
+                targetWorldPos += new Vector3(0, enemyManager.SpawnOffsetY, 0);
+            }
+            else
+            {
+                targetWorldPos += new Vector3(0, 0.5f, 0);
+            }
+            
+            // 向上跳起
+            moveSequence.Append(transform.DOMoveY(targetWorldPos.y + jumpHeight, jumpUpDuration)
+                .SetEase(Ease.OutQuad));
+            // 同时向左移动
+            moveSequence.Join(transform.DOMoveX(targetWorldPos.x, singleJumpDuration)
+                .SetEase(Ease.Linear));
+            // 向下落回
+            moveSequence.Append(transform.DOMoveY(targetWorldPos.y, jumpDownDuration)
+                .SetEase(Ease.InQuad));
+        }
+        
+        // 更新网格位置
+        gridPosition.x -= actualSteps;
+    }
+    
+    /// <summary>
+    /// 检查是否在攻击范围内
+    /// </summary>
+    public bool IsInAttackRange()
+    {
+        if (enemyInfo == null)
+            return false;
+            
+        int range = enemyInfo.range;
+        // 离底线的距离（x坐标）<= range时，在攻击范围内
+        return gridPosition.x <= range;
+    }
+    
+    /// <summary>
+    /// 攻击玩家
+    /// </summary>
+    public void AttackPlayer()
+    {
+        if (isDead || enemyInfo == null || PlayerManager.Instance == null)
+            return;
+            
+        int damage = enemyInfo.attack;
+        if (damage <= 0)
+            damage = 10; // 默认伤害
+            
+        int range = enemyInfo.range;
+        
+        // 原地doShake动画
+        DoShake();
+        
+        // 如果range > 1，生成投射物
+        if (range > 1)
+        {
+            CreateProjectile(damage);
+        }
+        else
+        {
+            // 近战攻击，直接造成伤害
+            PlayerManager.Instance.TakeDamage(damage);
+            // 显示伤害数字
+            DamageNumber.CreateDamageNumber(damage, transform.position + Vector3.left * 0.5f, false);
+        }
+    }
+    
+    /// <summary>
+    /// 执行震动动画
+    /// </summary>
+    private void DoShake()
+    {
+        if (spriteRenderer == null)
+            return;
+            
+        float shakeDuration = 0.2f;
+        float shakeStrength = 0.1f;
+        
+        // 使用DOTween的Shake功能
+        transform.DOShakePosition(shakeDuration, shakeStrength, 10, 90, false, true)
+            .SetEase(Ease.OutQuad);
+    }
+    
+    /// <summary>
+    /// 创建投射物
+    /// </summary>
+    private void CreateProjectile(int damage)
+    {
+        if (boardManager == null)
+        {
+            boardManager = FindObjectOfType<BoardManager>();
+        }
+        
+        if (boardManager == null)
+            return;
+            
+        // 创建投射物GameObject
+        var projectPrefab = Resources.Load<GameObject>("Projectile/" + enemyInfo.identifier);;
+        GameObject projectileObj = Instantiate(projectPrefab);
+        projectileObj.transform.position = transform.position;
+        
+        
+        // 计算目标位置（最左边）
+        Vector3 startPos = transform.position;
+        Vector3 targetPos = boardManager.GridToWorldPosition(new Vector2Int(0, gridPosition.y));
+        if (EnemyManager.FindObjectOfType<EnemyManager>() != null)
+        {
+            EnemyManager em = FindObjectOfType<EnemyManager>();
+            targetPos += new Vector3(0, em.SpawnOffsetY, 0);
+        }
+        else
+        {
+            targetPos += new Vector3(0, 0.5f, 0);
+        }
+        
+        float travelDistance = Vector3.Distance(startPos, targetPos);
+        float projectileSpeed = 10f; // 投射物速度
+        float travelTime = travelDistance / projectileSpeed;
+        
+        // 移动投射物
+        projectileObj.transform.DOMove(targetPos, travelTime)
+            .SetEase(Ease.Linear)
+            .OnComplete(() =>
+            {
+                // 到达目标后造成伤害
+                if (PlayerManager.Instance != null)
+                {
+                    PlayerManager.Instance.TakeDamage(damage);
+                    // 显示伤害数字
+                    DamageNumber.CreateDamageNumber(damage, targetPos, false);
+                }
+                
+                // 销毁投射物
+                Destroy(projectileObj);
+            });
+    }
+    
+    /// <summary>
+    /// 敌人行动（每回合调用）
+    /// </summary>
+    public void TakeAction()
     {
         if (isDead)
             return;
-
-        Vector3 targetPos = transform.position + Vector3.left * distance;
-        gridPosition.x -= 1; // 向左移动一格
-
-        transform.DOMove(targetPos, duration)
-            .SetEase(Ease.Linear);
+            
+        // 1. 检查主动技能（冷却时间>0）
+        if (skillCooldown > 0)
+        {
+            currentCooldown--;
+            if (currentCooldown <= 0)
+            {
+                // 使用主动技能
+                UseSkill();
+                currentCooldown = skillCooldown; // 重置冷却
+                return;
+            }
+        }
+        
+        // 2. 检查是否在攻击范围内
+        if (IsInAttackRange())
+        {
+            AttackPlayer();
+        }
+        else
+        {
+            // 3. 否则向左移动
+            MoveLeft();
+        }
+    }
+    
+    /// <summary>
+    /// 使用技能
+    /// </summary>
+    private void UseSkill()
+    {
+        if (string.IsNullOrEmpty(currentSkill))
+            return;
+            
+        // 对于summon技能，currentSkill可能是"summon|identifier"格式
+        if (currentSkill.StartsWith("summon"))
+        {
+            UseSummonSkill();
+        }
+        else if (currentSkill == "heal")
+        {
+            UseHealSkill();
+        }
+        else if (currentSkill == "createFog")
+        {
+            UseCreateFogSkill();
+        }
+        else if (currentSkill == "dirtyWater")
+        {
+            UseDirtyWaterSkill();
+        }
+    }
+    
+    /// <summary>
+    /// 使用heal技能：随机恢复血量最少的敌人skillValue点血量
+    /// </summary>
+    private void UseHealSkill()
+    {
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (enemyManager == null)
+            return;
+            
+        // 找到血量最少的敌人
+        Enemy targetEnemy = null;
+        int minHealth = int.MaxValue;
+        
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead && enemy.CurrentHealth < minHealth)
+            {
+                minHealth = enemy.CurrentHealth;
+                targetEnemy = enemy;
+            }
+        }
+        
+        // 如果有多个敌人血量相同，随机选择一个
+        if (targetEnemy != null)
+        {
+            List<Enemy> candidates = new List<Enemy>();
+            foreach (var enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy != null && !enemy.IsDead && enemy.CurrentHealth == minHealth)
+                {
+                    candidates.Add(enemy);
+                }
+            }
+            
+            if (candidates.Count > 0)
+            {
+                targetEnemy = candidates[Random.Range(0, candidates.Count)];
+                targetEnemy.Heal(skillValue);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 恢复血量
+    /// </summary>
+    public void Heal(int amount)
+    {
+        if (isDead)
+            return;
+            
+        currentHealth += amount;
+        currentHealth = Mathf.Min(currentHealth, maxHealth);
+        
+        // 更新血条
+        if (healthBar != null)
+        {
+            healthBar.UpdateHealthBar(currentHealth, maxHealth);
+        }
+        
+        // 显示治疗数字
+        DamageNumber.CreateDamageNumber(amount, transform.position + Vector3.up * 0.5f, true);
+    }
+    
+    /// <summary>
+    /// 使用createFog技能：每回合随机在skillValue个tile上生成fog
+    /// </summary>
+    private void UseCreateFogSkill()
+    {
+        BoardManager board = FindObjectOfType<BoardManager>();
+        if (board == null)
+            return;
+            
+        // 获取所有有效的tile位置
+        List<Vector2Int> availableTiles = new List<Vector2Int>();
+        for (int x = 0; x < board.Width; x++)
+        {
+            for (int y = 0; y < board.Height; y++)
+            {
+                TileCell tile = board.GetTile(new Vector2Int(x, y));
+                if (tile != null && !tile.HasFog)
+                {
+                    availableTiles.Add(new Vector2Int(x, y));
+                }
+            }
+        }
+        
+        // 随机选择skillValue个tile生成fog
+        int count = Mathf.Min(skillValue, availableTiles.Count);
+        for (int i = 0; i < count; i++)
+        {
+            if (availableTiles.Count == 0)
+                break;
+                
+            int index = Random.Range(0, availableTiles.Count);
+            Vector2Int pos = availableTiles[index];
+            availableTiles.RemoveAt(index);
+            
+            TileCell tile = board.GetTile(pos);
+            if (tile != null)
+            {
+                tile.SetFog(true);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 使用dirtyWater技能：每回合随机在skillValue个tile上生成dirt
+    /// </summary>
+    private void UseDirtyWaterSkill()
+    {
+        BoardManager board = FindObjectOfType<BoardManager>();
+        if (board == null)
+            return;
+            
+        // 获取所有有效的tile位置（不包括已经有dirt的）
+        List<Vector2Int> availableTiles = new List<Vector2Int>();
+        for (int x = 0; x < board.Width; x++)
+        {
+            for (int y = 0; y < board.Height; y++)
+            {
+                TileCell tile = board.GetTile(new Vector2Int(x, y));
+                if (tile != null && !tile.IsDirty)
+                {
+                    availableTiles.Add(new Vector2Int(x, y));
+                }
+            }
+        }
+        
+        // 随机选择skillValue个tile生成dirt
+        int count = Mathf.Min(skillValue, availableTiles.Count);
+        for (int i = 0; i < count; i++)
+        {
+            if (availableTiles.Count == 0)
+                break;
+                
+            int index = Random.Range(0, availableTiles.Count);
+            Vector2Int pos = availableTiles[index];
+            availableTiles.RemoveAt(index);
+            
+            TileCell tile = board.GetTile(pos);
+            if (tile != null)
+            {
+                tile.SetDirty(true);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 使用summon技能：在离自己最近的格子召唤skillValue个identifier的enemy
+    /// </summary>
+    private void UseSummonSkill()
+    {
+        if (enemyInfo == null || enemyInfo.skill == null || enemyInfo.skill.Count == 0)
+            return;
+            
+        if (enemyInfo.skill.Count < 2)
+            return;
+            
+        string summonIdentifier = enemyInfo.skill[1];
+        
+        // 检查identifier是否存在
+        if (!CSVLoader.Instance.enemyInfoMap.ContainsKey(summonIdentifier))
+        {
+            Debug.LogWarning($"Summon enemy identifier not found: {summonIdentifier}");
+            return;
+        }
+        
+        EnemyInfo summonInfo = CSVLoader.Instance.enemyInfoMap[summonIdentifier];
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        BoardManager board = FindObjectOfType<BoardManager>();
+        
+        if (enemyManager == null || board == null)
+            return;
+            
+        // 找到离自己最近的可用格子（右侧）
+        List<Vector2Int> candidatePositions = new List<Vector2Int>();
+        for (int x = gridPosition.x + 1; x < board.Width; x++)
+        {
+            for (int y = 0; y < board.Height; y++)
+            {
+                Vector2Int pos = new Vector2Int(x, y);
+                // 检查该位置是否有敌人
+                bool hasEnemy = false;
+                foreach (var enemy in enemyManager.ActiveEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead && enemy.GridPosition == pos)
+                    {
+                        hasEnemy = true;
+                        break;
+                    }
+                }
+                if (!hasEnemy)
+                {
+                    candidatePositions.Add(pos);
+                }
+            }
+        }
+        
+        // 按距离排序（最近的优先）
+        candidatePositions.Sort((a, b) => 
+        {
+            int distA = Mathf.Abs(a.x - gridPosition.x) + Mathf.Abs(a.y - gridPosition.y);
+            int distB = Mathf.Abs(b.x - gridPosition.x) + Mathf.Abs(b.y - gridPosition.y);
+            return distA.CompareTo(distB);
+        });
+        
+        // 召唤skillValue个敌人
+        int count = Mathf.Min(skillValue, candidatePositions.Count);
+        for (int i = 0; i < count; i++)
+        {
+            Vector2Int spawnPos = candidatePositions[i];
+            Vector3 worldPos = board.GridToWorldPosition(spawnPos);
+            worldPos += new Vector3(0, enemyManager.SpawnOffsetY, 0);
+            
+            // 获取EnemyManager的enemyParent（用于组织敌人对象）
+            Transform enemyParent = enemyManager.transform.Find("Enemies");
+            if (enemyParent == null)
+            {
+                enemyParent = enemyManager.transform;
+            }
+            
+            GameObject enemyObj = Instantiate(enemyManager.enemyPrefab, worldPos, Quaternion.identity, enemyParent);
+            Enemy newEnemy = enemyObj.GetComponent<Enemy>();
+            if (newEnemy == null)
+            {
+                newEnemy = enemyObj.AddComponent<Enemy>();
+            }
+            
+            newEnemy.Init(spawnPos, summonInfo.hp, summonInfo);
+            enemyManager.ActiveEnemies.Add(newEnemy);
+            
+            // 创建血条
+            enemyManager.CreateHealthBar(newEnemy);
+        }
     }
 
     /// <summary>

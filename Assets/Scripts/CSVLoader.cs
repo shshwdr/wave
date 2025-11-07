@@ -26,7 +26,10 @@ public class EnemyInfo
     public int hp;
     public int attack;
     public int speed;
+    public int range;
     public List<string> skill;
+    public int skillValue;
+    public int skillCD;
     public Sprite icon=> Resources.Load<Sprite>("enemy/"+identifier);
 
 }
