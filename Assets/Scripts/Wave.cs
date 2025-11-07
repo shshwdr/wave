@@ -37,6 +37,11 @@ public class Wave : MonoBehaviour
     private bool hasDamageBottomSkill = false; // 是否有damageBottom技能（外部传入）
     private float damageMultiplier = 1f; // 伤害倍数（来自buffNextDamage）
     private HashSet<Vector2Int> clearedTiles = new HashSet<Vector2Int>(); // 已清除fog/dirt的tile
+    private int hitEnemyCount = 0; // 已击中的敌人数量（用于damageIncreaseWhenHitMore）
+    private bool hasDamageIncreaseWhenHitMore = false; // 是否有damageIncreaseWhenHitMore技能
+    private int damageIncreaseWhenHitMoreValue = 0; // damageIncreaseWhenHitMore的值
+    private bool hasAoeAttack = false; // 是否有aoeAttack技能
+    private int aoeAttackValue = 0; // aoeAttack的值
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -91,6 +96,7 @@ public class Wave : MonoBehaviour
         isFirstWave = firstWave;
         hasDamageBottomSkill = hasDamageBottomSkillFlag;
         damageMultiplier = damageMult;
+        hitEnemyCount = 0; // 重置击中敌人计数
 
         transform.position = spawnPosition;
         gameObject.SetActive(true);
@@ -277,6 +283,18 @@ public class Wave : MonoBehaviour
                     // 最右列爆炸（由外部传入标志控制）
                     hasDamageBottom = hasDamageBottomSkill;
                     break;
+                    
+                case "damageIncreaseWhenHitMore":
+                    // 每击中一个敌人，下一个敌人伤害增加
+                    hasDamageIncreaseWhenHitMore = true;
+                    damageIncreaseWhenHitMoreValue = value;
+                    break;
+                    
+                case "aoeAttack":
+                    // 对相邻敌人造成伤害
+                    hasAoeAttack = true;
+                    aoeAttackValue = value;
+                    break;
             }
         }
     }
@@ -301,7 +319,7 @@ public class Wave : MonoBehaviour
     /// </summary>
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        Debug.Log($"Wave OnTriggerEnter2D: {collision.name}");
+        //Debug.Log($"Wave OnTriggerEnter2D: {collision.name}");
         Enemy enemy = collision.GetComponent<Enemy>();
         if (enemy == null)
         {
@@ -319,10 +337,23 @@ public class Wave : MonoBehaviour
                 if (!alreadyHit)
                 {
                     hitEnemies.Add(enemy);
+                    hitEnemyCount++; // 增加击中敌人计数
                 }
                 
                 Vector3 direction = (enemy.transform.position - transform.position).normalized;
                 float finalDamage = damage;
+                
+                // 应用damageIncreaseWhenHitMore技能（在应用其他技能之前）
+                if (hasDamageIncreaseWhenHitMore && hitEnemyCount > 1)
+                {
+                    // 每击中一个敌人，下一个敌人伤害增加value%
+                    // 第1个敌人：基础伤害
+                    // 第2个敌人：基础伤害 * (1 + value%)
+                    // 第3个敌人：基础伤害 * (1 + 2 * value%)
+                    // ...
+                    float increaseMultiplier = 1f + (hitEnemyCount - 1) * (damageIncreaseWhenHitMoreValue / 100f);
+                    finalDamage = finalDamage * increaseMultiplier;
+                }
                 
                 // 应用击中时的技能效果
                 ApplyHitSkillEffects(enemy, ref finalDamage, direction);
@@ -361,6 +392,15 @@ public class Wave : MonoBehaviour
                 
                 enemy.TakeDamage((int)finalDamage, direction, shouldKnockback, knockbackTiles, redWaveBaseDamage);
                 
+                // 记录伤害到wave group（用于spawnAlly技能）
+                MainGameManager.RecordWaveDamage(waveGroupId, finalDamage);
+                
+                // 应用aoeAttack技能 - 对四向相邻的敌人造成伤害
+                if (hasAoeAttack)
+                {
+                    ApplyAoeAttack(enemy, finalDamage);
+                }
+                
                 // 击中回血
                 if (hasHealWhenHit && PlayerManager.Instance != null)
                 {
@@ -395,12 +435,64 @@ public class Wave : MonoBehaviour
         string colorStr = GetColorString(waveColor);
         List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
 
-        foreach (var skill in skills)
-        {
-            int value = SkillManager.Instance.GetSkillValue(skill.identifier);
+        // 击中时的技能效果在这里处理（目前没有需要在这里处理的技能）
+        // 其他技能效果在ApplySkillEffects中处理
+    }
+
+    /// <summary>
+    /// 应用AOE攻击 - 对四向相邻的敌人造成伤害
+    /// </summary>
+    private void ApplyAoeAttack(Enemy targetEnemy, float baseDamage)
+    {
+        if (boardManager == null || EnemyManager.FindObjectOfType<EnemyManager>() == null)
+            return;
             
-            switch (skill.effect)
+        EnemyManager enemyManager = EnemyManager.FindObjectOfType<EnemyManager>();
+        Vector2Int targetGridPos = targetEnemy.GridPosition;
+        
+        // 四向相邻位置
+        Vector2Int[] adjacentPositions = new Vector2Int[]
+        {
+            new Vector2Int(targetGridPos.x, targetGridPos.y + 1), // 上
+            new Vector2Int(targetGridPos.x, targetGridPos.y - 1), // 下
+            new Vector2Int(targetGridPos.x - 1, targetGridPos.y), // 左
+            new Vector2Int(targetGridPos.x + 1, targetGridPos.y)  // 右
+        };
+        
+        // 对每个相邻位置的敌人造成伤害
+        foreach (var pos in adjacentPositions)
+        {
+            foreach (var enemy in enemyManager.ActiveEnemies)
             {
+                if (enemy != null && !enemy.IsDead && enemy != targetEnemy && enemy.GridPosition == pos)
+                {
+                    float aoeDamage = baseDamage * (aoeAttackValue / 100f);
+                    // 获取红色wave的基础伤害（用于hitTakeDamage）
+                    float redWaveBaseDamage = 20f;
+                    if (waveColor == TileColor.Red)
+                    {
+                        redWaveBaseDamage = baseDamage;
+                    }
+                    else
+                    {
+                        if (SkillManager.Instance != null)
+                        {
+                            List<SkillInfo> redSkills = SkillManager.Instance.GetOwnedSkillsByColor("red");
+                            float redDamage = 20f;
+                            foreach (var skill in redSkills)
+                            {
+                                int value = SkillManager.Instance.GetSkillValue(skill.identifier);
+                                if (skill.effect == "damageIncrease")
+                                {
+                                    redDamage = redDamage * (1f + value / 100f);
+                                }
+                            }
+                            redWaveBaseDamage = redDamage;
+                        }
+                    }
+                    enemy.TakeDamage((int)aoeDamage, Vector3.right, false, 0, redWaveBaseDamage);
+                    break; // 每个位置只攻击一个敌人
+                }
             }
         }
     }
@@ -411,6 +503,9 @@ public class Wave : MonoBehaviour
     private void DestroyWave()
     {
         transform.DOKill();
+        
+        // 通知MainGameManager这个wave已完成（用于spawnAlly技能）
+        MainGameManager.OnWaveDestroyed(waveGroupId);
         
         // 可以添加消失动画
         transform.DOScale(Vector3.zero, 0.2f)

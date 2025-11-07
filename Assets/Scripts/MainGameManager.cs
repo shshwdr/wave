@@ -15,6 +15,7 @@ public class MainGameManager : MonoBehaviour
     [SerializeField] private BoardManager boardManager;
     [SerializeField] private EnemyManager enemyManager;
     [SerializeField] private Camera mainCamera;
+    private AllyManager allyManager;
 
     [Header("波浪设置")]
     [SerializeField] private GameObject wavePrefab;
@@ -67,6 +68,11 @@ public class MainGameManager : MonoBehaviour
     // buffNextDamage技能管理（下一个wave的伤害加成）
     private static float nextWaveDamageMultiplier = 1f;
 
+    // spawnAlly技能管理 - 跟踪每个wave group的总伤害
+    private static Dictionary<int, float> waveGroupTotalDamage = new Dictionary<int, float>();
+    private static Dictionary<int, int> waveGroupActiveWaveCount = new Dictionary<int, int>();
+    private static Dictionary<int, TileColor> waveGroupColor = new Dictionary<int, TileColor>();
+
     private void Start()
     {
         if (mainCamera == null)
@@ -79,6 +85,14 @@ public class MainGameManager : MonoBehaviour
 
         if (enemyManager != null)
             enemyManager.Init(boardManager);
+            
+        // 初始化AllyManager
+        allyManager = FindObjectOfType<AllyManager>();
+        if (allyManager == null)
+        {
+            GameObject allyManagerObj = new GameObject("AllyManager");
+            allyManager = allyManagerObj.AddComponent<AllyManager>();
+        }
 
         if (waveParent == null)
         {
@@ -681,6 +695,14 @@ public class MainGameManager : MonoBehaviour
         // 重置damageBottom触发标志（新的wave group）
         currentWaveGroupId++;
         damageBottomTriggeredThisWave = false;
+        
+        // 初始化新的wave group的伤害跟踪
+        if (!waveGroupTotalDamage.ContainsKey(currentWaveGroupId))
+        {
+            waveGroupTotalDamage[currentWaveGroupId] = 0f;
+            waveGroupActiveWaveCount[currentWaveGroupId] = 0;
+            waveGroupColor[currentWaveGroupId] = waveColor;
+        }
 
         // 检查是否有buffNextDamage技能（用于下一个wave group）
         // 注意：这个检查的是当前wave group的技能，buff会应用到下一个wave group
@@ -706,6 +728,9 @@ public class MainGameManager : MonoBehaviour
 
         // 消除所有连通的格子并创建波浪
         float waveDuration = 2f; // 波浪移动持续时间
+        
+        // 更新wave group的活跃wave数量
+        waveGroupActiveWaveCount[currentWaveGroupId] = connectedTiles.Count;
         
         int waveIndex = 0;
         foreach (var pos in connectedTiles)
@@ -876,6 +901,185 @@ public class MainGameManager : MonoBehaviour
             case TileColor.Green: return "green";
             default: return "";
         }
+    }
+
+    /// <summary>
+    /// 记录wave造成的伤害（用于spawnAlly技能）
+    /// </summary>
+    public static void RecordWaveDamage(int waveGroupId, float damage)
+    {
+        if (waveGroupTotalDamage.ContainsKey(waveGroupId))
+        {
+            waveGroupTotalDamage[waveGroupId] += damage;
+        }
+    }
+
+    /// <summary>
+    /// 当wave销毁时调用（用于spawnAlly技能）
+    /// </summary>
+    public static void OnWaveDestroyed(int waveGroupId)
+    {
+        if (!waveGroupActiveWaveCount.ContainsKey(waveGroupId))
+            return;
+            
+        waveGroupActiveWaveCount[waveGroupId]--;
+        
+        // 如果这个wave group的所有wave都完成了，检查spawnAlly技能
+        if (waveGroupActiveWaveCount[waveGroupId] <= 0)
+        {
+            MainGameManager instance = FindObjectOfType<MainGameManager>();
+            if (instance != null)
+            {
+                instance.CheckSpawnAlly(waveGroupId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 检查并生成随从（spawnAlly技能）
+    /// </summary>
+    private void CheckSpawnAlly(int waveGroupId)
+    {
+        if (!waveGroupTotalDamage.ContainsKey(waveGroupId) || !waveGroupColor.ContainsKey(waveGroupId))
+            return;
+            
+        float totalDamage = waveGroupTotalDamage[waveGroupId];
+        TileColor waveColor = waveGroupColor[waveGroupId];
+        
+        // 检查是否有spawnAlly技能
+        if (SkillManager.Instance == null)
+            return;
+            
+        string colorStr = GetColorString(waveColor);
+        List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
+        
+        foreach (var skill in skills)
+        {
+            if (skill.effect == "spawnAlly")
+            {
+                int value = SkillManager.Instance.GetSkillValue(skill.identifier);
+                
+                // 计算随从血量：总伤害 * value%
+                int allyHealth = (int)(totalDamage * (value / 100f));
+                
+                // 生成随从
+                SpawnAlly(allyHealth);
+                break;
+            }
+        }
+        
+        // 清理已完成的wave group数据
+        waveGroupTotalDamage.Remove(waveGroupId);
+        waveGroupActiveWaveCount.Remove(waveGroupId);
+        waveGroupColor.Remove(waveGroupId);
+    }
+
+    /// <summary>
+    /// 生成随从
+    /// </summary>
+    private void SpawnAlly(int health)
+    {
+        if (boardManager == null)
+            return;
+            
+        // 在最左侧任意行生成随从
+        int boardHeight = boardManager.Height;
+        int spawnY = Random.Range(0, boardHeight);
+        Vector2Int spawnGridPos = new Vector2Int(0, spawnY);
+        
+        // 检查该位置是否已有敌人或随从
+        bool hasObstacle = false;
+        if (enemyManager != null)
+        {
+            foreach (var enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy != null && !enemy.IsDead && enemy.GridPosition == spawnGridPos)
+                {
+                    hasObstacle = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!hasObstacle && allyManager != null)
+        {
+            hasObstacle = allyManager.HasAllyAtPosition(spawnGridPos);
+        }
+        
+        // 如果该位置有障碍物，尝试其他位置
+        if (hasObstacle)
+        {
+            List<int> availableRows = new List<int>();
+            for (int y = 0; y < boardHeight; y++)
+            {
+                bool rowHasObstacle = false;
+                Vector2Int checkPos = new Vector2Int(0, y);
+                
+                // 检查敌人
+                if (enemyManager != null)
+                {
+                    foreach (var enemy in enemyManager.ActiveEnemies)
+                    {
+                        if (enemy != null && !enemy.IsDead && enemy.GridPosition == checkPos)
+                        {
+                            rowHasObstacle = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // 检查随从
+                if (!rowHasObstacle && allyManager != null)
+                {
+                    rowHasObstacle = allyManager.HasAllyAtPosition(checkPos);
+                }
+                
+                if (!rowHasObstacle)
+                {
+                    availableRows.Add(y);
+                }
+            }
+            
+            if (availableRows.Count > 0)
+            {
+                spawnY = availableRows[Random.Range(0, availableRows.Count)];
+                spawnGridPos = new Vector2Int(0, spawnY);
+            }
+            else
+            {
+                // 如果所有行都有障碍物，不生成随从
+                return;
+            }
+        }
+        
+        // 创建随从对象
+        GameObject allyObj = new GameObject("Ally");
+        Ally ally = allyObj.AddComponent<Ally>();
+        
+        // 设置位置
+        Vector3 worldPos = boardManager.GridToWorldPosition(spawnGridPos);
+        if (enemyManager != null)
+        {
+            worldPos += new Vector3(0, enemyManager.SpawnOffsetY, 0);
+        }
+        allyObj.transform.position = worldPos;
+        
+        // 初始化随从
+        ally.Init(spawnGridPos, health);
+        
+        // 添加到AllyManager
+        if (allyManager != null)
+        {
+            allyManager.AddAlly(ally);
+        }
+        
+        // 创建血条
+        if (enemyManager != null)
+        {
+            enemyManager.CreateHealthBarForAlly(ally);
+        }
+        
+        Debug.Log($"生成随从，血量: {health}");
     }
 
     /// <summary>

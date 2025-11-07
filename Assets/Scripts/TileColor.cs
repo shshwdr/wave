@@ -24,10 +24,10 @@ public static class TileColorUtil
     }
     private static readonly Color[] Colors = new Color[]
     {
-        HexToColor("#FFC8E2"),
+        HexToColor("#FFC8E2"),//red
         HexToColor("#7CACF6"),
         HexToColor("#B5E6F5"),
-        HexToColor("#BEBFF5")
+        HexToColor("#BEBFF5")//purple
         // Color.red,      // Red
         // Color.yellow,   // Yellow
         // Color.blue,      // Blue

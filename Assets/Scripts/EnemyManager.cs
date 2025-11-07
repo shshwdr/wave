@@ -293,6 +293,27 @@ public class EnemyManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 为随从创建血条
+    /// </summary>
+    public void CreateHealthBarForAlly(Ally ally)
+    {
+        if (healthBarPrefab == null || healthBarCanvas == null)
+        {
+            Debug.LogWarning("HealthBar prefab or canvas not set!");
+            return;
+        }
+
+        GameObject healthBarObj = Instantiate(healthBarPrefab, healthBarCanvas.transform);
+        EnemyHealthBar healthBar = healthBarObj.GetComponent<EnemyHealthBar>();
+        if (healthBar == null)
+        {
+            healthBar = healthBarObj.AddComponent<EnemyHealthBar>();
+        }
+
+        ally.SetHealthBar(healthBar);
+    }
+
+    /// <summary>
     /// 所有敌人行动（每回合调用）
     /// </summary>
     public void AllEnemiesTakeAction(float duration = 0.5f)

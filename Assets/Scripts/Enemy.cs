@@ -395,8 +395,8 @@ public class Enemy : MonoBehaviour
             if (checkX < 0)
                 break; // 超出左边界
                 
-            // 检查该位置是否有其他敌人
-            bool hasEnemy = false;
+            // 检查该位置是否有其他敌人或随从
+            bool hasObstacle = false;
             if (enemyManager != null)
             {
                 foreach (var enemy in enemyManager.ActiveEnemies)
@@ -404,12 +404,23 @@ public class Enemy : MonoBehaviour
                     if (enemy != null && !enemy.IsDead && enemy != this && 
                         enemy.GridPosition.x == checkX && enemy.GridPosition.y == gridPosition.y)
                     {
-                        hasEnemy = true;
+                        hasObstacle = true;
                         break;
                     }
                 }
             }
-            if (hasEnemy)
+            
+            // 检查是否有随从
+            if (!hasObstacle)
+            {
+                AllyManager allyManager = FindObjectOfType<AllyManager>();
+                if (allyManager != null && allyManager.HasAllyAtPosition(new Vector2Int(checkX, gridPosition.y)))
+                {
+                    hasObstacle = true;
+                }
+            }
+            
+            if (hasObstacle)
                 break;
                 
             actualSteps = step;
@@ -459,7 +470,7 @@ public class Enemy : MonoBehaviour
     }
     
     /// <summary>
-    /// 检查是否在攻击范围内
+    /// 检查是否在攻击范围内（包括随从）
     /// </summary>
     public bool IsInAttackRange()
     {
@@ -467,16 +478,32 @@ public class Enemy : MonoBehaviour
             return false;
             
         int range = enemyInfo.range;
+        
+        // 先检查是否有随从在攻击范围内
+        AllyManager allyManager = FindObjectOfType<AllyManager>();
+        if (allyManager != null)
+        {
+            for (int x = gridPosition.x; x >= 0 && x >= gridPosition.x - range; x--)
+            {
+                Ally ally = allyManager.GetAllyAtPosition(new Vector2Int(x, gridPosition.y));
+                if (ally != null && !ally.IsDead)
+                {
+                    return true; // 有随从在攻击范围内
+                }
+            }
+        }
+        
+        // 如果没有随从，检查是否在玩家攻击范围内
         // 离底线的距离（x坐标）<= range时，在攻击范围内
         return gridPosition.x <= range;
     }
     
     /// <summary>
-    /// 攻击玩家
+    /// 攻击玩家或随从
     /// </summary>
     public void AttackPlayer()
     {
-        if (isDead || enemyInfo == null || PlayerManager.Instance == null)
+        if (isDead || enemyInfo == null)
             return;
             
         int damage = enemyInfo.attack;
@@ -485,20 +512,118 @@ public class Enemy : MonoBehaviour
             
         int range = enemyInfo.range;
         
+        // 先检查是否有随从在攻击范围内
+        AllyManager allyManager = FindObjectOfType<AllyManager>();
+        Ally targetAlly = null;
+        if (allyManager != null)
+        {
+            for (int x = gridPosition.x; x >= 0 && x >= gridPosition.x - range; x--)
+            {
+                Ally ally = allyManager.GetAllyAtPosition(new Vector2Int(x, gridPosition.y));
+                if (ally != null && !ally.IsDead)
+                {
+                    targetAlly = ally;
+                    break;
+                }
+            }
+        }
+        
         // 原地doShake动画
         DoShake();
         
-        // 如果range > 1，生成投射物
-        if (range > 1)
+        if (targetAlly != null)
         {
-            CreateProjectile(damage);
+            // 攻击随从
+            if (range > 1)
+            {
+                // 远程攻击随从
+                CreateProjectileToAlly(targetAlly, damage);
+            }
+            else
+            {
+                // 近战攻击随从
+                targetAlly.TakeDamage(damage);
+            }
+        }
+        else if (PlayerManager.Instance != null)
+        {
+            // 攻击玩家
+            if (range > 1)
+            {
+                CreateProjectile(damage);
+            }
+            else
+            {
+                // 近战攻击，直接造成伤害
+                PlayerManager.Instance.TakeDamage(damage);
+                // 显示伤害数字
+                DamageNumber.CreateDamageNumber(damage, transform.position + Vector3.left * 0.5f, false);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 创建投射物攻击随从
+    /// </summary>
+    private void CreateProjectileToAlly(Ally targetAlly, int damage)
+    {
+        if (boardManager == null)
+        {
+            boardManager = FindObjectOfType<BoardManager>();
+        }
+        
+        if (boardManager == null || targetAlly == null)
+            return;
+            
+        // 创建投射物GameObject（使用默认投射物）
+        var projectPrefab = Resources.Load<GameObject>("Projectile/default");
+        if (projectPrefab == null)
+        {
+            // 如果没有默认投射物，创建一个简单的
+            GameObject projectileObj = new GameObject("Projectile");
+            SpriteRenderer sr = projectileObj.AddComponent<SpriteRenderer>();
+            sr.color = Color.red;
+            sr.sortingOrder = 5;
+            
+            Vector3 startPos = transform.position;
+            Vector3 targetPos = targetAlly.transform.position;
+            
+            float travelDistance = Vector3.Distance(startPos, targetPos);
+            float projectileSpeed = 10f;
+            float travelTime = travelDistance / projectileSpeed;
+            
+            projectileObj.transform.position = startPos;
+            projectileObj.transform.localScale = Vector3.one * 0.3f;
+            
+            projectileObj.transform.DOMove(targetPos, travelTime)
+                .SetEase(Ease.Linear)
+                .OnComplete(() =>
+                {
+                    targetAlly.TakeDamage(damage);
+                    DamageNumber.CreateDamageNumber(damage, targetPos, false);
+                    Destroy(projectileObj);
+                });
         }
         else
         {
-            // 近战攻击，直接造成伤害
-            PlayerManager.Instance.TakeDamage(damage);
-            // 显示伤害数字
-            DamageNumber.CreateDamageNumber(damage, transform.position + Vector3.left * 0.5f, false);
+            GameObject projectileObj = Instantiate(projectPrefab);
+            projectileObj.transform.position = transform.position;
+            
+            Vector3 startPos = transform.position;
+            Vector3 targetPos = targetAlly.transform.position;
+            
+            float travelDistance = Vector3.Distance(startPos, targetPos);
+            float projectileSpeed = 10f;
+            float travelTime = travelDistance / projectileSpeed;
+            
+            projectileObj.transform.DOMove(targetPos, travelTime)
+                .SetEase(Ease.Linear)
+                .OnComplete(() =>
+                {
+                    targetAlly.TakeDamage(damage);
+                    DamageNumber.CreateDamageNumber(damage, targetPos, false);
+                    Destroy(projectileObj);
+                });
         }
     }
     

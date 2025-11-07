@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -75,8 +76,70 @@ public class PlayerManager : Singleton<PlayerManager>
     /// </summary>
     public void Heal(int amount)
     {
+        int oldHealth = currentHealth;
         currentHealth += amount;
+        int actualHeal = currentHealth - oldHealth;
         currentHealth = Mathf.Min(maxHealth, currentHealth);
+        
+        // 检查是否有overhealDoDamage技能
+        if (SkillManager.Instance != null)
+        {
+            // 检查所有颜色的overhealDoDamage技能
+            List<SkillInfo> allSkills = new List<SkillInfo>();
+            foreach (var color in new[] { "red", "yellow", "blue", "green" })
+            {
+                allSkills.AddRange(SkillManager.Instance.GetOwnedSkillsByColor(color));
+            }
+            
+            foreach (var skill in allSkills)
+            {
+                if (skill.effect == "overhealDoDamage")
+                {
+                    int value = SkillManager.Instance.GetSkillValue(skill.identifier);
+                    
+                    // 计算溢出的治疗量
+                    int overheal = amount - actualHeal;
+                    if (overheal > 0)
+                    {
+                        // 对随机敌人造成伤害
+                        int damage = (int)(overheal * (value / 100f));
+                        ApplyOverhealDamage(damage);
+                    }
+                    break; // 只应用一次
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 应用溢出治疗造成的伤害
+    /// </summary>
+    private void ApplyOverhealDamage(int damage)
+    {
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (enemyManager == null || damage <= 0)
+            return;
+            
+        // 获取所有活着的敌人
+        List<Enemy> aliveEnemies = new List<Enemy>();
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead)
+            {
+                aliveEnemies.Add(enemy);
+            }
+        }
+        
+        // 如果没有活着的敌人，不造成伤害
+        if (aliveEnemies.Count == 0)
+            return;
+            
+        // 随机选择一个敌人
+        Enemy targetEnemy = aliveEnemies[Random.Range(0, aliveEnemies.Count)];
+        targetEnemy.TakeDamage(damage, Vector3.right, false, 0, 0f);
+        
+        // 显示伤害数字
+        DamageNumber.CreateDamageNumber(damage, targetEnemy.transform.position + Vector3.up * 0.5f, false);
     }
 
     /// <summary>
