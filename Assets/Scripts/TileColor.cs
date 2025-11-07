@@ -16,12 +16,22 @@ public enum TileColor
 /// </summary>
 public static class TileColorUtil
 {
+    public static Color HexToColor(string hex)
+    {
+        Color res;
+        ColorUtility.TryParseHtmlString(hex, out res);
+        return res;
+    }
     private static readonly Color[] Colors = new Color[]
     {
-        Color.red,      // Red
-        Color.yellow,   // Yellow
-        Color.blue,      // Blue
-        Color.green     // Green
+        HexToColor("#FFC8E2"),
+        HexToColor("#7CACF6"),
+        HexToColor("#B5E6F5"),
+        HexToColor("#BEBFF5")
+        // Color.red,      // Red
+        // Color.yellow,   // Yellow
+        // Color.blue,      // Blue
+        // Color.green     // Green
     };
 
     /// <summary>
