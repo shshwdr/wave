@@ -237,20 +237,28 @@ public class Wave : MonoBehaviour
     /// </summary>
     private void ApplySkillEffects()
     {
-        if (SkillManager.Instance == null)
+        if (SkillManager.Instance == null || PlayerManager.Instance == null)
             return;
 
-        string colorStr = GetColorString(waveColor);
-        List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
+        // 从PlayerManager获取该颜色wave配置的技能列表
+        int colorIndex = (int)waveColor; // TileColor枚举值：Red=0, Yellow=1, Blue=2, Green=3
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
 
         // 先应用buffNextDamage的伤害加成
         damage = damage * damageMultiplier;
 
-        foreach (var skill in skills)
+        foreach (var identifier in skillIdentifiers)
         {
-            int value = SkillManager.Instance.GetSkillValue(skill.identifier);
+            if (!SkillManager.Instance.HasSkill(identifier))
+                continue;
+                
+            SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+            if (skillInfo == null)
+                continue;
+                
+            int value = SkillManager.Instance.GetSkillValue(identifier);
             
-            switch (skill.effect)
+            switch (skillInfo.effect)
             {
                 case "damageIncrease":
                     // 伤害增加百分比
@@ -374,16 +382,20 @@ public class Wave : MonoBehaviour
                 else
                 {
                     // 如果不是红色wave，需要获取红色wave的基础伤害
-                    if (SkillManager.Instance != null)
+                    if (SkillManager.Instance != null && PlayerManager.Instance != null)
                     {
-                        List<SkillInfo> redSkills = SkillManager.Instance.GetOwnedSkillsByColor("red");
+                        List<string> redSkillIdentifiers = PlayerManager.Instance.GetWaveSkills(0); // 0=红色
                         float redDamage = 20f; // 基础伤害
-                        foreach (var skill in redSkills)
+                        foreach (var identifier in redSkillIdentifiers)
                         {
-                            int value = SkillManager.Instance.GetSkillValue(skill.identifier);
-                            if (skill.effect == "damageIncrease")
+                            if (SkillManager.Instance.HasSkill(identifier))
                             {
-                                redDamage = redDamage * (1f + value / 100f);
+                                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                                if (skillInfo != null && skillInfo.effect == "damageIncrease")
+                                {
+                                    int value = SkillManager.Instance.GetSkillValue(identifier);
+                                    redDamage = redDamage * (1f + value / 100f);
+                                }
                             }
                         }
                         redWaveBaseDamage = redDamage;

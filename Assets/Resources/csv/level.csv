@@ -1,5 +1,5 @@
 ﻿enemies,level,startEnemyCount
-normal|3,0,3
+normal|1,0,3
 normal|3|speed|2,1,3
 normal|2|speed|2|archer|2,2,3
 normal|2|speed|2|archer|2|healer|2,3,3

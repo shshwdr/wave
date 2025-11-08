@@ -1,14 +1,14 @@
 ﻿identifier,name,description,color,isStart,effect,values,maxLevel,available
-damageIncrease,damageIncrease,Damage increase {0}%,red,0,damageIncrease,50|100,2,1
-healWhenHit,healWhenHit,Heal {0}% HP when hit enemy,green,0,healWhenHit,20|40,2,1
+damageIncrease,damageIncrease,Damage increase {0}%,red,1,damageIncrease,50|100,2,1
+healWhenHit,healWhenHit,Heal {0}% HP when hit enemy,green,1,healWhenHit,20|40,2,1
 buffNextDamage,buffNextDamage,Next wave took {0}% more damage,blue,0,buffNextDamage,50,1,1
 hitEnemyBack,hitEnemyBack,"When hit enemy, push them back {0} tile",yellow,0,hitEnemyBack,1,1,1
-wavePenetrate,wavePenetrate,"When hit enemy, penetrate {0} more enemy.",red,,wavePenetrate,1,1,1
+wavePenetrate,wavePenetrate,"When hit enemy, penetrate {0} more enemy.",red,1,wavePenetrate,1,1,1
 hitTakeDamage,hitTakeDamage,"When enemy hit other enemy or wall while get hit back, take damage equal to {0}% wave",yellow,0,hitTakeDamage,100,1,1
-damageBottom,damageBottom,"When hit the most right line, hit enemy on the whole right line with {0}% damage",red,,damageBottom,100,1,0
+damageBottom,damageBottom,"When hit the most right line, hit enemy on the whole right line with {0}% damage",red,0,damageBottom,100,1,0
 damageIncreaseWhenHitMore,damageIncreaseWhenHitMore,"When hit multiple enemies with one wave, for each enemy hit, later one get {0} more damage",blue,0,damageIncreaseWhenHitMore,20|40,2,0
 overhealDoDamage,overhealDoDamage,Over heal do {0} damage to random enemy,green,0,overhealDoDamage,100,1,0
 spawnAlly,spawnAlly,Spawn an ally on grid,green,,spawnAlly,100,,
-aoeAttack,aoeAttack,"When hit, do {0} damage to adjacent enemy too",red,0,aoeAttack,50,1,1
+aoeAttack,aoeAttack,"When hit, do {0} damage to adjacent enemy too",red,1,aoeAttack,50,1,1
 onlyDamageIncrease,,,,,,,,
 lowHP,,,,,,,,

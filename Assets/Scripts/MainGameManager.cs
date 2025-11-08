@@ -64,6 +64,16 @@ public class MainGameManager : MonoBehaviour
     // 玩家等级（起始为0，打一场架升一级）
     private int playerLevel = 0;
     public int PlayerLevel => playerLevel;
+    
+    /// <summary>
+    /// 玩家等级提升
+    /// </summary>
+    public void PlayerLevelUp()
+    {
+        playerLevel++;
+        LevelManager.Instance.NextLevel();
+        StartBattle();
+    }
 
     // damageBottom技能触发管理（确保整个wave只触发一次）
     private static bool damageBottomTriggeredThisWave = false;
@@ -112,6 +122,21 @@ public class MainGameManager : MonoBehaviour
         InitEnemyDescriptionUI();
 
         StartBattle();
+        
+        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+        skillMenu.ShowSkillSelection(
+            (selectedSkill) =>
+            {
+                // 三选一选择完成，技能已添加到背包
+                // 界面保持打开，让玩家可以继续配置技能
+                Debug.Log($"技能选择完成: {selectedSkill.identifier}，已添加到背包");
+            },
+            () =>
+            {
+                // 确认按钮点击，进入下一关
+                Debug.Log("确认配置，进入下一关");
+            }
+        );
     }
 
     /// <summary>
@@ -527,6 +552,13 @@ public class MainGameManager : MonoBehaviour
     /// </summary>
     private void HandleMouseHover()
     {
+        // 如果技能选择界面打开，不响应hover
+        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+        if (skillMenu != null && skillMenu.IsActive)
+        {
+            return;
+        }
+
         // 首先检查是否悬停在敌人上
         Enemy hoveredEnemy = GetEnemyUnderMouse();
         if (hoveredEnemy != null && !hoveredEnemy.IsDead && hoveredEnemy.EnemyInfo != null)
@@ -663,25 +695,35 @@ public class MainGameManager : MonoBehaviour
 
         // 获取当前格子的颜色
         TileColor tileColor = tile.Color;
-        string colorStr = GetColorString(tileColor);
+        int colorIndex = (int)tileColor; // TileColor枚举值：Red=0, Yellow=1, Blue=2, Green=3
 
-        // 获取该颜色的所有已拥有技能
-        if (SkillManager.Instance != null)
+        // 从PlayerManager获取该颜色wave配置的技能列表
+        if (PlayerManager.Instance != null && SkillManager.Instance != null)
         {
-            List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
+            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
 
-            if (skills.Count > 0)
+            if (skillIdentifiers.Count > 0)
             {
                 // 显示技能描述
                 string skillText = "";
-                foreach (var skill in skills)
+                foreach (var identifier in skillIdentifiers)
                 {
-                    string description = SkillManager.Instance.GetSkillDescription(skill.identifier,false);
-                    skillText += description + "\n";
+                    if (SkillManager.Instance.HasSkill(identifier))
+                    {
+                        string description = SkillManager.Instance.GetSkillDescription(identifier, false);
+                        skillText += description + "\n";
+                    }
                 }
 
-                skillDisplayText.text = skillText;
-                skillDisplayPanel.SetActive(true);
+                if (!string.IsNullOrEmpty(skillText))
+                {
+                    skillDisplayText.text = skillText;
+                    skillDisplayPanel.SetActive(true);
+                }
+                else
+                {
+                    skillDisplayPanel.SetActive(false);
+                }
             }
             else
             {
@@ -821,19 +863,23 @@ public class MainGameManager : MonoBehaviour
         // 获取起始格子的颜色
         TileCell startTile = boardManager.GetTile(startPos);
         TileColor waveColor = startTile != null ? startTile.Color : TileColor.Red;
+        int colorIndex = (int)waveColor; // TileColor枚举值：Red=0, Yellow=1, Blue=2, Green=3
 
-        // 检查是否有damageBottom技能
+        // 从PlayerManager获取该颜色wave配置的技能列表，检查是否有damageBottom技能
         bool hasDamageBottom = false;
-        if (SkillManager.Instance != null)
+        if (PlayerManager.Instance != null && SkillManager.Instance != null)
         {
-            string colorStr = GetColorString(waveColor);
-            List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
-            foreach (var skill in skills)
+            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+            foreach (var identifier in skillIdentifiers)
             {
-                if (skill.effect == "damageBottom")
+                if (SkillManager.Instance.HasSkill(identifier))
                 {
-                    hasDamageBottom = true;
-                    break;
+                    SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                    if (skillInfo != null && skillInfo.effect == "damageBottom")
+                    {
+                        hasDamageBottom = true;
+                        break;
+                    }
                 }
             }
         }
@@ -853,17 +899,20 @@ public class MainGameManager : MonoBehaviour
         // 检查是否有buffNextDamage技能（用于下一个wave group）
         // 注意：这个检查的是当前wave group的技能，buff会应用到下一个wave group
         float damageMultiplier = 1f;
-        if (SkillManager.Instance != null)
+        if (PlayerManager.Instance != null && SkillManager.Instance != null)
         {
-            string colorStr = GetColorString(waveColor);
-            List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
-            foreach (var skill in skills)
+            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+            foreach (var identifier in skillIdentifiers)
             {
-                if (skill.effect == "buffNextDamage")
+                if (SkillManager.Instance.HasSkill(identifier))
                 {
-                    int value = SkillManager.Instance.GetSkillValue(skill.identifier);
-                    damageMultiplier = 1f + value / 100f;
-                    break;
+                    SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                    if (skillInfo != null && skillInfo.effect == "buffNextDamage")
+                    {
+                        int value = SkillManager.Instance.GetSkillValue(identifier);
+                        damageMultiplier = 1f + value / 100f;
+                        break;
+                    }
                 }
             }
         }
@@ -940,16 +989,20 @@ public class MainGameManager : MonoBehaviour
             return;
 
         int value = 0;
-        if (SkillManager.Instance != null)
+        if (PlayerManager.Instance != null && SkillManager.Instance != null)
         {
-            string colorStr = GetColorStringStatic(waveColor);
-            List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
-            foreach (var skill in skills)
+            int colorIndex = (int)waveColor;
+            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+            foreach (var identifier in skillIdentifiers)
             {
-                if (skill.effect == "damageBottom")
+                if (SkillManager.Instance.HasSkill(identifier))
                 {
-                    value = SkillManager.Instance.GetSkillValue(skill.identifier);
-                    break;
+                    SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                    if (skillInfo != null && skillInfo.effect == "damageBottom")
+                    {
+                        value = SkillManager.Instance.GetSkillValue(identifier);
+                        break;
+                    }
                 }
             }
         }
@@ -1091,26 +1144,30 @@ public class MainGameManager : MonoBehaviour
             
         float totalDamage = waveGroupTotalDamage[waveGroupId];
         TileColor waveColor = waveGroupColor[waveGroupId];
+        int colorIndex = (int)waveColor;
         
-        // 检查是否有spawnAlly技能
-        if (SkillManager.Instance == null)
+        // 从PlayerManager获取该颜色wave配置的技能列表，检查是否有spawnAlly技能
+        if (PlayerManager.Instance == null || SkillManager.Instance == null)
             return;
             
-        string colorStr = GetColorString(waveColor);
-        List<SkillInfo> skills = SkillManager.Instance.GetOwnedSkillsByColor(colorStr);
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
         
-        foreach (var skill in skills)
+        foreach (var identifier in skillIdentifiers)
         {
-            if (skill.effect == "spawnAlly")
+            if (SkillManager.Instance.HasSkill(identifier))
             {
-                int value = SkillManager.Instance.GetSkillValue(skill.identifier);
-                
-                // 计算随从血量：总伤害 * value%
-                int allyHealth = (int)(totalDamage * (value / 100f));
-                
-                // 生成随从
-                SpawnAlly(allyHealth);
-                break;
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "spawnAlly")
+                {
+                    int value = SkillManager.Instance.GetSkillValue(identifier);
+                    
+                    // 计算随从血量：总伤害 * value%
+                    int allyHealth = (int)(totalDamage * (value / 100f));
+                    
+                    // 生成随从
+                    SpawnAlly(allyHealth);
+                    break;
+                }
             }
         }
         
@@ -1341,13 +1398,19 @@ public class MainGameManager : MonoBehaviour
             skillMenu = menuObj.AddComponent<SkillSelectMenu>();
         }
 
-        skillMenu.ShowSkillSelection((selectedSkill) =>
-        {
-            // 技能选择完成，玩家等级+1，进入下一关
-            playerLevel++;
-            LevelManager.Instance.NextLevel();
-            StartBattle();
-        });
+        skillMenu.ShowSkillSelection(
+            (selectedSkill) =>
+            {
+                // 三选一选择完成，技能已添加到背包
+                // 界面保持打开，让玩家可以继续配置技能
+                Debug.Log($"技能选择完成: {selectedSkill.identifier}，已添加到背包");
+            },
+            () =>
+            {
+                // 确认按钮点击，进入下一关
+                Debug.Log("确认配置，进入下一关");
+            }
+        );
     }
 
     /// <summary>

@@ -13,11 +13,68 @@ public class PlayerManager : Singleton<PlayerManager>
     private int currentHealth;
     private int currentSwapCount;
 
+    // Wave技能配置：List<List<string>>，索引0,1,2,3对应红、黄、蓝、绿
+    // 每个内层List存储该颜色wave的技能identifier列表
+    private List<List<string>> waveSkillsDict = new List<List<string>>();
+
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
     public int CurrentSwapCount => currentSwapCount;
     public int MaxSwapCount => maxSwapCount;
     public bool IsDead => currentHealth <= 0;
+    
+    /// <summary>
+    /// 获取wave技能配置字典
+    /// </summary>
+    public List<List<string>> WaveSkillsDict => waveSkillsDict;
+    
+    /// <summary>
+    /// 获取指定颜色的技能列表（索引0=红，1=黄，2=蓝，3=绿）
+    /// </summary>
+    public List<string> GetWaveSkills(int colorIndex)
+    {
+        if (colorIndex >= 0 && colorIndex < waveSkillsDict.Count)
+        {
+            return waveSkillsDict[colorIndex];
+        }
+        return new List<string>();
+    }
+    
+    /// <summary>
+    /// 设置指定颜色的技能列表
+    /// </summary>
+    public void SetWaveSkills(int colorIndex, List<string> skills)
+    {
+        // 确保waveSkillsDict有足够的元素
+        while (waveSkillsDict.Count <= colorIndex)
+        {
+            waveSkillsDict.Add(new List<string>());
+        }
+        waveSkillsDict[colorIndex] = new List<string>(skills);
+    }
+    
+    /// <summary>
+    /// 获取指定颜色的slot数量（当前技能数量）
+    /// </summary>
+    public int GetWaveSlotCount(int colorIndex)
+    {
+        if (colorIndex >= 0 && colorIndex < waveSkillsDict.Count)
+        {
+            return waveSkillsDict[colorIndex].Count;
+        }
+        return 0;
+    }
+    
+    /// <summary>
+    /// 获取指定颜色的最大slot数量（初始为4，之后可能通过技能改变）
+    /// </summary>
+    public int GetWaveMaxSlotCount(int colorIndex)
+    {
+        // 初始为4，之后可以通过技能改变
+        int baseMaxSlots = 4;
+        // TODO: 检查是否有增加slot数量的技能
+        return baseMaxSlots;
+    }
 
     /// <summary>
     /// 初始化玩家管理器
@@ -29,6 +86,65 @@ public class PlayerManager : Singleton<PlayerManager>
         
         maxSwapCount = swapCount > 0 ? swapCount : maxSwapCount;
         currentSwapCount = maxSwapCount;
+        
+        // 初始化waveSkillsDict（如果还未初始化）
+        InitializeWaveSkillsDict();
+    }
+    
+    /// <summary>
+    /// 初始化wave技能配置字典
+    /// </summary>
+    private void InitializeWaveSkillsDict()
+    {
+        // 如果已经初始化过，不重复初始化
+        if (waveSkillsDict.Count > 0)
+        {
+            return;
+        }
+        
+        // 初始化四个颜色的列表（红、黄、蓝、绿）
+        for (int i = 0; i < 4; i++)
+        {
+            waveSkillsDict.Add(new List<string>());
+        }
+        
+        // 如果有isStart技能，按原color字段自动分配
+        if (SkillManager.Instance != null && CSVLoader.Instance != null && CSVLoader.Instance.cardInfoMap != null)
+        {
+            foreach (var skillInfo in CSVLoader.Instance.cardInfoMap.Values)
+            {
+                if (skillInfo.isStart && SkillManager.Instance.HasSkill(skillInfo.identifier))
+                {
+                    // 根据color字段分配到对应颜色
+                    int colorIndex = GetColorIndex(skillInfo.color);
+                    if (colorIndex >= 0 && colorIndex < 4)
+                    {
+                        // 检查是否超过最大slot数量
+                        int maxSlots = GetWaveMaxSlotCount(colorIndex);
+                        if (waveSkillsDict[colorIndex].Count < maxSlots)
+                        {
+                            waveSkillsDict[colorIndex].Add(skillInfo.identifier);
+                            Debug.Log($"自动分配isStart技能: {skillInfo.identifier} -> 颜色索引 {colorIndex} ({skillInfo.color})");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 将颜色字符串转换为索引（0=红，1=黄，2=蓝，3=绿）
+    /// </summary>
+    private int GetColorIndex(string color)
+    {
+        switch (color.ToLower())
+        {
+            case "red": return 0;
+            case "yellow": return 1;
+            case "blue": return 2;
+            case "green": return 3;
+            default: return -1;
+        }
     }
 
     /// <summary>

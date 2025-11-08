@@ -8,7 +8,7 @@ public class SkillInfo
     public string identifier;
     public string name;
     public string description;
-    public string color;
+    public string color; //should  delete this and related code
     public bool isStart;
     public string effect;
     public List<int> values; //count equals level

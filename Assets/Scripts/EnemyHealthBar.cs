@@ -95,19 +95,19 @@ public class EnemyHealthBar : MonoBehaviour
             }, targetFill, 0.3f).SetEase(Ease.OutQuad);
 
             // 根据血量改变颜色
-            float healthPercent = (float)currentHealth / maxHealth;
-            if (healthPercent > 0.6f)
-            {
-                fillImage.color = Color.green;
-            }
-            else if (healthPercent > 0.3f)
-            {
-                fillImage.color = Color.yellow;
-            }
-            else
-            {
-                fillImage.color = Color.red;
-            }
+            // float healthPercent = (float)currentHealth / maxHealth;
+            // if (healthPercent > 0.6f)
+            // {
+            //     fillImage.color = Color.green;
+            // }
+            // else if (healthPercent > 0.3f)
+            // {
+            //     fillImage.color = Color.yellow;
+            // }
+            // else
+            // {
+            //     fillImage.color = Color.red;
+            // }
         }
         
         // 更新血量文字
