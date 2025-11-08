@@ -29,6 +29,10 @@ public class MainGameManager : MonoBehaviour
     [Header("技能显示UI")]
     [SerializeField] private GameObject skillDisplayPanel;
     [SerializeField] private TMP_Text skillDisplayText;
+    
+    [Header("敌人描述显示UI")]
+    [SerializeField] private GameObject enemyDescriptionPanel;
+    [SerializeField] private TMP_Text enemyDescriptionText;
 
     private enum GameState
     {
@@ -103,6 +107,9 @@ public class MainGameManager : MonoBehaviour
 
         // 初始化技能显示UI
         InitSkillDisplayUI();
+        
+        // 初始化敌人描述显示UI
+        InitEnemyDescriptionUI();
 
         StartBattle();
     }
@@ -150,7 +157,7 @@ public class MainGameManager : MonoBehaviour
             textRect.offsetMax = new Vector2(-10, -10);
 
             skillDisplayText = textObj.AddComponent<TextMeshProUGUI>();
-            skillDisplayText.fontSize = 24;
+            skillDisplayText.fontSize = 30;
             skillDisplayText.color = Color.white;
             skillDisplayText.alignment = TextAlignmentOptions.TopLeft;
         }
@@ -158,6 +165,61 @@ public class MainGameManager : MonoBehaviour
         if (skillDisplayPanel != null)
         {
             skillDisplayPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 初始化敌人描述显示UI
+    /// </summary>
+    private void InitEnemyDescriptionUI()
+    {
+        if (enemyDescriptionPanel == null)
+        {
+            // 创建敌人描述显示面板
+            GameObject canvasObj = GameObject.Find("Canvas");
+            if (canvasObj == null)
+            {
+                canvasObj = new GameObject("Canvas");
+                Canvas canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObj.AddComponent<CanvasScaler>();
+                canvasObj.AddComponent<GraphicRaycaster>();
+            }
+
+            enemyDescriptionPanel = new GameObject("EnemyDescriptionPanel");
+            enemyDescriptionPanel.transform.SetParent(canvasObj.transform);
+            RectTransform rectTransform = enemyDescriptionPanel.AddComponent<RectTransform>();
+            // 右上角：anchorMin和anchorMax都是(1,1)，pivot是(1,1)
+            rectTransform.anchorMin = new Vector2(1, 1);
+            rectTransform.anchorMax = new Vector2(1, 1);
+            rectTransform.pivot = new Vector2(1, 1);
+            rectTransform.anchoredPosition = new Vector2(-20, -20); // 距离右上角20像素
+            rectTransform.sizeDelta = new Vector2(400, 300);
+
+            // 添加背景
+            Image bg = enemyDescriptionPanel.AddComponent<Image>();
+            bg.color = new Color(0, 0, 0, 0.7f);
+
+            // 添加文本
+            GameObject textObj = new GameObject("EnemyDescriptionText");
+            textObj.transform.SetParent(enemyDescriptionPanel.transform);
+            RectTransform textRect = textObj.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.anchoredPosition = Vector2.zero;
+            textRect.offsetMin = new Vector2(10, 10);
+            textRect.offsetMax = new Vector2(-10, -10);
+
+            enemyDescriptionText = textObj.AddComponent<TextMeshProUGUI>();
+            enemyDescriptionText.fontSize = 30;
+            enemyDescriptionText.color = Color.white;
+            enemyDescriptionText.alignment = TextAlignmentOptions.TopLeft;
+        }
+
+        if (enemyDescriptionPanel != null)
+        {
+            enemyDescriptionPanel.SetActive(false);
         }
     }
 
@@ -221,11 +283,7 @@ public class MainGameManager : MonoBehaviour
         if (currentState == GameState.GameOver)
             return;
 
-        // 检查敌人到达最左边，攻击玩家
-        if (enemyManager != null && enemyManager.HasEnemyAtLeftEdge())
-        {
-            AttackPlayer();
-        }
+        // 敌人攻击逻辑现在由Enemy.TakeAction()处理，不再需要在这里检查
 
         // 检查玩家是否死亡
         if (PlayerManager.Instance != null && PlayerManager.Instance.IsDead)
@@ -234,16 +292,6 @@ public class MainGameManager : MonoBehaviour
             return;
         }
 
-        // 检查关卡完成条件（所有敌人死亡）
-        // 只有在玩家回合且不在处理中时才检查，避免重复触发
-        if (currentState == GameState.PlayerTurn && 
-            !isProcessing && 
-            enemyManager != null && 
-            enemyManager.AreAllEnemiesDead())
-        {
-            CompleteLevel();
-            return;
-        }
 
         // 玩家回合 - 处理输入和鼠标悬停（只有在没有处理中时）
         if (currentState == GameState.PlayerTurn && !isProcessing)
@@ -479,6 +527,28 @@ public class MainGameManager : MonoBehaviour
     /// </summary>
     private void HandleMouseHover()
     {
+        // 首先检查是否悬停在敌人上
+        Enemy hoveredEnemy = GetEnemyUnderMouse();
+        if (hoveredEnemy != null && !hoveredEnemy.IsDead && hoveredEnemy.EnemyInfo != null)
+        {
+            // 显示敌人描述
+            UpdateEnemyDescription(hoveredEnemy);
+            // 隐藏技能显示
+            if (skillDisplayPanel != null)
+            {
+                skillDisplayPanel.SetActive(false);
+            }
+            return;
+        }
+        else
+        {
+            // 没有悬停在敌人上，隐藏敌人描述
+            if (enemyDescriptionPanel != null)
+            {
+                enemyDescriptionPanel.SetActive(false);
+            }
+        }
+        
         Vector2Int gridPos = GetMouseGridPosition();
         if (boardManager != null && boardManager.IsValidPosition(gridPos))
         {
@@ -497,6 +567,82 @@ public class MainGameManager : MonoBehaviour
             {
                 skillDisplayPanel.SetActive(false);
             }
+        }
+    }
+    
+    /// <summary>
+    /// 获取鼠标下的敌人
+    /// </summary>
+    private Enemy GetEnemyUnderMouse()
+    {
+        if (mainCamera == null || enemyManager == null)
+            return null;
+            
+        // 将鼠标屏幕坐标转换为世界坐标
+        Vector3 mouseScreenPos = Input.mousePosition;
+        mouseScreenPos.z = mainCamera.nearClipPlane;
+        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
+        mouseWorldPos.z = 0;
+        
+        // 使用OverlapPoint检测鼠标位置下的碰撞体
+        Collider2D hitCollider = Physics2D.OverlapPoint(mouseWorldPos);
+        if (hitCollider != null)
+        {
+            Enemy enemy = hitCollider.GetComponent<Enemy>();
+            if (enemy == null)
+            {
+                // 尝试从父对象获取
+                enemy = hitCollider.GetComponentInParent<Enemy>();
+            }
+            if (enemy != null && !enemy.IsDead)
+            {
+                return enemy;
+            }
+        }
+        
+        // 如果OverlapPoint没有检测到，尝试遍历所有敌人检查距离
+        // 这对于某些collider设置可能更可靠
+        float checkRadius = 0.5f; // 检查半径
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(mouseWorldPos, checkRadius);
+        foreach (var collider in colliders)
+        {
+            Enemy enemy = collider.GetComponent<Enemy>();
+            if (enemy == null)
+            {
+                enemy = collider.GetComponentInParent<Enemy>();
+            }
+            if (enemy != null && !enemy.IsDead)
+            {
+                return enemy;
+            }
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// 更新敌人描述显示
+    /// </summary>
+    private void UpdateEnemyDescription(Enemy enemy)
+    {
+        if (enemy == null || enemy.EnemyInfo == null || enemyDescriptionPanel == null || enemyDescriptionText == null)
+        {
+            if (enemyDescriptionPanel != null)
+            {
+                enemyDescriptionPanel.SetActive(false);
+            }
+            return;
+        }
+        
+        string description = enemy.EnemyInfo.description;
+        if (!string.IsNullOrEmpty(description))
+        {
+            enemyDescriptionText.text = description;
+            enemyDescriptionPanel.SetActive(true);
+        }
+        else
+        {
+            enemyDescriptionPanel.SetActive(false);
         }
     }
 
@@ -1100,9 +1246,17 @@ public class MainGameManager : MonoBehaviour
             {
                 enemyManager.SpawnEnemyEachTurn();
                 
-                // 进入下一回合
+                // 敌人回合结束后，检查胜利条件
                 DOVirtual.DelayedCall(0.1f, () =>
                 {
+                    // 检查是否可以完成关卡（所有敌人死亡且没有剩余敌人可生成）
+                    if (enemyManager != null && enemyManager.CanCompleteLevel())
+                    {
+                        CompleteLevel();
+                        return;
+                    }
+                    
+                    // 否则进入玩家回合
                     isProcessing = false;
                     currentState = GameState.PlayerTurn;
                 });
@@ -1127,6 +1281,12 @@ public class MainGameManager : MonoBehaviour
         if (skillDisplayPanel != null)
         {
             skillDisplayPanel.SetActive(false);
+        }
+        
+        // 关闭敌人描述显示
+        if (enemyDescriptionPanel != null)
+        {
+            enemyDescriptionPanel.SetActive(false);
         }
         
         // 等待敌人移动动画完成后显示弹窗
@@ -1165,6 +1325,12 @@ public class MainGameManager : MonoBehaviour
         {
             skillDisplayPanel.SetActive(false);
         }
+        
+        // 关闭敌人描述显示
+        if (enemyDescriptionPanel != null)
+        {
+            enemyDescriptionPanel.SetActive(false);
+        }
 
         // 显示技能选择界面
         SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
@@ -1185,8 +1351,9 @@ public class MainGameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 敌人攻击玩家
+    /// 敌人攻击玩家（已废弃，现在由Enemy.TakeAction()处理）
     /// </summary>
+    [System.Obsolete("敌人攻击现在由Enemy.TakeAction()处理，此方法不再使用")]
     private void AttackPlayer()
     {
         if (PlayerManager.Instance == null || enemyManager == null)

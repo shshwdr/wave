@@ -112,7 +112,7 @@ public class SkillSelectMenu : MenuBase
                 
                 if (skillTexts[i] != null)
                 {
-                    skillTexts[i].text = skill.name + "\n" + description;
+                    skillTexts[i].text = description;
                 }
                 
                 skillButtons[i].gameObject.SetActive(true);

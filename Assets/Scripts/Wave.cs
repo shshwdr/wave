@@ -358,7 +358,7 @@ public class Wave : MonoBehaviour
                 // 应用击中时的技能效果
                 ApplyHitSkillEffects(enemy, ref finalDamage, direction);
                 
-                Debug.Log($"Wave hit enemy: {enemy.name}, dealing {finalDamage} damage");
+                //Debug.Log($"Wave hit enemy: {enemy.name}, dealing {finalDamage} damage");
                 
                 // 应用击退和回血效果
                 bool shouldKnockback = hasHitEnemyBack;

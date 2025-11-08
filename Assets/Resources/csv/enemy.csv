@@ -1,12 +1,12 @@
 ﻿identifier,name,description,hp,attack,speed,range,skill,skillValue,skillCD
-normal,normal,normal,50,10,1,1,,,
-hp,hp,hp,200,20,1,1,,,
-archer,archer,archer,70,5,1,7,,,
-speed,speed,speed,70,5,2,1,,,
+normal,normal,nothing special,50,10,1,1,,,
+hp,hp,has more hp,200,20,1,1,,,
+archer,archer,can do range attack,70,5,1,7,,,
+speed,speed,move faster,70,5,2,1,,,
 moveForward,moveForward,moveForward,70,10,1,1,hitMoveForward,,1
-healer,healer,healer,70,10,1,1,heal,10,1
-fog,fog,fog,70,10,1,1,createFog,3,1
-dirty,dirty,dirty,70,10,1,1,dirtyWater,2,1
+healer,healer,can heal others,70,10,1,1,heal,10,1
+fog,fog,create fog that hides tiles,70,10,1,1,createFog,3,1
+dirty,dirty,create dirt on tile that you can't control,70,10,1,1,dirtyWater,2,1
 removeWave,removeWave,removeWave,70,10,1,1,removeWave,,1
-summon,Summon,Summon,200,10,1,1,summon|archer,1,1
-shield,shield,shield,100,10,1,1,ignoreFirstAttack,,1
+summon,Summon,summon minions,200,10,1,1,summon|archer,1,1
+shield,shield,create a shield on it every turn to prevent first attack,100,10,1,1,ignoreFirstAttack,,1

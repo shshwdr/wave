@@ -332,18 +332,10 @@ public class EnemyManager : MonoBehaviour
             enemy.TakeAction();
         }
 
-        // 等待行动完成后检查边缘和死亡
+        // 等待行动完成后检查死亡（不再移除到达边缘的敌人，因为敌人攻击后应该继续存在）
         DOVirtual.DelayedCall(duration + 0.1f, () =>
         {
-            foreach (var enemy in activeEnemies)
-            {
-                if (enemy != null && !enemy.IsDead && enemy.IsAtLeftEdge())
-                {
-                    enemiesToRemove.Add(enemy);
-                }
-            }
-
-            // 移除死亡的敌人和到达边缘的敌人
+            // 只移除死亡的敌人
             foreach (var enemy in enemiesToRemove)
             {
                 if (enemy != null)
@@ -399,6 +391,41 @@ public class EnemyManager : MonoBehaviour
                 return false;
             }
         }
+        return true;
+    }
+
+    /// <summary>
+    /// 检查是否还有剩余的敌人可以被生成
+    /// </summary>
+    public bool HasRemainingEnemiesToSpawn()
+    {
+        // 如果使用关卡信息生成敌人，检查是否还有剩余的敌人
+        if (currentLevelInfo != null)
+        {
+            return currentSpawnIndex < remainingEnemies.Count;
+        }
+        
+        // 如果使用随机生成，没有剩余敌人列表，返回false（随机生成模式下，所有敌人都在开始时生成）
+        return false;
+    }
+
+    /// <summary>
+    /// 检查是否可以完成关卡（所有敌人死亡且没有剩余敌人可生成）
+    /// </summary>
+    public bool CanCompleteLevel()
+    {
+        // 首先检查所有活跃敌人是否都死了
+        if (!AreAllEnemiesDead())
+        {
+            return false;
+        }
+        
+        // 然后检查是否还有剩余的敌人可以被生成
+        if (HasRemainingEnemiesToSpawn())
+        {
+            return false;
+        }
+        
         return true;
     }
 }
