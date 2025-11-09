@@ -230,8 +230,8 @@ public class PlayerManager : Singleton<PlayerManager>
     {
         int oldHealth = currentHealth;
         currentHealth += amount;
-        int actualHeal = currentHealth - oldHealth;
         currentHealth = Mathf.Min(maxHealth, currentHealth);
+        int actualHeal = currentHealth - oldHealth;
         
         // 检查是否有overhealDoDamage技能
         if (SkillManager.Instance != null)

@@ -88,6 +88,9 @@ public class MainGameManager : MonoBehaviour
     private static Dictionary<int, float> waveGroupTotalDamage = new Dictionary<int, float>();
     private static Dictionary<int, int> waveGroupActiveWaveCount = new Dictionary<int, int>();
     private static Dictionary<int, TileColor> waveGroupColor = new Dictionary<int, TileColor>();
+    
+    // addDamageWhenPass技能管理 - 跟踪每个wave group的伤害加成
+    private static Dictionary<int, float> waveGroupAddDamageWhenPass = new Dictionary<int, float>();
 
     private void Start()
     {
@@ -895,6 +898,7 @@ public class MainGameManager : MonoBehaviour
             waveGroupTotalDamage[currentWaveGroupId] = 0f;
             waveGroupActiveWaveCount[currentWaveGroupId] = 0;
             waveGroupColor[currentWaveGroupId] = waveColor;
+            waveGroupAddDamageWhenPass[currentWaveGroupId] = 0f; // 初始化addDamageWhenPass
         }
 
         // 检查是否有buffNextDamage技能（用于下一个wave group）
@@ -1126,6 +1130,38 @@ public class MainGameManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 设置addDamageWhenPass技能的值（整个wave group共享）
+    /// </summary>
+    public static void SetAddDamageWhenPass(int waveGroupId, float value)
+    {
+        if (!waveGroupAddDamageWhenPass.ContainsKey(waveGroupId))
+        {
+            waveGroupAddDamageWhenPass[waveGroupId] = 0f;
+        }
+        waveGroupAddDamageWhenPass[waveGroupId] = value;
+    }
+    
+    /// <summary>
+    /// 检查wave group是否有addDamageWhenPass技能
+    /// </summary>
+    public static bool HasAddDamageWhenPass(int waveGroupId)
+    {
+        return waveGroupAddDamageWhenPass.ContainsKey(waveGroupId) && waveGroupAddDamageWhenPass[waveGroupId] > 0f;
+    }
+    
+    /// <summary>
+    /// 获取wave group的addDamageWhenPass技能值
+    /// </summary>
+    public static float GetAddDamageWhenPassValue(int waveGroupId)
+    {
+        if (waveGroupAddDamageWhenPass.ContainsKey(waveGroupId))
+        {
+            return waveGroupAddDamageWhenPass[waveGroupId];
+        }
+        return 0f;
+    }
+    
+    /// <summary>
     /// 记录wave造成的伤害（用于spawnAlly技能）
     /// </summary>
     public static void RecordWaveDamage(int waveGroupId, float damage)
@@ -1145,6 +1181,12 @@ public class MainGameManager : MonoBehaviour
             return;
             
         waveGroupActiveWaveCount[waveGroupId]--;
+        
+        // 清理addDamageWhenPass数据（wave group完成后）
+        if (waveGroupAddDamageWhenPass.ContainsKey(waveGroupId))
+        {
+            waveGroupAddDamageWhenPass.Remove(waveGroupId);
+        }
         
         // 如果这个wave group的所有wave都完成了，检查spawnAlly技能
         if (waveGroupActiveWaveCount[waveGroupId] <= 0)

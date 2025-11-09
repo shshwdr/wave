@@ -48,6 +48,16 @@ public class Wave : MonoBehaviour
     private int exchangeValue = 0; // exchange的值
     private bool hasPure = false; // 是否有pure技能
     private int pureValue = 0; // pure的值
+    private bool hasLowHP = false; // 是否有lowHP技能
+    private int lowHPValue = 0; // lowHP的值
+    private bool hasHighHP = false; // 是否有highHP技能
+    private int highHPValue = 0; // highHP的值
+    private bool hasHealWhenPass = false; // 是否有healWhenPass技能
+    private int healWhenPassValue = 0; // healWhenPass的值
+    private bool hasHitAddColor = false; // 是否有hitAddColor技能
+    private bool hasFocus = false; // 是否有focus技能
+    private int focusValue = 0; // focus的值
+    private bool hasPassedSameColorTile = false; // 是否已经经过同色tile（用于healWhenPass和addDamageWhenPass）
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -104,6 +114,7 @@ public class Wave : MonoBehaviour
         damageMultiplier = damageMult;
         hasPure = hasPureFlag;
         pureValue = pureValueParam;
+        hasPassedSameColorTile = false; // 重置经过同色tile标志
         hitEnemyCount = 0; // 重置击中敌人计数
 
         transform.position = spawnPosition;
@@ -190,6 +201,41 @@ public class Wave : MonoBehaviour
             // 如果wave在tile的范围内（考虑tile大小和wave大小）
             if (distanceX <= tileSize * 0.5f && distanceY <= tileSize * 0.5f)
             {
+                // 检查是否经过同色tile（用于healWhenPass和addDamageWhenPass）
+                if (tile.Color == waveColor && !hasPassedSameColorTile)
+                {
+                    hasPassedSameColorTile = true;
+                    
+                    // 应用healWhenPass技能
+                    if (hasHealWhenPass && PlayerManager.Instance != null)
+                    {
+                        int maxHealth = PlayerManager.Instance.MaxHealth;
+                        int healValue = (int)(maxHealth * healWhenPassValue / 100f);
+                        PlayerManager.Instance.Heal(healValue);
+                        DamageNumber.CreateDamageNumber(healValue, transform.position, true);
+                    }
+                    
+                    // 应用addDamageWhenPass技能（整个wave group共享）
+                    if (PlayerManager.Instance != null && SkillManager.Instance != null)
+                    {
+                        int colorIndex = (int)waveColor;
+                        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+                        foreach (var identifier in skillIdentifiers)
+                        {
+                            if (SkillManager.Instance.HasSkill(identifier))
+                            {
+                                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                                if (skillInfo != null && skillInfo.effect == "addDamageWhenPass")
+                                {
+                                    int value = SkillManager.Instance.GetSkillValue(identifier);
+                                    MainGameManager.SetAddDamageWhenPass(waveGroupId, value);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // 清除fog和dirt
                 if (tile.HasFog)
                 {
@@ -330,6 +376,45 @@ public class Wave : MonoBehaviour
                     // pure技能在EliminateConnectedTiles中处理，这里不需要处理
                     // 因为pure技能只在单个tile时生效，已经在CreateWave时传递了
                     break;
+                    
+                case "lowHP":
+                    // 对血量少于30%的敌人造成额外伤害
+                    hasLowHP = true;
+                    lowHPValue = value;
+                    break;
+                    
+                case "highHP":
+                    // 对满血敌人造成额外伤害
+                    hasHighHP = true;
+                    highHPValue = value;
+                    break;
+                    
+                case "healWhenPass":
+                    // 经过同色tile时恢复血量
+                    hasHealWhenPass = true;
+                    healWhenPassValue = value;
+                    break;
+                    
+                case "addDamageWhenPass":
+                    // 经过同色tile时整个wave group增加伤害（在CheckAndClearFogDirt中处理）
+                    // 这里只标记，实际处理在MainGameManager中
+                    break;
+                    
+                case "hitAddColor":
+                    // 击中敌人时改变场上tile颜色
+                    hasHitAddColor = true;
+                    break;
+                    
+                case "focus":
+                    // 击中第一个敌人后移除，攻击力提高
+                    hasFocus = true;
+                    focusValue = value;
+                    break;
+                    
+                case "damageIncreaseAll":
+                    // 所有wave伤害提升（全局效果）
+                    damage = damage * (1f + value / 100f);
+                    break;
             }
         }
         
@@ -337,6 +422,12 @@ public class Wave : MonoBehaviour
         if (hasPure && pureValue > 0)
         {
             damage = damage * (1f + pureValue / 100f);
+        }
+        
+        // 应用focus技能（攻击力提高）
+        if (hasFocus && focusValue > 0)
+        {
+            damage = damage * (1f + focusValue / 100f);
         }
     }
     
@@ -409,6 +500,32 @@ public class Wave : MonoBehaviour
                     // ...
                     float increaseMultiplier = 1f + (hitEnemyCount - 1) * (damageIncreaseWhenHitMoreValue / 100f);
                     finalDamage = finalDamage * increaseMultiplier;
+                }
+                
+                // 应用lowHP技能（对血量少于30%的敌人造成额外伤害）
+                if (hasLowHP && enemy != null)
+                {
+                    float healthPercent = (float)enemy.CurrentHealth / enemy.MaxHealth;
+                    if (healthPercent < 0.3f)
+                    {
+                        finalDamage = finalDamage * (1f + lowHPValue / 100f);
+                    }
+                }
+                
+                // 应用highHP技能（对满血敌人造成额外伤害）
+                if (hasHighHP && enemy != null)
+                {
+                    if (enemy.CurrentHealth >= enemy.MaxHealth)
+                    {
+                        finalDamage = finalDamage * (1f + highHPValue / 100f);
+                    }
+                }
+                
+                // 应用addDamageWhenPass技能（整个wave group共享）
+                if (MainGameManager.HasAddDamageWhenPass(waveGroupId))
+                {
+                    float addDamageValue = MainGameManager.GetAddDamageWhenPassValue(waveGroupId);
+                    finalDamage = finalDamage * (1f + addDamageValue / 100f);
                 }
                 
                 // 应用击中时的技能效果
@@ -488,6 +605,19 @@ public class Wave : MonoBehaviour
                     DamageNumber.CreateDamageNumber(healValue, transform.position, true);
                 }
                 
+                // 应用hitAddColor技能（击中敌人时改变场上tile颜色）
+                if (hasHitAddColor && boardManager != null)
+                {
+                    ApplyHitAddColor();
+                }
+                
+                // 应用focus技能（击中第一个敌人后移除）
+                if (hasFocus && hitEnemyCount == 1)
+                {
+                    DestroyWave();
+                    return; // 立即返回，不再处理后续逻辑
+                }
+                
                 // 如果没有穿透能力或穿透次数为0，销毁波浪
                 if (penetrateCount <= 0)
                 {
@@ -518,6 +648,46 @@ public class Wave : MonoBehaviour
         // 其他技能效果在ApplySkillEffects中处理
     }
 
+    /// <summary>
+    /// 应用hitAddColor技能（击中敌人时改变场上tile颜色）
+    /// </summary>
+    private void ApplyHitAddColor()
+    {
+        if (boardManager == null)
+            return;
+            
+        // 找到场地上一个不是这个wave颜色的tile
+        int boardWidth = boardManager.Width;
+        int boardHeight = boardManager.Height;
+        
+        List<Vector2Int> candidateTiles = new List<Vector2Int>();
+        
+        for (int x = 0; x < boardWidth; x++)
+        {
+            for (int y = 0; y < boardHeight; y++)
+            {
+                Vector2Int gridPos = new Vector2Int(x, y);
+                TileCell tile = boardManager.GetTile(gridPos);
+                if (tile != null && tile.Color != waveColor)
+                {
+                    candidateTiles.Add(gridPos);
+                }
+            }
+        }
+        
+        // 如果找到候选tile，随机选择一个并改变颜色
+        if (candidateTiles.Count > 0)
+        {
+            int randomIndex = Random.Range(0, candidateTiles.Count);
+            Vector2Int targetPos = candidateTiles[randomIndex];
+            TileCell targetTile = boardManager.GetTile(targetPos);
+            if (targetTile != null)
+            {
+                targetTile.SetColor(waveColor);
+            }
+        }
+    }
+    
     /// <summary>
     /// 应用AOE攻击 - 对四向相邻的敌人造成伤害
     /// </summary>
