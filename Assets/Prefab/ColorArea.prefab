@@ -56,7 +56,7 @@ MonoBehaviour:
   m_ChildAlignment: 0
   m_Spacing: 0
   m_ChildForceExpandWidth: 1
-  m_ChildForceExpandHeight: 1
+  m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 0
   m_ChildControlHeight: 0
   m_ChildScaleWidth: 0
@@ -156,6 +156,7 @@ MonoBehaviour:
   button: {fileID: 1610538585907294705}
   slotText: {fileID: 8462916886159915017}
   slotParent: {fileID: 209393405695165506}
+  colorImage: {fileID: 2337684211704895096}
 --- !u!114 &4526929696652677807
 MonoBehaviour:
   m_ObjectHideFlags: 0

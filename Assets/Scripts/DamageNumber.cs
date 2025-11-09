@@ -9,7 +9,7 @@ public class DamageNumber : MonoBehaviour
 {
     [SerializeField] private TMP_Text damageText;
     [SerializeField] private float jumpHeight = 1f;
-    [SerializeField] private float duration = 1f;
+    [SerializeField] private float duration = 2f;
     [SerializeField] private Color damageColor = Color.red;
     [SerializeField] private Color healColor = Color.green;
 

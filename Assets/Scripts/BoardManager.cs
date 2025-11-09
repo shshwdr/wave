@@ -27,6 +27,9 @@ public class BoardManager : MonoBehaviour
 
     private TileCell[,] board;
     private Transform boardParent;
+    
+    // 颜色权重（用于more/less技能），默认都是1.0
+    private float[] colorWeights = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
 
     public int Width => boardWidth;
     public int Height => boardHeight;
@@ -126,8 +129,8 @@ public class BoardManager : MonoBehaviour
                         tile = tileObj.AddComponent<TileCell>();
                     }
 
-                    // 随机颜色
-                    TileColor randomColor = availableColors[Random.Range(0, availableColors.Count)];
+                    // 根据权重随机颜色
+                    TileColor randomColor = GetWeightedRandomColor();
                     Vector2Int gridPos = new Vector2Int(x, y);
                     
                     // 设置位置
@@ -140,8 +143,8 @@ public class BoardManager : MonoBehaviour
                 }
                 else
                 {
-                    // 更新现有格子颜色
-                    TileColor randomColor = availableColors[Random.Range(0, availableColors.Count)];
+                    // 更新现有格子颜色（根据权重）
+                    TileColor randomColor = GetWeightedRandomColor();
                     board[x, y].SetColor(randomColor);
                 }
             }
@@ -350,8 +353,8 @@ public class BoardManager : MonoBehaviour
                         tile = tileObj.AddComponent<TileCell>();
                     }
 
-                    // 随机颜色
-                    TileColor randomColor = availableColors[Random.Range(0, availableColors.Count)];
+                    // 根据权重随机颜色
+                    TileColor randomColor = GetWeightedRandomColor();
                     Vector2Int gridPos = new Vector2Int(x, y);
                     
                     // 从上方生成（动画效果）
@@ -411,8 +414,8 @@ public class BoardManager : MonoBehaviour
                         tile = tileObj.AddComponent<TileCell>();
                     }
 
-                    // 随机颜色
-                    TileColor randomColor = availableColors[Random.Range(0, availableColors.Count)];
+                    // 根据权重随机颜色
+                    TileColor randomColor = GetWeightedRandomColor();
                     Vector2Int gridPos = new Vector2Int(x, y);
                     
                     // 从右侧生成（动画效果）
@@ -436,6 +439,101 @@ public class BoardManager : MonoBehaviour
     public bool IsInRightHalf(Vector2Int gridPos)
     {
         return gridPos.x >= boardWidth / 2;
+    }
+    
+    /// <summary>
+    /// 根据权重随机获取颜色（动态检查more/less技能）
+    /// </summary>
+    private TileColor GetWeightedRandomColor()
+    {
+        // 动态计算每个颜色的权重（检查more/less技能）
+        float[] dynamicWeights = new float[4]; // 0=红，1=黄，2=蓝，3=绿
+        
+        for (int i = 0; i < availableColors.Count && i < 4; i++)
+        {
+            // 基础权重为1.0
+            float weight = 1.0f;
+            
+            // 检查该颜色是否有more/less技能
+            if (PlayerManager.Instance != null && SkillManager.Instance != null)
+            {
+                List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(i);
+                foreach (var identifier in skillIdentifiers)
+                {
+                    if (SkillManager.Instance.HasSkill(identifier))
+                    {
+                        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                        if (skillInfo != null)
+                        {
+                            if (skillInfo.effect == "more")
+                            {
+                                int value = SkillManager.Instance.GetSkillValue(identifier);
+                                weight += value / 100f; // 增加百分比
+                            }
+                            else if (skillInfo.effect == "less")
+                            {
+                                int value = SkillManager.Instance.GetSkillValue(identifier);
+                                weight -= value / 100f; // 减少百分比
+                            }
+                        }
+                    }
+                }
+            }
+            
+            dynamicWeights[i] = Mathf.Max(0f, weight); // 确保权重不为负
+        }
+        
+        // 计算总权重
+        float totalWeight = 0f;
+        for (int i = 0; i < availableColors.Count && i < 4; i++)
+        {
+            totalWeight += dynamicWeights[i];
+        }
+        
+        if (totalWeight <= 0f)
+        {
+            // 如果总权重为0或负数，使用均匀随机
+            return availableColors[Random.Range(0, availableColors.Count)];
+        }
+        
+        // 随机一个0到totalWeight之间的值
+        float randomValue = Random.Range(0f, totalWeight);
+        
+        // 根据权重选择颜色
+        float currentWeight = 0f;
+        for (int i = 0; i < availableColors.Count && i < 4; i++)
+        {
+            currentWeight += dynamicWeights[i];
+            if (randomValue <= currentWeight)
+            {
+                return availableColors[i];
+            }
+        }
+        
+        // 如果没找到（理论上不应该发生），返回第一个颜色
+        return availableColors[0];
+    }
+    
+    /// <summary>
+    /// 修改颜色权重（用于more/less技能）
+    /// </summary>
+    public void ModifyColorWeight(int colorIndex, float delta)
+    {
+        if (colorIndex >= 0 && colorIndex < colorWeights.Length)
+        {
+            colorWeights[colorIndex] = Mathf.Max(0f, colorWeights[colorIndex] + delta);
+        }
+    }
+    
+    /// <summary>
+    /// 重置所有颜色权重为1.0
+    /// </summary>
+    public void ResetColorWeights()
+    {
+        for (int i = 0; i < colorWeights.Length; i++)
+        {
+            colorWeights[i] = 1.0f;
+        }
     }
 }
 

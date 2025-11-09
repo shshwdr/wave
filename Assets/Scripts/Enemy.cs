@@ -988,6 +988,9 @@ public class Enemy : MonoBehaviour
             newEnemy.Init(spawnPos, summonInfo.hp, summonInfo);
             enemyManager.ActiveEnemies.Add(newEnemy);
             
+            // 召唤的敌人需要添加到remainingEnemies（因为未上场的敌人本来就在统计里）
+            enemyManager.AddSummonedEnemy();
+            
             // 创建血条
             enemyManager.CreateHealthBar(newEnemy);
         }
@@ -1033,6 +1036,13 @@ public class Enemy : MonoBehaviour
             healthBar.SetVisible(false);
         }
 
+        // 通知EnemyManager更新敌人计数
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (enemyManager != null)
+        {
+            enemyManager.RemoveDeadEnemy(this);
+        }
+        
         // 死亡动画
         transform.DOScale(Vector3.zero, 0.3f)
             .SetEase(Ease.InBack)

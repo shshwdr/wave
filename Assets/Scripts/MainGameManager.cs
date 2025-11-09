@@ -34,6 +34,8 @@ public class MainGameManager : MonoBehaviour
     [SerializeField] private GameObject enemyDescriptionPanel;
     [SerializeField] private TMP_Text enemyDescriptionText;
 
+    public bool showShopAtBeginning;
+
     private enum GameState
     {
         PlayerTurn,
@@ -122,21 +124,20 @@ public class MainGameManager : MonoBehaviour
         InitEnemyDescriptionUI();
 
         StartBattle();
+
+        if (showShopAtBeginning)
+        {
+            SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+            skillMenu.ShowSkillSelection(
+                () =>
+                {
+                    // 确认按钮点击，进入下一关
+                    Debug.Log("确认配置，进入下一关");
+                }
+            );
+        }
+        // 初始打开商店
         
-        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
-        skillMenu.ShowSkillSelection(
-            (selectedSkill) =>
-            {
-                // 三选一选择完成，技能已添加到背包
-                // 界面保持打开，让玩家可以继续配置技能
-                Debug.Log($"技能选择完成: {selectedSkill.identifier}，已添加到背包");
-            },
-            () =>
-            {
-                // 确认按钮点击，进入下一关
-                Debug.Log("确认配置，进入下一关");
-            }
-        );
     }
 
     /// <summary>
@@ -927,12 +928,34 @@ public class MainGameManager : MonoBehaviour
         // 更新wave group的活跃wave数量
         waveGroupActiveWaveCount[currentWaveGroupId] = connectedTiles.Count;
         
+        // 检查是否有pure技能（如果只有一个tile，伤害增加）
+        bool hasPure = false;
+        int pureValue = 0;
+        if (connectedTiles.Count == 1 && PlayerManager.Instance != null && SkillManager.Instance != null)
+        {
+            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+            foreach (var identifier in skillIdentifiers)
+            {
+                if (SkillManager.Instance.HasSkill(identifier))
+                {
+                    SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                    if (skillInfo != null && skillInfo.effect == "pure")
+                    {
+                        hasPure = true;
+                        pureValue = SkillManager.Instance.GetSkillValue(identifier);
+                        break;
+                    }
+                }
+            }
+        }
+        
         int waveIndex = 0;
         foreach (var pos in connectedTiles)
         {
             Vector3 worldPos = boardManager.GridToWorldPosition(pos);
             bool isFirstWave = (waveIndex == 0);
-            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier);
+            // 如果只有一个tile且有pure技能，传递pure信息
+            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue);
 
             boardManager.RemoveTile(pos);
             waveIndex++;
@@ -957,7 +980,7 @@ public class MainGameManager : MonoBehaviour
     /// <summary>
     /// 创建波浪攻击
     /// </summary>
-    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f)
+    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f, bool hasPure = false, int pureValue = 0)
     {
         if (wavePrefab == null)
             return;
@@ -969,7 +992,7 @@ public class MainGameManager : MonoBehaviour
             wave = waveObj.AddComponent<Wave>();
         }
 
-        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier);
+        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue);
     }
 
     /// <summary>
@@ -1377,6 +1400,31 @@ public class MainGameManager : MonoBehaviour
         currentState = GameState.LevelComplete;
         isProcessing = true;
 
+        // 掉落gold（使用当前玩家等级对应的关卡信息）
+        if (LevelManager.Instance != null && PlayerManager.Instance != null && CSVLoader.Instance != null)
+        {
+            // 查找当前玩家等级对应的关卡信息
+            LevelInfo levelInfo = null;
+            if (CSVLoader.Instance.levelInfoMap != null)
+            {
+                // 查找匹配玩家等级的关卡
+                foreach (var kvp in CSVLoader.Instance.levelInfoMap)
+                {
+                    if (kvp.Value.level == playerLevel)
+                    {
+                        levelInfo = kvp.Value;
+                        break;
+                    }
+                }
+            }
+            
+            if (levelInfo != null && levelInfo.gold > 0)
+            {
+                PlayerManager.Instance.AddGold(levelInfo.gold);
+                Debug.Log($"关卡完成，获得 {levelInfo.gold} gold");
+            }
+        }
+
         // 关闭技能显示
         if (skillDisplayPanel != null)
         {
@@ -1399,12 +1447,6 @@ public class MainGameManager : MonoBehaviour
         }
 
         skillMenu.ShowSkillSelection(
-            (selectedSkill) =>
-            {
-                // 三选一选择完成，技能已添加到背包
-                // 界面保持打开，让玩家可以继续配置技能
-                Debug.Log($"技能选择完成: {selectedSkill.identifier}，已添加到背包");
-            },
             () =>
             {
                 // 确认按钮点击，进入下一关
@@ -1453,7 +1495,7 @@ public class MainGameManager : MonoBehaviour
         // 从列表中移除已死亡的敌人
         foreach (var enemy in enemiesToRemove)
         {
-            enemyManager.ActiveEnemies.Remove(enemy);
+            enemyManager.RemoveDeadEnemy(enemy);
         }
 
         if (attackCount > 0)

@@ -14,6 +14,9 @@ public class SkillInfo
     public List<int> values; //count equals level
     public int maxLevel;
     public bool available;
+    public int buyPrice;
+    public int upgradePrice;
+    public List<string> unlock;
 
 }
 
@@ -38,6 +41,7 @@ public class LevelInfo
 {
     public string enemies;
     public int level;
+    public int gold;
     public int startEnemyCount;
 }
 public class CSVLoader : Singleton<CSVLoader>

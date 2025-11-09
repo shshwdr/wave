@@ -31,9 +31,72 @@ public class EnemyManager : MonoBehaviour
     private LevelInfo currentLevelInfo;
     private List<EnemySpawnInfo> remainingEnemies = new List<EnemySpawnInfo>(); // 剩余的敌人列表
     private int currentSpawnIndex = 0; // 当前生成索引
+    private int deadEnemyCount = 0; // 已死亡的敌人数量
 
     public List<Enemy> ActiveEnemies => activeEnemies;
     public int EnemyCount => activeEnemies.Count;
+    
+    /// <summary>
+    /// 获取总敌人数（包括已生成和未生成的）
+    /// </summary>
+    public int GetTotalEnemyCount()
+    {
+        // 如果使用关卡信息生成敌人，总数为remainingEnemies.Count
+        if (currentLevelInfo != null)
+        {
+            return remainingEnemies.Count;
+        }
+        
+        // 如果使用随机生成，总数为当前活跃敌人数 + 已死亡敌人数（因为所有敌人都在开始时生成）
+        return activeEnemies.Count + deadEnemyCount;
+    }
+    
+    /// <summary>
+    /// 获取已死亡的敌人数量
+    /// </summary>
+    public int GetDeadEnemyCount()
+    {
+        return deadEnemyCount;
+    }
+    
+    /// <summary>
+    /// 获取剩余敌人数量（总数 - 已死亡）
+    /// </summary>
+    public int GetRemainingEnemyCount()
+    {
+        int total = GetTotalEnemyCount();
+        int dead = GetDeadEnemyCount();
+        return total - dead;
+    }
+    
+    /// <summary>
+    /// 移除已死亡的敌人（并更新死亡计数）
+    /// </summary>
+    public void RemoveDeadEnemy(Enemy enemy)
+    {
+        if (enemy != null && enemy.IsDead)
+        {
+            if (activeEnemies.Contains(enemy))
+            {
+                activeEnemies.Remove(enemy);
+                deadEnemyCount++;
+                // 敌人被杀死时，更新enemies的当前值（通过增加deadEnemyCount）
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 添加召唤的敌人（召唤的敌人需要更新remainingEnemies计数）
+    /// </summary>
+    public void AddSummonedEnemy()
+    {
+        // 召唤的敌人需要添加到remainingEnemies，因为未上场的敌人本来就在统计里
+        remainingEnemies.Add(new EnemySpawnInfo
+        {
+            identifier = "",
+            count = 1
+        });
+    }
 
     private void Awake()
     {
@@ -70,6 +133,10 @@ public class EnemyManager : MonoBehaviour
             }
         }
         activeEnemies.Clear();
+        deadEnemyCount = 0;
+        remainingEnemies.Clear();
+        currentSpawnIndex = 0;
+        currentLevelInfo = null;
     }
 
     /// <summary>
@@ -83,6 +150,7 @@ public class EnemyManager : MonoBehaviour
             return;
         }
 
+        deadEnemyCount = 0; // 重置死亡计数
         int enemyCount = Random.Range(minEnemyCount, maxEnemyCount + 1);
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
@@ -132,6 +200,7 @@ public class EnemyManager : MonoBehaviour
         }
 
         currentLevelInfo = levelInfo;
+        deadEnemyCount = 0; // 重置死亡计数
         
         // 解析敌人信息
         List<EnemySpawnInfo> allSpawnInfos = LevelManager.Instance.ParseEnemies(levelInfo.enemies);
@@ -343,6 +412,7 @@ public class EnemyManager : MonoBehaviour
                     activeEnemies.Remove(enemy);
                     if (enemy.IsDead)
                     {
+                        deadEnemyCount++; // 增加已死亡敌人计数
                         Destroy(enemy.gameObject, 1f);
                     }
                 }

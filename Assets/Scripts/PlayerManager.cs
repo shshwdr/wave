@@ -12,6 +12,9 @@ public class PlayerManager : Singleton<PlayerManager>
 
     private int currentHealth;
     private int currentSwapCount;
+    private int gold = 0; // 金币
+    public int startGold = 3;
+    private int tempSwapCount = 0; // 临时交换次数（可以突破上限）
 
     // Wave技能配置：List<List<string>>，索引0,1,2,3对应红、黄、蓝、绿
     // 每个内层List存储该颜色wave的技能identifier列表
@@ -20,7 +23,8 @@ public class PlayerManager : Singleton<PlayerManager>
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
     public int CurrentSwapCount => currentSwapCount;
-    public int MaxSwapCount => maxSwapCount;
+    public int MaxSwapCount => maxSwapCount + tempSwapCount; // 临时交换次数可以突破上限
+    public int Gold => gold;
     public bool IsDead => currentHealth <= 0;
     
     /// <summary>
@@ -89,6 +93,8 @@ public class PlayerManager : Singleton<PlayerManager>
         
         // 初始化waveSkillsDict（如果还未初始化）
         InitializeWaveSkillsDict();
+        
+        AddGold(startGold);
     }
     
     /// <summary>
@@ -153,6 +159,36 @@ public class PlayerManager : Singleton<PlayerManager>
     public void StartBattle()
     {
         currentSwapCount = maxSwapCount;
+        tempSwapCount = 0; // 重置临时交换次数
+    }
+    
+    /// <summary>
+    /// 添加金币
+    /// </summary>
+    public void AddGold(int amount)
+    {
+        gold += amount;
+    }
+    
+    /// <summary>
+    /// 消耗金币
+    /// </summary>
+    public bool ConsumeGold(int amount)
+    {
+        if (gold >= amount)
+        {
+            gold -= amount;
+            return true;
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// 添加临时交换次数（增加当前可用的交换次数，而非最大值）
+    /// </summary>
+    public void AddTempSwapCount(int amount)
+    {
+        currentSwapCount += amount;
     }
 
     /// <summary>

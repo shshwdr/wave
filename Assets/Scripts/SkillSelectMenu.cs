@@ -12,10 +12,9 @@ using Random = UnityEngine.Random;
 /// </summary>
 public class SkillSelectMenu : MenuBase
 {
-    [Header("三选一区域")]
-    [SerializeField] private Transform threeChoiceParent;
-    private Button[] threeChoiceButtons;
-    private TMP_Text[] threeChoiceTexts;
+    [Header("商店区域")]
+    [SerializeField] private Transform shopParent; // 商店技能列表容器
+    [SerializeField] private GameObject shopSkillItemPrefab; // 商店技能项Prefab（包含技能图标、价格、购买按钮）
 
     [Header("颜色区域")]
     [SerializeField] public ColorArea[] colorArea = new ColorArea[4]; // 0=红，1=黄，2=蓝，3=绿
@@ -32,12 +31,16 @@ public class SkillSelectMenu : MenuBase
 
     [Header("确认按钮")]
     [SerializeField] private Button confirmButton;
+    
+    [Header("刷新按钮")]
+    [SerializeField] private Button refreshButton;
+    
+    [Header("金币显示")]
+    [SerializeField] private TMP_Text goldText;
 
-    private List<SkillInfo> selectedSkills = new List<SkillInfo>(); // 三选一的技能列表
-    private Action<SkillInfo> onSkillSelected; // 三选一选择后的回调
     private Action onConfirm; // 确认按钮的回调
     private Dictionary<string, SkillIconUI> skillIconMap = new Dictionary<string, SkillIconUI>(); // 技能identifier -> UI实例
-    private bool threeChoiceCompleted = false; // 三选一是否已完成
+    private List<GameObject> shopSkillItems = new List<GameObject>(); // 商店技能项列表
 
     // 拖拽相关
     private SkillIconUI draggingIcon = null;
@@ -54,41 +57,45 @@ public class SkillSelectMenu : MenuBase
     {
         base.Awake();
         dragDropLayer = LayerMask.NameToLayer("DropTarget");
-        // 初始化三选一按钮
-        if (threeChoiceParent != null)
+        // 初始化刷新按钮
+        if (refreshButton != null)
         {
-            threeChoiceButtons = threeChoiceParent.GetComponentsInChildren<Button>();
-            threeChoiceTexts = new TMP_Text[threeChoiceButtons.Length];
-            for (int i = 0; i < threeChoiceButtons.Length; i++)
-            {
-                int index = i;
-                threeChoiceButtons[i].onClick.AddListener(() => OnThreeChoiceClicked(index));
-                threeChoiceTexts[i] = threeChoiceButtons[i].GetComponentInChildren<TMP_Text>();
-            }
+            refreshButton.onClick.AddListener(OnRefreshClicked);
         }
 
-        // 初始化颜色区域的详情按钮
+        // 初始化颜色区域的详情按钮和颜色图片
         for (int i = 0; i < 4; i++)
         {
             int colorIndex = i;
-            if (colorArea[i] != null && colorArea[i].button != null)
+            if (colorArea[i] != null)
             {
-                // 添加鼠标悬停事件
-                EventTrigger trigger = colorArea[i].button.gameObject.GetComponent<EventTrigger>();
-                if (trigger == null)
+                // 设置颜色图片
+                if (colorArea[i].colorImage != null)
                 {
-                    trigger = colorArea[i].button.gameObject.AddComponent<EventTrigger>();
+                    TileColor tileColor = (TileColor)colorIndex;
+                    Color waveColor = TileColorUtil.GetUnityColor(tileColor);
+                    colorArea[i].colorImage.color = waveColor;
                 }
 
-                EventTrigger.Entry entryEnter = new EventTrigger.Entry();
-                entryEnter.eventID = EventTriggerType.PointerEnter;
-                entryEnter.callback.AddListener((data) => OnColorAreaButtonHover(colorIndex, true));
-                trigger.triggers.Add(entryEnter);
+                // 添加鼠标悬停事件
+                if (colorArea[i].button != null)
+                {
+                    EventTrigger trigger = colorArea[i].button.gameObject.GetComponent<EventTrigger>();
+                    if (trigger == null)
+                    {
+                        trigger = colorArea[i].button.gameObject.AddComponent<EventTrigger>();
+                    }
 
-                EventTrigger.Entry entryExit = new EventTrigger.Entry();
-                entryExit.eventID = EventTriggerType.PointerExit;
-                entryExit.callback.AddListener((data) => OnColorAreaButtonHover(colorIndex, false));
-                trigger.triggers.Add(entryExit);
+                    EventTrigger.Entry entryEnter = new EventTrigger.Entry();
+                    entryEnter.eventID = EventTriggerType.PointerEnter;
+                    entryEnter.callback.AddListener((data) => OnColorAreaButtonHover(colorIndex, true));
+                    trigger.triggers.Add(entryEnter);
+
+                    EventTrigger.Entry entryExit = new EventTrigger.Entry();
+                    entryExit.eventID = EventTriggerType.PointerExit;
+                    entryExit.callback.AddListener((data) => OnColorAreaButtonHover(colorIndex, false));
+                    trigger.triggers.Add(entryExit);
+                }
             }
         }
 
@@ -106,47 +113,14 @@ public class SkillSelectMenu : MenuBase
     }
 
     /// <summary>
-    /// 显示技能选择界面
+    /// 显示技能商店界面
     /// </summary>
-    public void ShowSkillSelection(Action<SkillInfo> onSelected, Action onConfirmCallback = null)
+    public void ShowSkillSelection(Action onConfirmCallback = null)
     {
-        onSkillSelected = onSelected;
         onConfirm = onConfirmCallback;
-        selectedSkills.Clear();
-        threeChoiceCompleted = false;
 
-        // 获取可选择的技能列表（未拥有的和可升级的）
-        List<SkillInfo> availableSkills = SkillManager.Instance.GetAvailableSkillsForSelection();
-
-        if (availableSkills.Count == 0)
-        {
-            Debug.LogWarning("没有可选择的技能！");
-            // 如果没有可选择的技能，直接隐藏三选一区域
-            if (threeChoiceParent != null)
-            {
-                threeChoiceParent.gameObject.SetActive(false);
-            }
-            threeChoiceCompleted = true;
-        }
-        else
-        {
-            // 随机选择技能（最多选择按钮数量）
-            List<SkillInfo> randomSkills = new List<SkillInfo>();
-            List<SkillInfo> tempList = new List<SkillInfo>(availableSkills);
-
-            int maxCount = threeChoiceButtons != null ? threeChoiceButtons.Length : 3;
-            int count = Mathf.Min(maxCount, availableSkills.Count);
-            for (int i = 0; i < count; i++)
-            {
-                int randomIndex = Random.Range(0, tempList.Count);
-                randomSkills.Add(tempList[randomIndex]);
-                tempList.RemoveAt(randomIndex);
-            }
-
-            selectedSkills = randomSkills;
-            UpdateThreeChoiceButtons();
-            threeChoiceParent.gameObject.SetActive(true);
-        }
+        // 更新商店显示
+        UpdateShop();
 
         // 更新颜色区域和背包
         UpdateColorAreas();
@@ -154,6 +128,230 @@ public class SkillSelectMenu : MenuBase
 
         // 显示界面
         Show();
+    }
+    
+    /// <summary>
+    /// 更新商店显示
+    /// </summary>
+    private void UpdateShop()
+    {
+        if (shopParent == null)
+            return;
+
+        // 清除旧的商店技能项
+        foreach (var item in shopSkillItems)
+        {
+            if (item != null)
+            {
+                Destroy(item);
+            }
+        }
+        shopSkillItems.Clear();
+
+        // 获取所有可购买的技能（有buyPrice或upgradePrice的）
+        List<SkillInfo> shopSkills = GetShopSkills();
+
+        // 创建商店技能项
+        foreach (var skillInfo in shopSkills)
+        {
+            CreateShopSkillItem(skillInfo);
+        }
+        
+        // 更新金币显示
+        UpdateGoldDisplay();
+    }
+    
+    /// <summary>
+    /// 获取商店技能列表（随机选择3个）
+    /// </summary>
+    private List<SkillInfo> GetShopSkills()
+    {
+        List<SkillInfo> allAvailableSkills = new List<SkillInfo>();
+        
+        if (CSVLoader.Instance == null || CSVLoader.Instance.cardInfoMap == null)
+            return new List<SkillInfo>();
+
+        foreach (var skillInfo in CSVLoader.Instance.cardInfoMap.Values)
+        {
+            if (!skillInfo.available)
+                continue;
+                
+            // 检查unlock条件：如果unlock不为空，需要检查所有unlock中的技能是否都已获得
+            if (skillInfo.unlock != null && skillInfo.unlock.Count > 0)
+            {
+                bool allUnlocked = true;
+                foreach (var unlockIdentifier in skillInfo.unlock)
+                {
+                    if (string.IsNullOrEmpty(unlockIdentifier))
+                        continue;
+                        
+                    if (!SkillManager.Instance.HasSkill(unlockIdentifier))
+                    {
+                        allUnlocked = false;
+                        break;
+                    }
+                }
+                
+                // 如果有未解锁的前置技能，则不在商店中显示
+                if (!allUnlocked)
+                    continue;
+            }
+                
+            // 检查是否可以购买或升级
+            bool canBuy = !SkillManager.Instance.HasSkill(skillInfo.identifier) && skillInfo.buyPrice > 0;
+            bool canUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier) && 
+                             SkillManager.Instance.CanUpgradeSkill(skillInfo.identifier) && 
+                             skillInfo.upgradePrice > 0;
+            
+            if (canBuy || canUpgrade)
+            {
+                allAvailableSkills.Add(skillInfo);
+            }
+        }
+
+        // 随机选择3个技能
+        List<SkillInfo> result = new List<SkillInfo>();
+        if (allAvailableSkills.Count == 0)
+        {
+            return result;
+        }
+
+        // 如果可用技能少于3个，返回所有可用技能
+        int count = Mathf.Min(3, allAvailableSkills.Count);
+        
+        // 创建临时列表用于随机选择
+        List<SkillInfo> tempList = new List<SkillInfo>(allAvailableSkills);
+        
+        for (int i = 0; i < count; i++)
+        {
+            int randomIndex = Random.Range(0, tempList.Count);
+            result.Add(tempList[randomIndex]);
+            tempList.RemoveAt(randomIndex);
+        }
+
+        return result;
+    }
+    
+    /// <summary>
+    /// 创建商店技能项
+    /// </summary>
+    private void CreateShopSkillItem(SkillInfo skillInfo)
+    {
+        if (shopSkillItemPrefab == null || shopParent == null)
+            return;
+
+        GameObject itemObj = Instantiate(shopSkillItemPrefab, shopParent);
+        shopSkillItems.Add(itemObj);
+
+        // 获取组件（假设Prefab包含：技能图标、价格文本、购买按钮）
+        // 这里需要根据实际的Prefab结构调整
+        // 假设结构：ShopSkillItem组件包含所有需要的引用
+        ShopSkillItem shopItem = itemObj.GetComponent<ShopSkillItem>();
+        if (shopItem == null)
+        {
+            shopItem = itemObj.AddComponent<ShopSkillItem>();
+        }
+        
+        shopItem.Init(skillInfo, this);
+    }
+    
+    /// <summary>
+    /// 购买技能
+    /// </summary>
+    public void BuySkill(SkillInfo skillInfo)
+    {
+        if (PlayerManager.Instance == null || SkillManager.Instance == null)
+            return;
+
+        bool isUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier);
+        int price = isUpgrade ? skillInfo.upgradePrice : skillInfo.buyPrice;
+
+        // 检查金币是否足够
+        if (!PlayerManager.Instance.ConsumeGold(price))
+        {
+            Debug.LogWarning($"金币不足，无法购买技能: {skillInfo.identifier}");
+            return;
+        }
+
+        // 升级或获得技能
+        SkillManager.Instance.UpgradeSkill(skillInfo.identifier);
+
+        // 如果是新技能，添加到背包
+        if (!isUpgrade)
+        {
+            AddSkillToBackpack(skillInfo.identifier);
+        }
+        else
+        {
+            // 如果是升级，高亮对应技能
+            HighlightSkill(skillInfo.identifier);
+        }
+
+        // 隐藏该技能项（从商店中移除，直到刷新后才会重新出现）
+        RemoveShopSkillItem(skillInfo.identifier);
+        
+        UpdateColorAreas();
+        UpdateBackpack();
+        UpdateGoldDisplay();
+    }
+    
+    /// <summary>
+    /// 从商店中移除指定的技能项
+    /// </summary>
+    private void RemoveShopSkillItem(string identifier)
+    {
+        // 查找对应的技能项
+        GameObject itemToRemove = null;
+        foreach (var item in shopSkillItems)
+        {
+            if (item != null)
+            {
+                ShopSkillItem shopItem = item.GetComponent<ShopSkillItem>();
+                if (shopItem != null && shopItem.SkillIdentifier == identifier)
+                {
+                    itemToRemove = item;
+                    break;
+                }
+            }
+        }
+        
+        // 移除找到的项
+        if (itemToRemove != null)
+        {
+            shopSkillItems.Remove(itemToRemove);
+            Destroy(itemToRemove);
+        }
+    }
+    
+    /// <summary>
+    /// 刷新商店
+    /// </summary>
+    private void OnRefreshClicked()
+    {
+        if (PlayerManager.Instance == null)
+            return;
+
+        // 消耗1 gold
+        if (!PlayerManager.Instance.ConsumeGold(1))
+        {
+            Debug.LogWarning("金币不足，无法刷新商店");
+            return;
+        }
+
+        // 刷新商店
+        UpdateShop();
+        UpdateGoldDisplay();
+    }
+    
+    /// <summary>
+    /// 更新金币显示
+    /// </summary>
+    private void UpdateGoldDisplay()
+    {
+        if (goldText != null && PlayerManager.Instance != null)
+        {
+            goldText.text = $"Gold: {PlayerManager.Instance.Gold}";
+        }
     }
 
     /// <summary>
@@ -175,74 +373,6 @@ public class SkillSelectMenu : MenuBase
         onConfirm?.Invoke();
     }
 
-    /// <summary>
-    /// 更新三选一按钮显示
-    /// </summary>
-    private void UpdateThreeChoiceButtons()
-    {
-        if (threeChoiceButtons == null || threeChoiceTexts == null)
-            return;
-
-        for (int i = 0; i < threeChoiceButtons.Length; i++)
-        {
-            if (i < selectedSkills.Count)
-            {
-                SkillInfo skill = selectedSkills[i];
-                string description = SkillManager.Instance.GetSkillDescription(skill.identifier, true);
-                
-                if (threeChoiceTexts[i] != null)
-                {
-                    threeChoiceTexts[i].text = description;
-                }
-                
-                threeChoiceButtons[i].gameObject.SetActive(true);
-            }
-            else
-            {
-                threeChoiceButtons[i].gameObject.SetActive(false);
-            }
-        }
-    }
-
-    /// <summary>
-    /// 三选一按钮点击事件
-    /// </summary>
-    private void OnThreeChoiceClicked(int index)
-    {
-        if (index < 0 || index >= selectedSkills.Count)
-            return;
-
-        SkillInfo selectedSkill = selectedSkills[index];
-        
-        // 检查是否是升级（已拥有该技能）
-        bool isUpgrade = SkillManager.Instance.HasSkill(selectedSkill.identifier);
-        
-        // 升级或获得技能
-        SkillManager.Instance.UpgradeSkill(selectedSkill.identifier);
-        
-        Debug.Log($"选择了技能: {selectedSkill.identifier}, 是否升级: {isUpgrade}");
-        
-        if (isUpgrade)
-        {
-            // 如果是升级，高亮对应技能（无论在背包还是颜色区域）
-            HighlightSkill(selectedSkill.identifier);
-        }
-        else
-        {
-            // 如果是新技能，添加到背包
-            AddSkillToBackpack(selectedSkill.identifier);
-        }
-        
-        // 隐藏三选一区域
-        if (threeChoiceParent != null)
-        {
-            threeChoiceParent.gameObject.SetActive(false);
-        }
-        threeChoiceCompleted = true;
-        
-        // 回调
-        onSkillSelected?.Invoke(selectedSkill);
-    }
 
     /// <summary>
     /// 高亮技能图标

@@ -23,6 +23,25 @@ public class LevelManager : Singleton<LevelManager>
     }
 
     /// <summary>
+    /// 获取当前关卡信息
+    /// </summary>
+    public LevelInfo GetCurrentLevelInfo()
+    {
+        if (CSVLoader.Instance == null || CSVLoader.Instance.levelInfoMap == null || CSVLoader.Instance.levelInfoMap.Count == 0)
+        {
+            return null;
+        }
+
+        // 查找当前关卡
+        if (CSVLoader.Instance.levelInfoMap.ContainsKey(currentLevel))
+        {
+            return CSVLoader.Instance.levelInfoMap[currentLevel];
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// 获取下一个关卡（根据玩家等级）
     /// </summary>
     public LevelInfo GetNextLevel(int playerLevel)

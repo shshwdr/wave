@@ -42,6 +42,12 @@ public class Wave : MonoBehaviour
     private int damageIncreaseWhenHitMoreValue = 0; // damageIncreaseWhenHitMore的值
     private bool hasAoeAttack = false; // 是否有aoeAttack技能
     private int aoeAttackValue = 0; // aoeAttack的值
+    private bool hasBounty = false; // 是否有bounty技能
+    private int bountyValue = 0; // bounty的值
+    private bool hasExchange = false; // 是否有exchange技能
+    private int exchangeValue = 0; // exchange的值
+    private bool hasPure = false; // 是否有pure技能
+    private int pureValue = 0; // pure的值
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -81,7 +87,7 @@ public class Wave : MonoBehaviour
     /// <summary>
     /// 初始化波浪
     /// </summary>
-    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f)
+    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f, bool hasPureFlag = false, int pureValueParam = 0)
     {
         startPosition = spawnPosition;
         travelDistance = distance;
@@ -96,6 +102,8 @@ public class Wave : MonoBehaviour
         isFirstWave = firstWave;
         hasDamageBottomSkill = hasDamageBottomSkillFlag;
         damageMultiplier = damageMult;
+        hasPure = hasPureFlag;
+        pureValue = pureValueParam;
         hitEnemyCount = 0; // 重置击中敌人计数
 
         transform.position = spawnPosition;
@@ -303,7 +311,47 @@ public class Wave : MonoBehaviour
                     hasAoeAttack = true;
                     aoeAttackValue = value;
                     break;
+                    
+                // more和less技能现在在BoardManager.GetWeightedRandomColor中动态处理，不需要在这里处理
+                    
+                case "bounty":
+                    // 标记有bounty技能
+                    hasBounty = true;
+                    bountyValue = value;
+                    break;
+                    
+                case "exchange":
+                    // 标记有exchange技能
+                    hasExchange = true;
+                    exchangeValue = value;
+                    break;
+                    
+                case "pure":
+                    // pure技能在EliminateConnectedTiles中处理，这里不需要处理
+                    // 因为pure技能只在单个tile时生效，已经在CreateWave时传递了
+                    break;
             }
+        }
+        
+        // 应用pure技能（如果只有一个tile）
+        if (hasPure && pureValue > 0)
+        {
+            damage = damage * (1f + pureValue / 100f);
+        }
+    }
+    
+    /// <summary>
+    /// 将颜色字符串转换为索引
+    /// </summary>
+    private int GetColorIndexFromString(string color)
+    {
+        switch (color.ToLower())
+        {
+            case "red": return 0;
+            case "yellow": return 1;
+            case "blue": return 2;
+            case "green": return 3;
+            default: return -1;
         }
     }
 
@@ -402,7 +450,26 @@ public class Wave : MonoBehaviour
                     }
                 }
                 
+                bool wasAlive = !enemy.IsDead;
                 enemy.TakeDamage((int)finalDamage, direction, shouldKnockback, knockbackTiles, redWaveBaseDamage);
+                
+                // 检查敌人是否死亡（由这次伤害导致）
+                if (wasAlive && enemy.IsDead)
+                {
+                    // 触发bounty技能
+                    if (hasBounty && PlayerManager.Instance != null)
+                    {
+                        PlayerManager.Instance.AddGold(bountyValue);
+                        Debug.Log($"Bounty: 获得 {bountyValue} gold");
+                    }
+                    
+                    // 触发exchange技能
+                    if (hasExchange && PlayerManager.Instance != null)
+                    {
+                        PlayerManager.Instance.AddTempSwapCount(exchangeValue);
+                        Debug.Log($"Exchange: 获得 {exchangeValue} 临时交换次数");
+                    }
+                }
                 
                 // 记录伤害到wave group（用于spawnAlly技能）
                 MainGameManager.RecordWaveDamage(waveGroupId, finalDamage);
