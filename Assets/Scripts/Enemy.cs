@@ -21,6 +21,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Collider2D enemyCollider;
     [SerializeField] private EnemyHealthBar healthBar;
+    [SerializeField] private GameObject shieldObject; // 盾牌显示对象（shield敌人使用）
 
     private int currentHealth;
     private int maxHealth;
@@ -36,6 +37,13 @@ public class Enemy : MonoBehaviour
     private int skillValue = 0; // 技能值
     private int skillCooldown = 0; // 技能冷却时间（0表示被动技能，>0表示主动技能）
     private int currentCooldown = 0; // 当前冷却时间
+    
+    // Shield敌人系统
+    private bool hasShield = false; // 是否有shield技能
+    private bool shieldActive = false; // 盾牌是否激活（每回合开始时为true）
+    
+    // Buff/Debuff系统
+    private int vulnerableStacks = 0; // vulnerable层数
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
@@ -88,6 +96,19 @@ public class Enemy : MonoBehaviour
         currentHealth = maxHealth;
         isDead = false;
         enemyInfo = info;
+        
+        // 初始化shield系统
+        hasShield = false;
+        shieldActive = false;
+        if (enemyInfo != null && enemyInfo.identifier == "shield")
+        {
+            hasShield = true;
+            shieldActive = true;
+        }
+        UpdateShieldDisplay();
+        
+        // 初始化buff系统
+        vulnerableStacks = 0;
         
         // 初始化技能系统
         if (enemyInfo != null)
@@ -174,6 +195,22 @@ public class Enemy : MonoBehaviour
     {
         if (isDead)
             return;
+
+        // Shield敌人：每回合第一次攻击被吃掉
+        if (hasShield && shieldActive)
+        {
+            shieldActive = false;
+            UpdateShieldDisplay();
+            // 伤害被吃掉，不造成伤害
+            return;
+        }
+        
+        // 应用vulnerable debuff（每层增加5%伤害）
+        if (vulnerableStacks > 0)
+        {
+            float vulnerableMultiplier = 1f + (vulnerableStacks * 0.05f);
+            damage = Mathf.RoundToInt(damage * vulnerableMultiplier);
+        }
 
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);
@@ -494,8 +531,18 @@ public class Enemy : MonoBehaviour
         }
         
         // 如果没有随从，检查是否在玩家攻击范围内
-        // 只有在最左侧（x=0）时才能攻击玩家
-        return gridPosition.x == 0;
+        // 远程敌人：检查自己到最左侧的距离，距离小于等于range就会攻击
+        // 近战敌人（range <= 1）：只有在最左侧（x=0）时才能攻击玩家
+        if (range > 1)
+        {
+            // 远程敌人：距离 = gridPosition.x - 0 = gridPosition.x
+            return gridPosition.x <= range;
+        }
+        else
+        {
+            // 近战敌人：只有在最左侧（x=0）时才能攻击玩家
+            return gridPosition.x == 0;
+        }
     }
     
     /// <summary>
@@ -794,7 +841,9 @@ public class Enemy : MonoBehaviour
             if (candidates.Count > 0)
             {
                 targetEnemy = candidates[Random.Range(0, candidates.Count)];
-                targetEnemy.Heal(skillValue);
+                // 恢复量 = 攻击力 * skillValue
+                int healAmount = GetAttack() * skillValue;
+                targetEnemy.Heal(healAmount);
             }
         }
     }
@@ -1079,6 +1128,81 @@ public class Enemy : MonoBehaviour
     public bool IsAtLeftEdge()
     {
         return gridPosition.x <= 0;
+    }
+    
+    private int calculatedAttack = 0; // 计算后的攻击力（考虑difficulty）
+    
+    /// <summary>
+    /// 设置攻击力（考虑difficulty）
+    /// </summary>
+    public void SetAttack(int attack)
+    {
+        calculatedAttack = attack;
+    }
+    
+    /// <summary>
+    /// 获取攻击力（考虑buff/debuff和difficulty）
+    /// </summary>
+    public int GetAttack()
+    {
+        if (calculatedAttack > 0)
+        {
+            return calculatedAttack;
+        }
+        if (enemyInfo != null)
+        {
+            return enemyInfo.attack;
+        }
+        return 0;
+    }
+    
+    /// <summary>
+    /// 更新盾牌显示
+    /// </summary>
+    private void UpdateShieldDisplay()
+    {
+        if (shieldObject != null)
+        {
+            shieldObject.SetActive(shieldActive);
+        }
+    }
+    
+    /// <summary>
+    /// 重置盾牌（敌人回合结束时调用）
+    /// </summary>
+    public void ResetShield()
+    {
+        if (hasShield)
+        {
+            shieldActive = true;
+            UpdateShieldDisplay();
+        }
+    }
+    
+    /// <summary>
+    /// 添加vulnerable debuff
+    /// </summary>
+    public void AddVulnerable(int stacks)
+    {
+        vulnerableStacks += stacks;
+        UpdateBuffDisplay();
+    }
+    
+    /// <summary>
+    /// 获取vulnerable层数
+    /// </summary>
+    public int GetVulnerableStacks()
+    {
+        return vulnerableStacks;
+    }
+    
+    /// <summary>
+    /// 更新buff显示（在敌人上显示buff图标）
+    /// </summary>
+    private void UpdateBuffDisplay()
+    {
+        // TODO: 实现buff图标显示
+        // 可以在EnemyHealthBar或单独创建一个BuffDisplay组件
     }
 }
 

@@ -58,6 +58,8 @@ public class Wave : MonoBehaviour
     private bool hasFocus = false; // 是否有focus技能
     private int focusValue = 0; // focus的值
     private bool hasPassedSameColorTile = false; // 是否已经经过同色tile（用于healWhenPass和addDamageWhenPass）
+    private bool hasTarget = false; // 是否有target技能
+    private int targetValue = 0; // target的值
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -116,6 +118,8 @@ public class Wave : MonoBehaviour
         pureValue = pureValueParam;
         hasPassedSameColorTile = false; // 重置经过同色tile标志
         hitEnemyCount = 0; // 重置击中敌人计数
+        hasTarget = false; // 重置target技能
+        targetValue = 0;
 
         transform.position = spawnPosition;
         gameObject.SetActive(true);
@@ -415,6 +419,12 @@ public class Wave : MonoBehaviour
                     // 所有wave伤害提升（全局效果）
                     damage = damage * (1f + value / 100f);
                     break;
+                    
+                case "target":
+                    // target技能在击中敌人时处理，这里只标记
+                    hasTarget = true;
+                    targetValue = value;
+                    break;
             }
         }
         
@@ -530,6 +540,12 @@ public class Wave : MonoBehaviour
                 
                 // 应用击中时的技能效果
                 ApplyHitSkillEffects(enemy, ref finalDamage, direction);
+                
+                // 应用target技能（给敌人添加vulnerable debuff）
+                if (hasTarget && enemy != null)
+                {
+                    enemy.AddVulnerable(targetValue);
+                }
                 
                 //Debug.Log($"Wave hit enemy: {enemy.name}, dealing {finalDamage} damage");
                 

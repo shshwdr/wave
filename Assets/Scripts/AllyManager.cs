@@ -61,5 +61,20 @@ public class AllyManager : MonoBehaviour
         }
         return null;
     }
+    
+    /// <summary>
+    /// 清除所有随从
+    /// </summary>
+    public void ClearAllAllies()
+    {
+        foreach (var ally in activeAllies)
+        {
+            if (ally != null)
+            {
+                Destroy(ally.gameObject);
+            }
+        }
+        activeAllies.Clear();
+    }
 }
 

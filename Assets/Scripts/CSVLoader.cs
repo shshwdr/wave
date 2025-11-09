@@ -33,6 +33,8 @@ public class EnemyInfo
     public List<string> skill;
     public int skillValue;
     public int skillCD;
+    public int attackIncrease;
+    public int hpIncrease;
     public Sprite icon=> Resources.Load<Sprite>("enemy/"+identifier);
 
 }
@@ -43,6 +45,7 @@ public class LevelInfo
     public int level;
     public int gold;
     public int startEnemyCount;
+    public int difficulty;
 }
 public class CSVLoader : Singleton<CSVLoader>
 {

@@ -14,13 +14,15 @@ public class GameOverDialog : DialogBase
     /// <summary>
     /// 显示游戏结束弹窗
     /// </summary>
-    public static void ShowGameOver(Action onRestart = null, Action onQuit = null)
+    public static void ShowGameOver(Action onRetryLevel = null, Action onRestart = null, Action onQuit = null)
     {
         ShowDialog(
             title: "Game Over",
             content: "enmey eat your brain, try better next time",
-            button1Label: "Restart",
-            onButton1: onRestart
+            button1Label: "Retry This Level",
+            onButton1: onRetryLevel,
+            button2Label: "Restart",
+            onButton2: onRestart
         );
     }
 }

@@ -290,9 +290,30 @@ public class SkillSelectMenu : MenuBase
         // 隐藏该技能项（从商店中移除，直到刷新后才会重新出现）
         RemoveShopSkillItem(skillInfo.identifier);
         
+        // 更新其他商店技能项的状态（检查是否还能购买）
+        UpdateShopSkillItemsState();
+        
         UpdateColorAreas();
         UpdateBackpack();
         UpdateGoldDisplay();
+    }
+    
+    /// <summary>
+    /// 更新所有商店技能项的状态（检查是否还能购买）
+    /// </summary>
+    private void UpdateShopSkillItemsState()
+    {
+        foreach (var item in shopSkillItems)
+        {
+            if (item != null)
+            {
+                ShopSkillItem shopItem = item.GetComponent<ShopSkillItem>();
+                if (shopItem != null)
+                {
+                    shopItem.UpdateState();
+                }
+            }
+        }
     }
     
     /// <summary>

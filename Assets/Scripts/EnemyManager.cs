@@ -155,15 +155,19 @@ public class EnemyManager : MonoBehaviour
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
 
-        // 右半部分的x范围
-        int rightHalfStartX = boardWidth / 2;
-        int rightHalfEndX = boardWidth - 1;
+        // 敌人生成在底线（最右侧，x = boardWidth - 1）
+        int x = boardWidth - 1;
 
         for (int i = 0; i < enemyCount; i++)
         {
-            // 随机在右半部分生成
-            int x = Random.Range(rightHalfStartX, rightHalfEndX + 1);
-            int y = Random.Range(0, boardHeight);
+            // 找到一个不与其他敌人重叠的y位置
+            int y = FindAvailableYPosition(x, boardHeight);
+            if (y < 0)
+            {
+                // 如果找不到可用位置，跳过这个敌人
+                Debug.LogWarning($"无法找到可用的敌人生成位置，跳过第 {i + 1} 个敌人");
+                continue;
+            }
 
             Vector2Int gridPos = new Vector2Int(x, y);
             Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
@@ -259,11 +263,17 @@ public class EnemyManager : MonoBehaviour
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
         
-        // 初始加载的敌人可以在右侧任意位置
-        int rightHalfStartX = boardWidth / 2;
-        int rightHalfEndX = boardWidth - 1;
-        int x = Random.Range(rightHalfStartX, rightHalfEndX + 1);
-        int y = Random.Range(0, boardHeight);
+        // 敌人生成在底线（最右侧，x = boardWidth - 1）
+        int x = boardWidth - 1;
+        
+        // 找到一个不与其他敌人重叠的y位置
+        int y = FindAvailableYPosition(x, boardHeight);
+        if (y < 0)
+        {
+            // 如果找不到可用位置，不生成敌人
+            Debug.LogWarning("无法找到可用的敌人生成位置");
+            return;
+        }
 
         Vector2Int gridPos = new Vector2Int(x, y);
         Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
@@ -276,8 +286,15 @@ public class EnemyManager : MonoBehaviour
             enemy = enemyObj.AddComponent<Enemy>();
         }
 
-        // 使用enemyInfo中的hp初始化
-        enemy.Init(gridPos, enemyInfo.hp, enemyInfo);
+        // 根据difficulty计算敌人属性
+        int difficulty = currentLevelInfo != null ? currentLevelInfo.difficulty : 0;
+        int calculatedHP = enemyInfo.hp + difficulty * enemyInfo.hpIncrease;
+        int calculatedAttack = enemyInfo.attack + difficulty * enemyInfo.attackIncrease;
+        
+        // 使用计算后的hp初始化
+        enemy.Init(gridPos, calculatedHP, enemyInfo);
+        // 设置计算后的攻击力
+        enemy.SetAttack(calculatedAttack);
         
         // 创建血条
         CreateHealthBar(enemy);
@@ -307,9 +324,18 @@ public class EnemyManager : MonoBehaviour
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
 
-        // 在最右侧随机位置
+        // 在最右侧（底线）生成
         int targetX = boardWidth - 1;
-        int y = Random.Range(0, boardHeight);
+        
+        // 找到一个不与其他敌人重叠的y位置
+        int y = FindAvailableYPosition(targetX, boardHeight);
+        if (y < 0)
+        {
+            // 如果找不到可用位置，不生成敌人
+            Debug.LogWarning("无法找到可用的敌人生成位置");
+            return;
+        }
+        
         Vector2Int targetGridPos = new Vector2Int(targetX, y);
 
         // 从最右端右边生成（在棋盘外面）
@@ -497,6 +523,41 @@ public class EnemyManager : MonoBehaviour
         }
         
         return true;
+    }
+    
+    /// <summary>
+    /// 查找可用的Y位置（不与其他敌人重叠）
+    /// </summary>
+    private int FindAvailableYPosition(int x, int boardHeight)
+    {
+        // 收集所有已占用的y位置
+        HashSet<int> occupiedY = new HashSet<int>();
+        foreach (var enemy in activeEnemies)
+        {
+            if (enemy != null && !enemy.IsDead && enemy.GridPosition.x == x)
+            {
+                occupiedY.Add(enemy.GridPosition.y);
+            }
+        }
+        
+        // 收集所有可用的y位置
+        List<int> availableY = new List<int>();
+        for (int y = 0; y < boardHeight; y++)
+        {
+            if (!occupiedY.Contains(y))
+            {
+                availableY.Add(y);
+            }
+        }
+        
+        // 如果没有可用位置，返回-1
+        if (availableY.Count == 0)
+        {
+            return -1;
+        }
+        
+        // 随机选择一个可用位置
+        return availableY[Random.Range(0, availableY.Count)];
     }
 }
 

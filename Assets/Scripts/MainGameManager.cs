@@ -69,6 +69,9 @@ public class MainGameManager : MonoBehaviour
     private int playerLevel = 0;
     public int PlayerLevel => playerLevel;
     
+    // 保存关卡开始时的血量（用于重试关卡）
+    private int levelStartHealth = -1;
+    
     /// <summary>
     /// 玩家等级提升
     /// </summary>
@@ -193,7 +196,7 @@ public class MainGameManager : MonoBehaviour
             textRect.offsetMax = new Vector2(-10, -10);
 
             skillDisplayText = textObj.AddComponent<TextMeshProUGUI>();
-            skillDisplayText.fontSize = 30;
+            skillDisplayText.fontSize = 26;
             skillDisplayText.color = Color.white;
             skillDisplayText.alignment = TextAlignmentOptions.TopLeft;
         }
@@ -248,7 +251,7 @@ public class MainGameManager : MonoBehaviour
             textRect.offsetMax = new Vector2(-10, -10);
 
             enemyDescriptionText = textObj.AddComponent<TextMeshProUGUI>();
-            enemyDescriptionText.fontSize = 30;
+            enemyDescriptionText.fontSize = 26;
             enemyDescriptionText.color = Color.white;
             enemyDescriptionText.alignment = TextAlignmentOptions.TopLeft;
         }
@@ -279,6 +282,8 @@ public class MainGameManager : MonoBehaviour
         // 初始化PlayerManager并恢复交换次数
         if (PlayerManager.Instance != null)
         {
+            // 保存关卡开始时的血量（用于重试关卡）
+            levelStartHealth = PlayerManager.Instance.CurrentHealth;
             PlayerManager.Instance.StartBattle();
         }
 
@@ -294,6 +299,16 @@ public class MainGameManager : MonoBehaviour
         if (enemyManager != null)
         {
             enemyManager.ClearAllEnemies();
+        }
+        
+        // 清空随从
+        if (allyManager == null)
+        {
+            allyManager = FindObjectOfType<AllyManager>();
+        }
+        if (allyManager != null)
+        {
+            allyManager.ClearAllAllies();
         }
 
         // 从关卡管理器获取关卡信息并生成敌人
@@ -335,6 +350,7 @@ public class MainGameManager : MonoBehaviour
         {
             HandlePlayerInput();
             HandleMouseHover();
+            HandleTouchInput(); // 处理触屏输入
         }
         else if (isProcessing)
         {
@@ -614,6 +630,143 @@ public class MainGameManager : MonoBehaviour
         }
     }
     
+    private bool isTouching = false; // 是否正在触摸
+    private Vector2Int touchGridPos = new Vector2Int(-1, -1); // 触摸的格子位置
+    
+    /// <summary>
+    /// 处理触屏输入
+    /// </summary>
+    private void HandleTouchInput()
+    {
+        // 如果技能选择界面打开，不响应touch
+        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+        if (skillMenu != null && skillMenu.IsActive)
+        {
+            return;
+        }
+        
+        // 处理中时不允许操作
+        if (isProcessing)
+            return;
+        
+        // 检查触摸输入
+        if (Input.touchCount > 0)
+        {
+            Touch touch = Input.GetTouch(0);
+            Vector3 touchWorldPos = mainCamera.ScreenToWorldPoint(touch.position);
+            touchWorldPos.z = 0;
+            
+            // 检查是否触摸到敌人或tile
+            Vector2Int gridPos = GetGridPositionFromWorld(touchWorldPos);
+            
+            if (touch.phase == TouchPhase.Began)
+            {
+                isTouching = true;
+                touchGridPos = gridPos;
+                
+                // 检查是否触摸到敌人
+                Enemy touchedEnemy = GetEnemyAtPosition(touchWorldPos);
+                if (touchedEnemy != null && !touchedEnemy.IsDead)
+                {
+                    UpdateEnemyDescription(touchedEnemy);
+                }
+                // 检查是否触摸到tile
+                else if (boardManager != null && boardManager.IsValidPosition(gridPos))
+                {
+                    UpdateSkillDisplay(gridPos);
+                }
+            }
+            else if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+            {
+                isTouching = false;
+                touchGridPos = new Vector2Int(-1, -1);
+                
+                // 隐藏详细信息
+                if (enemyDescriptionPanel != null)
+                {
+                    enemyDescriptionPanel.SetActive(false);
+                }
+                if (skillDisplayPanel != null)
+                {
+                    skillDisplayPanel.SetActive(false);
+                }
+            }
+            else if (touch.phase == TouchPhase.Moved && isTouching)
+            {
+                // 触摸移动时更新显示
+                Vector2Int newGridPos = GetGridPositionFromWorld(touchWorldPos);
+                if (newGridPos != touchGridPos)
+                {
+                    touchGridPos = newGridPos;
+                    
+                    // 检查是否触摸到敌人
+                    Enemy touchedEnemy = GetEnemyAtPosition(touchWorldPos);
+                    if (touchedEnemy != null && !touchedEnemy.IsDead)
+                    {
+                        UpdateEnemyDescription(touchedEnemy);
+                    }
+                    // 检查是否触摸到tile
+                    else if (boardManager != null && boardManager.IsValidPosition(newGridPos))
+                    {
+                        UpdateSkillDisplay(newGridPos);
+                    }
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 从世界坐标获取格子位置
+    /// </summary>
+    private Vector2Int GetGridPositionFromWorld(Vector3 worldPos)
+    {
+        if (boardManager == null)
+            return new Vector2Int(-1, -1);
+        return boardManager.WorldToGridPosition(worldPos);
+    }
+    
+    /// <summary>
+    /// 获取指定位置的敌人
+    /// </summary>
+    private Enemy GetEnemyAtPosition(Vector3 worldPos)
+    {
+        if (enemyManager == null)
+            return null;
+        
+        // 使用OverlapPoint检测位置下的碰撞体
+        Collider2D hitCollider = Physics2D.OverlapPoint(worldPos);
+        if (hitCollider != null)
+        {
+            Enemy enemy = hitCollider.GetComponent<Enemy>();
+            if (enemy == null)
+            {
+                enemy = hitCollider.GetComponentInParent<Enemy>();
+            }
+            if (enemy != null && !enemy.IsDead)
+            {
+                return enemy;
+            }
+        }
+        
+        // 如果OverlapPoint没有检测到，尝试使用OverlapCircle
+        float checkRadius = 0.5f;
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(worldPos, checkRadius);
+        foreach (var collider in colliders)
+        {
+            Enemy enemy = collider.GetComponent<Enemy>();
+            if (enemy == null)
+            {
+                enemy = collider.GetComponentInParent<Enemy>();
+            }
+            if (enemy != null && !enemy.IsDead)
+            {
+                return enemy;
+            }
+        }
+        
+        return null;
+    }
+    
     /// <summary>
     /// 获取鼠标下的敌人
     /// </summary>
@@ -678,16 +831,36 @@ public class MainGameManager : MonoBehaviour
             return;
         }
         
-        string description = enemy.EnemyInfo.description;
-        if (!string.IsNullOrEmpty(description))
+        // 构建详细信息文本
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        
+        // 基本信息
+        sb.AppendLine($"<b>{enemy.EnemyInfo.name}</b>");
+        sb.AppendLine();
+        
+        // 攻击力和血量
+        sb.AppendLine($"Attack: {enemy.GetAttack()}");
+        sb.AppendLine($"HP: {enemy.CurrentHealth}/{enemy.MaxHealth}");
+        sb.AppendLine();
+        
+        // Buff/Debuff信息
+        int vulnerableStacks = enemy.GetVulnerableStacks();
+        if (vulnerableStacks > 0)
         {
-            enemyDescriptionText.text = description;
-            enemyDescriptionPanel.SetActive(true);
+            float damageIncrease = vulnerableStacks * 0.05f * 100f;
+            sb.AppendLine($"<color=yellow>Vulnerable: {vulnerableStacks}层</color>");
+            sb.AppendLine($"伤害提升: +{damageIncrease:F0}%");
+            sb.AppendLine();
         }
-        else
+        
+        // 描述
+        if (!string.IsNullOrEmpty(enemy.EnemyInfo.description))
         {
-            enemyDescriptionPanel.SetActive(false);
+            sb.AppendLine(enemy.EnemyInfo.description);
         }
+        
+        enemyDescriptionText.text = sb.ToString();
+        enemyDescriptionPanel.SetActive(true);
     }
 
     /// <summary>
@@ -1235,7 +1408,7 @@ public class MainGameManager : MonoBehaviour
                 {
                     int value = SkillManager.Instance.GetSkillValue(identifier);
                     
-                    // 计算随从血量：总伤害 * value%
+                    // 计算随从血量：总伤害 * value%（value是百分比值，例如50表示50%）
                     int allyHealth = (int)(totalDamage * (value / 100f));
                     
                     // 生成随从
@@ -1618,10 +1791,14 @@ public class MainGameManager : MonoBehaviour
         DOVirtual.DelayedCall(0.5f, () =>
         {
             GameOverDialog.ShowGameOver(
+                onRetryLevel: () =>
+                {
+                    // 重试当前关卡
+                    RetryLevel();
+                },
                 onRestart: () =>
                 {
                     // 重新开始游戏
-                    //StartBattle();
                     Restart();
                 },
                 onQuit: () =>
@@ -1635,6 +1812,31 @@ public class MainGameManager : MonoBehaviour
                 }
             );
         });
+    }
+    
+    /// <summary>
+    /// 重试当前关卡
+    /// </summary>
+    private void RetryLevel()
+    {
+        // 恢复血量到关卡开始前
+        if (PlayerManager.Instance != null && levelStartHealth >= 0)
+        {
+            PlayerManager.Instance.SetHealth(levelStartHealth);
+        }
+        
+        // 清空所有随从
+        if (allyManager == null)
+        {
+            allyManager = FindObjectOfType<AllyManager>();
+        }
+        if (allyManager != null)
+        {
+            allyManager.ClearAllAllies();
+        }
+        
+        // 重新开始当前关卡
+        StartBattle();
     }
 
     /// <summary>
@@ -1680,6 +1882,16 @@ public class MainGameManager : MonoBehaviour
         if (enemyDescriptionPanel != null)
         {
             enemyDescriptionPanel.SetActive(false);
+        }
+        
+        // 清除所有随从
+        if (allyManager == null)
+        {
+            allyManager = FindObjectOfType<AllyManager>();
+        }
+        if (allyManager != null)
+        {
+            allyManager.ClearAllAllies();
         }
 
         // 显示技能选择界面

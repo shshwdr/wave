@@ -342,5 +342,13 @@ public class PlayerManager : Singleton<PlayerManager>
         maxHealth = health;
         currentHealth = Mathf.Min(currentHealth, maxHealth);
     }
+    
+    /// <summary>
+    /// 设置当前血量（用于重试关卡）
+    /// </summary>
+    public void SetHealth(int health)
+    {
+        currentHealth = Mathf.Clamp(health, 0, maxHealth);
+    }
 }
 

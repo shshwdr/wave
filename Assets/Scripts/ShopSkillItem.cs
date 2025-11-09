@@ -42,6 +42,14 @@ public class ShopSkillItem : MonoBehaviour
     }
 
     /// <summary>
+    /// 更新状态（检查是否还能购买）
+    /// </summary>
+    public void UpdateState()
+    {
+        UpdateDisplay();
+    }
+    
+    /// <summary>
     /// 更新显示
     /// </summary>
     private void UpdateDisplay()
