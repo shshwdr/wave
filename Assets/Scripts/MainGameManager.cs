@@ -35,7 +35,9 @@ public class MainGameManager : MonoBehaviour
     [SerializeField] private TMP_Text enemyDescriptionText;
 
     public bool showShopAtBeginning;
-
+    [SerializeField] public GameObject allyPrefab;
+    [SerializeField] public GameObject allyProjectile;
+    
     private enum GameState
     {
         PlayerTurn,
@@ -91,6 +93,11 @@ public class MainGameManager : MonoBehaviour
     
     // addDamageWhenPass技能管理 - 跟踪每个wave group的伤害加成
     private static Dictionary<int, float> waveGroupAddDamageWhenPass = new Dictionary<int, float>();
+    
+    // noAttackNoCost技能管理 - 跟踪每个wave group是否造成伤害
+    private static Dictionary<int, bool> waveGroupHasDamage = new Dictionary<int, bool>();
+    private static bool noAttackNoCostTriggeredThisTurn = false; // 一个回合只会触发一次
+    private static HashSet<int> pendingWaveGroups = new HashSet<int>(); // 等待结算完成的wave group
 
     private void Start()
     {
@@ -260,6 +267,7 @@ public class MainGameManager : MonoBehaviour
         // 重置游戏状态
         isProcessing = false;
         currentState = GameState.PlayerTurn;
+        noAttackNoCostTriggeredThisTurn = false; // 重置noAttackNoCost触发标志
         isDragging = false;
         waitingForSecondSwap = false;
         dragStartPos = new Vector2Int(-1, -1);
@@ -899,6 +907,8 @@ public class MainGameManager : MonoBehaviour
             waveGroupActiveWaveCount[currentWaveGroupId] = 0;
             waveGroupColor[currentWaveGroupId] = waveColor;
             waveGroupAddDamageWhenPass[currentWaveGroupId] = 0f; // 初始化addDamageWhenPass
+            waveGroupHasDamage[currentWaveGroupId] = false; // 初始化伤害标志
+            pendingWaveGroups.Add(currentWaveGroupId); // 添加到待结算列表
         }
 
         // 检查是否有buffNextDamage技能（用于下一个wave group）
@@ -927,8 +937,6 @@ public class MainGameManager : MonoBehaviour
         nextWaveDamageMultiplier = damageMultiplier; // 设置下一个wave group的加成
 
         // 消除所有连通的格子并创建波浪
-        float waveDuration = 2f; // 波浪移动持续时间
-        
         // 更新wave group的活跃wave数量
         waveGroupActiveWaveCount[currentWaveGroupId] = connectedTiles.Count;
         
@@ -972,13 +980,8 @@ public class MainGameManager : MonoBehaviour
             boardManager.ApplyGravity();
         });
 
-        // 等待重力动画和波浪移动都完成后，进入敌人回合
-        float maxDuration = Mathf.Max(waveDuration, 0.8f); // 重力动画大约0.8秒
-        DOVirtual.DelayedCall(maxDuration + 0.2f, () =>
-        {
-            isProcessing = false;
-            EndPlayerTurn();
-        });
+        // 不再在这里直接调用EndPlayerTurn
+        // EndPlayerTurn会在所有wave group都完成结算后，在CheckSpawnAlly中调用
     }
 
     /// <summary>
@@ -1162,13 +1165,19 @@ public class MainGameManager : MonoBehaviour
     }
     
     /// <summary>
-    /// 记录wave造成的伤害（用于spawnAlly技能）
+    /// 记录wave造成的伤害（用于spawnAlly技能和noAttackNoCost技能）
     /// </summary>
     public static void RecordWaveDamage(int waveGroupId, float damage)
     {
         if (waveGroupTotalDamage.ContainsKey(waveGroupId))
         {
             waveGroupTotalDamage[waveGroupId] += damage;
+        }
+        
+        // 标记该wave group造成了伤害（用于noAttackNoCost技能）
+        if (damage > 0 && waveGroupHasDamage.ContainsKey(waveGroupId))
+        {
+            waveGroupHasDamage[waveGroupId] = true;
         }
     }
 
@@ -1188,7 +1197,7 @@ public class MainGameManager : MonoBehaviour
             waveGroupAddDamageWhenPass.Remove(waveGroupId);
         }
         
-        // 如果这个wave group的所有wave都完成了，检查spawnAlly技能
+        // 如果这个wave group的所有wave都完成了，检查spawnAlly技能和noAttackNoCost技能
         if (waveGroupActiveWaveCount[waveGroupId] <= 0)
         {
             MainGameManager instance = FindObjectOfType<MainGameManager>();
@@ -1236,10 +1245,195 @@ public class MainGameManager : MonoBehaviour
             }
         }
         
+        // 检查summonAttack技能（召唤物集体向右侧发射投射物）
+        CheckSummonAttack(waveGroupId);
+        
+        // 检查noAttackNoCost技能（如果整个wave group没有造成伤害，不进入敌人回合）
+        bool hasDamage = waveGroupHasDamage.ContainsKey(waveGroupId) && waveGroupHasDamage[waveGroupId];
+        if (!hasDamage && !noAttackNoCostTriggeredThisTurn)
+        {
+            // 检查是否有noAttackNoCost技能
+            bool hasNoAttackNoCost = false;
+            for (int i = 0; i < 4; i++)
+            {
+                List<string> skillIdentifiers2 = PlayerManager.Instance.GetWaveSkills(i);
+                foreach (var identifier in skillIdentifiers2)
+                {
+                    if (SkillManager.Instance.HasSkill(identifier))
+                    {
+                        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                        if (skillInfo != null && skillInfo.effect == "noAttackNoCost")
+                        {
+                            hasNoAttackNoCost = true;
+                            break;
+                        }
+                    }
+                }
+                if (hasNoAttackNoCost) break;
+            }
+            
+            if (hasNoAttackNoCost)
+            {
+                // 标记已触发，一个回合只会触发一次
+                noAttackNoCostTriggeredThisTurn = true;
+                
+                // 清理已完成的wave group数据
+                waveGroupTotalDamage.Remove(waveGroupId);
+                waveGroupActiveWaveCount.Remove(waveGroupId);
+                waveGroupColor.Remove(waveGroupId);
+                waveGroupHasDamage.Remove(waveGroupId);
+                pendingWaveGroups.Remove(waveGroupId);
+                
+                
+                // 不进入敌人回合，直接重置为玩家回合
+                DOVirtual.DelayedCall(0.1f, () =>
+                {
+                    isProcessing = false;
+                    currentState = GameState.PlayerTurn;
+                    Debug.Log("noAttackNoCost: 没有造成伤害，继续玩家回合");
+                });
+                return;
+            }
+            // 检查是否所有wave group都完成了
+            CheckAllWaveGroupsCompleted();
+        }
+        
         // 清理已完成的wave group数据
         waveGroupTotalDamage.Remove(waveGroupId);
         waveGroupActiveWaveCount.Remove(waveGroupId);
         waveGroupColor.Remove(waveGroupId);
+        waveGroupHasDamage.Remove(waveGroupId);
+        pendingWaveGroups.Remove(waveGroupId);
+        
+        // 检查是否所有wave group都完成了
+        CheckAllWaveGroupsCompleted();
+    }
+    
+    /// <summary>
+    /// 检查所有wave group是否都完成了，如果是则进入敌人回合
+    /// </summary>
+    private void CheckAllWaveGroupsCompleted()
+    {
+        // 如果还有待结算的wave group，等待
+        if (pendingWaveGroups.Count > 0)
+        {
+            return;
+        }
+        
+        // 所有wave group都完成了，进入敌人回合
+        // 重置noAttackNoCost触发标志（新的玩家回合）
+        noAttackNoCostTriggeredThisTurn = false;
+        
+        DOVirtual.DelayedCall(0.1f, () =>
+        {
+            isProcessing = false;
+            EndPlayerTurn();
+        });
+    }
+    
+    /// <summary>
+    /// 检查并执行summonAttack技能（召唤物集体向右侧发射投射物）
+    /// </summary>
+    private void CheckSummonAttack(int waveGroupId)
+    {
+        if (!waveGroupColor.ContainsKey(waveGroupId))
+            return;
+            
+        TileColor waveColor = waveGroupColor[waveGroupId];
+        int colorIndex = (int)waveColor;
+        
+        // 检查是否有summonAttack技能
+        if (PlayerManager.Instance == null || SkillManager.Instance == null || allyManager == null)
+            return;
+            
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+        bool hasSummonAttack = false;
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (SkillManager.Instance.HasSkill(identifier))
+            {
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "summonAttack")
+                {
+                    hasSummonAttack = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!hasSummonAttack)
+            return;
+        
+        // 获取wave的攻击力（使用当前wave的基础伤害，如果有多个wave则使用平均）
+        float waveDamage = 20f; // 基础伤害
+        if (waveGroupTotalDamage.ContainsKey(waveGroupId) && waveGroupActiveWaveCount.ContainsKey(waveGroupId))
+        {
+            // 计算平均伤害（总伤害 / wave数量）
+            int waveCount = waveGroupActiveWaveCount[waveGroupId];
+            if (waveCount > 0)
+            {
+                waveDamage = waveGroupTotalDamage[waveGroupId] / waveCount;
+            }
+        }
+        
+        // 所有ally向右侧发射投射物
+        foreach (var ally in allyManager.ActiveAllies)
+        {
+            if (ally != null && !ally.IsDead)
+            {
+                CreateAllyProjectile(ally, (int)waveDamage);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 创建ally的投射物（向右侧发射）
+    /// </summary>
+    private void CreateAllyProjectile(Ally ally, int damage)
+    {
+        if (boardManager == null || ally == null)
+            return;
+            
+        // 创建投射物GameObject
+        GameObject projectileObj = Instantiate(allyProjectile);
+        SpriteRenderer sr = projectileObj.GetComponentInChildren<SpriteRenderer>();
+        
+        Vector3 startPos = ally.transform.position;
+        // 目标位置：右侧（假设向右飞行10个单位）
+        Vector3 targetPos = startPos + Vector3.right * 10f;
+        
+        projectileObj.transform.position = startPos;
+        projectileObj.transform.localScale = Vector3.one * 0.3f;
+        
+        float projectileSpeed = 10f;
+        float travelTime = 10f / projectileSpeed;
+        
+        projectileObj.transform.DOMove(targetPos, travelTime)
+            .SetEase(Ease.Linear)
+            .OnComplete(() =>
+            {
+                // 检查是否击中敌人
+                if (enemyManager != null)
+                {
+                    // 检查投射物路径上的敌人
+                    Vector2Int allyGridPos = ally.GridPosition;
+                    for (int x = allyGridPos.x + 1; x < boardManager.Width; x++)
+                    {
+                        Vector2Int checkPos = new Vector2Int(x, allyGridPos.y);
+                        foreach (var enemy in enemyManager.ActiveEnemies)
+                        {
+                            if (enemy != null && !enemy.IsDead && enemy.GridPosition == checkPos)
+                            {
+                                // 击中敌人
+                                enemy.TakeDamage(damage, Vector3.right, false, 0, 0f);
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                Destroy(projectileObj);
+            });
     }
 
     /// <summary>
@@ -1247,82 +1441,91 @@ public class MainGameManager : MonoBehaviour
     /// </summary>
     private void SpawnAlly(int health)
     {
+        if (health <= 0)
+        {
+            return;
+        }
         if (boardManager == null)
             return;
             
-        // 在最左侧任意行生成随从
         int boardHeight = boardManager.Height;
-        int spawnY = Random.Range(0, boardHeight);
-        Vector2Int spawnGridPos = new Vector2Int(0, spawnY);
         
-        // 检查该位置是否已有敌人或随从
-        bool hasObstacle = false;
+        // 收集所有有敌人的行（优先选择这些行）
+        HashSet<int> enemyRows = new HashSet<int>();
         if (enemyManager != null)
         {
             foreach (var enemy in enemyManager.ActiveEnemies)
             {
-                if (enemy != null && !enemy.IsDead && enemy.GridPosition == spawnGridPos)
+                if (enemy != null && !enemy.IsDead)
                 {
-                    hasObstacle = true;
-                    break;
+                    enemyRows.Add(enemy.GridPosition.y);
                 }
             }
         }
         
-        if (!hasObstacle && allyManager != null)
-        {
-            hasObstacle = allyManager.HasAllyAtPosition(spawnGridPos);
-        }
+        // 收集所有可用的行（最左侧x=0没有障碍物的行）
+        List<int> availableRows = new List<int>();
+        List<int> enemyAvailableRows = new List<int>(); // 有敌人的可用行（优先）
         
-        // 如果该位置有障碍物，尝试其他位置
-        if (hasObstacle)
+        for (int y = 0; y < boardHeight; y++)
         {
-            List<int> availableRows = new List<int>();
-            for (int y = 0; y < boardHeight; y++)
+            Vector2Int checkPos = new Vector2Int(0, y);
+            bool rowHasObstacle = false;
+            
+            // 检查敌人
+            if (enemyManager != null)
             {
-                bool rowHasObstacle = false;
-                Vector2Int checkPos = new Vector2Int(0, y);
-                
-                // 检查敌人
-                if (enemyManager != null)
+                foreach (var enemy in enemyManager.ActiveEnemies)
                 {
-                    foreach (var enemy in enemyManager.ActiveEnemies)
+                    if (enemy != null && !enemy.IsDead && enemy.GridPosition == checkPos)
                     {
-                        if (enemy != null && !enemy.IsDead && enemy.GridPosition == checkPos)
-                        {
-                            rowHasObstacle = true;
-                            break;
-                        }
+                        rowHasObstacle = true;
+                        break;
                     }
-                }
-                
-                // 检查随从
-                if (!rowHasObstacle && allyManager != null)
-                {
-                    rowHasObstacle = allyManager.HasAllyAtPosition(checkPos);
-                }
-                
-                if (!rowHasObstacle)
-                {
-                    availableRows.Add(y);
                 }
             }
             
-            if (availableRows.Count > 0)
+            // 检查随从
+            if (!rowHasObstacle && allyManager != null)
             {
-                spawnY = availableRows[Random.Range(0, availableRows.Count)];
-                spawnGridPos = new Vector2Int(0, spawnY);
+                rowHasObstacle = allyManager.HasAllyAtPosition(checkPos);
             }
-            else
+            
+            if (!rowHasObstacle)
             {
-                // 如果所有行都有障碍物，不生成随从
-                return;
+                if (enemyRows.Contains(y))
+                {
+                    enemyAvailableRows.Add(y); // 优先：有敌人的行
+                }
+                else
+                {
+                    availableRows.Add(y); // 普通可用行
+                }
             }
         }
         
+        // 如果所有行都有障碍物，不生成随从
+        if (enemyAvailableRows.Count == 0 && availableRows.Count == 0)
+        {
+            return;
+        }
+        
+        // 优先选择有敌人的行，否则选择其他可用行
+        int spawnY;
+        if (enemyAvailableRows.Count > 0)
+        {
+            spawnY = enemyAvailableRows[Random.Range(0, enemyAvailableRows.Count)];
+        }
+        else
+        {
+            spawnY = availableRows[Random.Range(0, availableRows.Count)];
+        }
+        
+        Vector2Int spawnGridPos = new Vector2Int(0, spawnY);
+        
         // 创建随从对象
-        GameObject allyObj = new GameObject("Ally");
-        Ally ally = allyObj.AddComponent<Ally>();
+        GameObject allyObj = Instantiate(allyPrefab);
+        Ally ally = allyObj.GetComponent<Ally>();
         
         // 设置位置
         Vector3 worldPos = boardManager.GridToWorldPosition(spawnGridPos);
@@ -1551,4 +1754,5 @@ public class MainGameManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
+
 

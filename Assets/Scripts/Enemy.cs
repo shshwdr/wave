@@ -494,8 +494,8 @@ public class Enemy : MonoBehaviour
         }
         
         // 如果没有随从，检查是否在玩家攻击范围内
-        // 离底线的距离（x坐标）<= range时，在攻击范围内
-        return gridPosition.x <= range;
+        // 只有在最左侧（x=0）时才能攻击玩家
+        return gridPosition.x == 0;
     }
     
     /// <summary>

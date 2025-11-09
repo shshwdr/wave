@@ -2110,7 +2110,9 @@ MonoBehaviour:
   skillDisplayText: {fileID: 0}
   enemyDescriptionPanel: {fileID: 0}
   enemyDescriptionText: {fileID: 0}
-  showShopAtBeginning: 1
+  showShopAtBeginning: 0
+  allyPrefab: {fileID: 1301853740920789355, guid: 3ae5e562d6ec64c44a24e6e76cced702, type: 3}
+  allyProjectile: {fileID: 4774102499940393064, guid: 6428cff0341872248820a0459fd4b2fb, type: 3}
 --- !u!1001 &1045576067
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3895,7 +3897,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b718d3150a0203146b622c579104a40d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemyPrefab: {fileID: 9209408494864702295, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+  enemyPrefab: {fileID: 8765120871175952216, guid: 8f636a3ebfe1f3f4a88f52efa0871277, type: 3}
   minEnemyCount: 1
   maxEnemyCount: 3
   spawnOffsetX: 1

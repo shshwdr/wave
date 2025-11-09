@@ -161,6 +161,32 @@ public class Ally : MonoBehaviour
     }
 
     /// <summary>
+    /// 恢复血量
+    /// </summary>
+    public void Heal(int amount)
+    {
+        if (isDead)
+            return;
+            
+        int oldHealth = currentHealth;
+        currentHealth += amount;
+        currentHealth = Mathf.Min(maxHealth, currentHealth);
+        int actualHeal = currentHealth - oldHealth;
+        
+        // 显示回血数字
+        if (actualHeal > 0)
+        {
+            DamageNumber.CreateDamageNumber(actualHeal, transform.position + Vector3.up * 0.5f, true);
+        }
+        
+        // 更新血条
+        if (healthBar != null)
+        {
+            healthBar.UpdateHealthBar(currentHealth, maxHealth);
+        }
+    }
+    
+    /// <summary>
     /// 设置血条引用
     /// </summary>
     public void SetHealthBar(EnemyHealthBar healthBar)

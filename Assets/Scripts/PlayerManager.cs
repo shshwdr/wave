@@ -233,6 +233,46 @@ public class PlayerManager : Singleton<PlayerManager>
         currentHealth = Mathf.Min(maxHealth, currentHealth);
         int actualHeal = currentHealth - oldHealth;
         
+        // 检查是否有summonHeal技能，如果有则给所有ally也回血
+        if (SkillManager.Instance != null)
+        {
+            bool hasSummonHeal = false;
+            // 检查所有颜色的wave技能
+            for (int i = 0; i < 4; i++)
+            {
+                List<string> skillIdentifiers = GetWaveSkills(i);
+                foreach (var identifier in skillIdentifiers)
+                {
+                    if (SkillManager.Instance.HasSkill(identifier))
+                    {
+                        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                        if (skillInfo != null && skillInfo.effect == "summonHeal")
+                        {
+                            hasSummonHeal = true;
+                            break;
+                        }
+                    }
+                }
+                if (hasSummonHeal) break;
+            }
+            
+            if (hasSummonHeal)
+            {
+                // 给所有ally回血
+                AllyManager allyManager = UnityEngine.Object.FindObjectOfType<AllyManager>();
+                if (allyManager != null)
+                {
+                    foreach (var ally in allyManager.ActiveAllies)
+                    {
+                        if (ally != null && !ally.IsDead)
+                        {
+                            ally.Heal(amount);
+                        }
+                    }
+                }
+            }
+        }
+        
         // 检查是否有overhealDoDamage技能
         if (SkillManager.Instance != null)
         {
