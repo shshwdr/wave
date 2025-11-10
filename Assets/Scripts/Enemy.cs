@@ -22,6 +22,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private Collider2D enemyCollider;
     [SerializeField] private EnemyHealthBar healthBar;
     [SerializeField] private GameObject shieldObject; // 盾牌显示对象（shield敌人使用）
+    [SerializeField] private SpriteRenderAnim spriteRenderAnim; // Sprite动画组件
 
     private int currentHealth;
     private int maxHealth;
@@ -57,6 +58,8 @@ public class Enemy : MonoBehaviour
             spriteRenderer = GetComponent<SpriteRenderer>();
         if (enemyCollider == null)
             enemyCollider = GetComponentInChildren<Collider2D>();
+        if (spriteRenderAnim == null)
+            spriteRenderAnim = GetComponentInChildren<SpriteRenderAnim>();
         
         // 确保敌人有Collider2D和Rigidbody2D（用于碰撞检测）
         if (enemyCollider == null)
@@ -97,6 +100,7 @@ public class Enemy : MonoBehaviour
         isDead = false;
         enemyInfo = info;
         
+        spriteRenderAnim.SetIdentifier(enemyInfo.identifier);
         // 初始化shield系统
         hasShield = false;
         shieldActive = false;
@@ -129,14 +133,39 @@ public class Enemy : MonoBehaviour
             currentCooldown = skillCooldown; // 初始冷却时间等于技能冷却时间
         }
         
-        if (spriteRenderer != null)
+        // 初始化动画系统
+        if (enemyInfo != null && !string.IsNullOrEmpty(enemyInfo.identifier))
+        {
+            // 检查是否有对应的动画文件夹（首字母大写）
+            string folderIdentifier = char.ToUpper(enemyInfo.identifier[0]) + enemyInfo.identifier.Substring(1);
+            bool hasAnimationFolder = SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier);
+            
+            if (hasAnimationFolder && spriteRenderAnim != null)
+            {
+                // 设置identifier并播放idle动画
+                spriteRenderAnim.SetIdentifier(folderIdentifier);
+                spriteRenderAnim.PlayIdle();
+            }
+            else if (spriteRenderer != null)
+            {
+                // 如果没有动画文件夹，使用原逻辑
+                spriteRenderer.enabled = true;
+                spriteRenderer.sprite = info.icon;
+                // 记录spriteRenderer的原始本地位置（如果spriteRenderer是transform的子对象）
+                // 如果spriteRenderer直接挂载在transform上，使用localPosition
+                spriteRendererOriginalLocalPos = spriteRenderer.transform.localPosition;
+            }
+        }
+        else if (spriteRenderer != null)
         {
             spriteRenderer.enabled = true;
-            spriteRenderer.sprite = info.icon;
-            // 记录spriteRenderer的原始本地位置（如果spriteRenderer是transform的子对象）
-            // 如果spriteRenderer直接挂载在transform上，使用localPosition
+            if (info != null)
+            {
+                spriteRenderer.sprite = info.icon;
+            }
             spriteRendererOriginalLocalPos = spriteRenderer.transform.localPosition;
         }
+        
         if (enemyCollider != null)
         {
             enemyCollider.enabled = true;
@@ -225,7 +254,10 @@ public class Enemy : MonoBehaviour
         }
 
         // 跳起动画
-        ApplyJumpAnimation();
+        //ApplyJumpAnimation();
+        
+        // 播放受伤动画（会自动切换到idle）
+        TryPlayHurtAnimation();
 
         // 更新视觉（可以添加血条等）
         UpdateVisual();
@@ -405,7 +437,7 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// 向左移动（基于speed快速跳跃多次）
     /// </summary>
-    public void MoveLeft(float duration = 0.5f)
+    public void MoveLeft(float duration = 0.3f)
     {
         if (isDead || enemyInfo == null)
             return;
@@ -504,6 +536,15 @@ public class Enemy : MonoBehaviour
         
         // 更新网格位置
         gridPosition.x -= actualSteps;
+        
+        // 播放移动动画（移动过程中）
+        TryPlayMoveAnimation();
+        
+        // 移动完成后切换到idle
+        moveSequence.OnComplete(() =>
+        {
+            TryPlayIdleAnimation();
+        });
     }
     
     /// <summary>
@@ -577,6 +618,9 @@ public class Enemy : MonoBehaviour
         
         // 原地doShake动画
         DoShake();
+        
+        // 播放攻击动画（会自动切换到idle）
+        TryPlayAtkAnimation();
         
         if (targetAlly != null)
         {
@@ -784,6 +828,9 @@ public class Enemy : MonoBehaviour
     {
         if (string.IsNullOrEmpty(currentSkill))
             return;
+        
+        // 播放特殊技能动画
+        TryPlaySpecialAnimation();
             
         // 对于summon技能，currentSkill可能是"summon|identifier"格式
         if (currentSkill.StartsWith("summon"))
@@ -1068,15 +1115,11 @@ public class Enemy : MonoBehaviour
 
         isDead = true;
 
-        // 取消跳起动画并确保位置正确
+        // 取消跳起动画
         if (jumpTween != null && jumpTween.IsActive())
         {
             jumpTween.Kill();
             jumpTween = null;
-        }
-        if (spriteRenderer != null)
-        {
-            spriteRenderer.transform.localPosition = spriteRendererOriginalLocalPos;
         }
 
         // 隐藏血条
@@ -1092,16 +1135,25 @@ public class Enemy : MonoBehaviour
             enemyManager.RemoveDeadEnemy(this);
         }
         
-        // 死亡动画
-        transform.DOScale(Vector3.zero, 0.3f)
-            .SetEase(Ease.InBack)
-            .OnComplete(() =>
-            {
-                if (spriteRenderer != null)
-                    spriteRenderer.enabled = false;
-                if (enemyCollider != null)
-                    enemyCollider.enabled = false;
-            });
+        // 播放死亡动画
+        TryPlayDeadAnimation();
+        
+        // 等待1秒让玩家看到死亡动画，然后隐藏
+        StartCoroutine(DieAfterDelay());
+    }
+
+    /// <summary>
+    /// 延迟隐藏敌人（等待死亡动画播放）
+    /// </summary>
+    private System.Collections.IEnumerator DieAfterDelay()
+    {
+        yield return new WaitForSeconds(1f);
+        
+        // 隐藏敌人
+        if (spriteRenderer != null)
+            spriteRenderer.enabled = false;
+        if (enemyCollider != null)
+            enemyCollider.enabled = false;
     }
 
     private void OnDestroy()
@@ -1203,6 +1255,102 @@ public class Enemy : MonoBehaviour
     {
         // TODO: 实现buff图标显示
         // 可以在EnemyHealthBar或单独创建一个BuffDisplay组件
+    }
+    
+    /// <summary>
+    /// 尝试播放攻击动画
+    /// </summary>
+    private void TryPlayAtkAnimation()
+    {
+        if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
+            return;
+            
+        string folderIdentifier = char.ToUpper(enemyInfo.identifier[0]) + enemyInfo.identifier.Substring(1);
+        if (SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier) && spriteRenderAnim != null)
+        {
+            spriteRenderAnim.SetIdentifier(folderIdentifier);
+            spriteRenderAnim.PlayAtk();
+        }
+    }
+    
+    /// <summary>
+    /// 尝试播放待机动画
+    /// </summary>
+    private void TryPlayIdleAnimation()
+    {
+        if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
+            return;
+            
+        string folderIdentifier = char.ToUpper(enemyInfo.identifier[0]) + enemyInfo.identifier.Substring(1);
+        if (SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier) && spriteRenderAnim != null)
+        {
+            spriteRenderAnim.SetIdentifier(folderIdentifier);
+            spriteRenderAnim.PlayIdle();
+        }
+    }
+    
+    /// <summary>
+    /// 尝试播放受伤动画
+    /// </summary>
+    private void TryPlayHurtAnimation()
+    {
+        if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
+            return;
+            
+        string folderIdentifier = char.ToUpper(enemyInfo.identifier[0]) + enemyInfo.identifier.Substring(1);
+        if (SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier) && spriteRenderAnim != null)
+        {
+            spriteRenderAnim.SetIdentifier(folderIdentifier);
+            spriteRenderAnim.PlayHurt();
+        }
+    }
+    
+    /// <summary>
+    /// 尝试播放移动动画
+    /// </summary>
+    private void TryPlayMoveAnimation()
+    {
+        if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
+            return;
+            
+        string folderIdentifier = char.ToUpper(enemyInfo.identifier[0]) + enemyInfo.identifier.Substring(1);
+        if (SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier) && spriteRenderAnim != null)
+        {
+            spriteRenderAnim.SetIdentifier(folderIdentifier);
+            spriteRenderAnim.PlayMove();
+        }
+    }
+    
+    /// <summary>
+    /// 尝试播放特殊技能动画
+    /// </summary>
+    private void TryPlaySpecialAnimation()
+    {
+        if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
+            return;
+            
+        string folderIdentifier = char.ToUpper(enemyInfo.identifier[0]) + enemyInfo.identifier.Substring(1);
+        if (SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier) && spriteRenderAnim != null)
+        {
+            spriteRenderAnim.SetIdentifier(folderIdentifier);
+            spriteRenderAnim.PlaySpecial();
+        }
+    }
+    
+    /// <summary>
+    /// 尝试播放死亡动画
+    /// </summary>
+    private void TryPlayDeadAnimation()
+    {
+        if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
+            return;
+            
+        string folderIdentifier = char.ToUpper(enemyInfo.identifier[0]) + enemyInfo.identifier.Substring(1);
+        if (SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier) && spriteRenderAnim != null)
+        {
+            spriteRenderAnim.SetIdentifier(folderIdentifier);
+            spriteRenderAnim.PlayDead();
+        }
     }
 }
 
