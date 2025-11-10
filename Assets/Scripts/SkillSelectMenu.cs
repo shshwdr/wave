@@ -171,10 +171,23 @@ public class SkillSelectMenu : MenuBase
         if (CSVLoader.Instance == null || CSVLoader.Instance.cardInfoMap == null)
             return new List<SkillInfo>();
 
+        // 获取当前关卡等级
+        int currentLevel = 1;
+        if (LevelManager.Instance != null)
+        {
+            currentLevel = LevelManager.Instance.CurrentLevel;
+        }
+        
         foreach (var skillInfo in CSVLoader.Instance.cardInfoMap.Values)
         {
             if (!skillInfo.available)
                 continue;
+            
+            // 检查unlockLevel条件：当前关卡等级必须 >= unlockLevel
+            if (skillInfo.unlockLevel > 0 && currentLevel < skillInfo.unlockLevel)
+            {
+                continue; // 关卡等级不够，不显示此技能
+            }
                 
             // 检查unlock条件：如果unlock不为空，需要检查所有unlock中的技能是否都已获得
             if (skillInfo.unlock != null && skillInfo.unlock.Count > 0)

@@ -141,14 +141,27 @@ public class SkillManager : Singleton<SkillManager>
         List<SkillInfo> result = new List<SkillInfo>();
         if (CSVLoader.Instance != null && CSVLoader.Instance.cardInfoMap != null)
         {
-            foreach (var skillInfo in CSVLoader.Instance.cardInfoMap.Values)
+        // 获取当前关卡等级
+        int currentLevel = 1;
+        if (LevelManager.Instance != null)
+        {
+            currentLevel = LevelManager.Instance.CurrentLevel;
+        }
+
+        foreach (var skillInfo in CSVLoader.Instance.cardInfoMap.Values)
+        {
+            // 只有available为true且可以升级的技能才能被选择
+            if (!skillInfo.available || !CanUpgradeSkill(skillInfo.identifier))
+                continue;
+            
+            // 检查unlockLevel条件：当前关卡等级必须 >= unlockLevel
+            if (skillInfo.unlockLevel > 0 && currentLevel < skillInfo.unlockLevel)
             {
-                // 只有available为true且可以升级的技能才能被选择
-                if (skillInfo.available && CanUpgradeSkill(skillInfo.identifier))
-                {
-                    result.Add(skillInfo);
-                }
+                continue; // 关卡等级不够，不显示此技能
             }
+            
+            result.Add(skillInfo);
+        }
         }
         return result;
     }

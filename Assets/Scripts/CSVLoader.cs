@@ -17,6 +17,7 @@ public class SkillInfo
     public int buyPrice;
     public int upgradePrice;
     public List<string> unlock;
+    public int unlockLevel;
 
 }
 
