@@ -11,6 +11,10 @@ public class Wave : MonoBehaviour
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float damage = 20f;
     [SerializeField] private float range = 0.5f;
+    
+    [Header("波动设置")]
+    [SerializeField] private float waveAmplitude = 0.5f; // 波动振幅
+    [SerializeField] private float waveFrequency = 2f; // 波动频率（每秒周期数）
 
     [Header("组件")]
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -60,6 +64,10 @@ public class Wave : MonoBehaviour
     private bool hasPassedSameColorTile = false; // 是否已经经过同色tile（用于healWhenPass和addDamageWhenPass）
     private bool hasTarget = false; // 是否有target技能
     private int targetValue = 0; // target的值
+    private float waveStartTime = 0f; // 波动开始时间
+    private float baseYPosition = 0f; // 基础Y位置（起始位置的Y坐标）
+    private int columnIndex = 0; // 列索引（用于计算相位偏移）
+    private bool isMoving = false; // 是否正在移动
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -120,9 +128,21 @@ public class Wave : MonoBehaviour
         hitEnemyCount = 0; // 重置击中敌人计数
         hasTarget = false; // 重置target技能
         targetValue = 0;
+        
+        // 初始化波动相关变量
+        columnIndex = gridPos.x; // 列索引
+        baseYPosition = spawnPosition.y; // 基础Y位置
+        waveStartTime = Time.time; // 记录开始时间
+        isMoving = false; // 初始状态为未移动
 
         transform.position = spawnPosition;
         gameObject.SetActive(true);
+
+        // 设置spriteRenderer的颜色为对应的tile颜色
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = TileColorUtil.GetUnityColor(waveColor) + new Color(0.2f, 0.2f, 0.2f);
+        }
 
         // 获取BoardManager
         if (boardManager == null)
@@ -149,6 +169,7 @@ public class Wave : MonoBehaviour
     private void StartWave()
     {
         waveDuration = travelDistance / moveSpeed;
+        isMoving = true; // 开始移动
 
         // 如果有damageBottom技能且是第一个wave，监听是否离开最右列
         if (hasDamageBottomSkill && isFirstWave && boardManager != null)
@@ -162,13 +183,44 @@ public class Wave : MonoBehaviour
             InvokeRepeating(nameof(CheckAndClearFogDirt), 0.05f, 0.05f);
         }
 
-        transform.DOMove(targetPosition, waveDuration)
-            .SetEase(Ease.Linear)
-            .OnComplete(() =>
-            {
-                CancelInvoke(nameof(CheckAndClearFogDirt));
-                DestroyWave();
-            });
+        // 使用协程或Update来处理带波动的移动
+        // 不再使用DOMove，改为在Update中处理
+    }
+    
+    /// <summary>
+    /// Update方法：处理带波动的移动
+    /// </summary>
+    private void Update()
+    {
+        if (!isMoving)
+            return;
+        
+        // 计算经过的时间
+        float elapsedTime = Time.time - waveStartTime;
+        
+        // 计算水平移动进度（0到1）
+        float horizontalProgress = elapsedTime / waveDuration;
+        
+        // 如果已经到达目标位置，销毁wave
+        if (horizontalProgress >= 1f)
+        {
+            CancelInvoke(nameof(CheckAndClearFogDirt));
+            DestroyWave();
+            return;
+        }
+        
+        // 计算水平位置（线性移动）
+        float currentX = Mathf.Lerp(startPosition.x, targetPosition.x, horizontalProgress);
+        
+        // 计算垂直波动
+        // 每两列之间相差半个周期（π），所以相位偏移 = columnIndex * π
+        float phaseOffset = columnIndex * Mathf.PI; // 每列相差π（半个周期）
+        float time = elapsedTime * waveFrequency * 2f * Mathf.PI; // 转换为角度
+        float verticalOffset = Mathf.Sin(time + phaseOffset) * waveAmplitude;
+        
+        // 更新位置
+        float currentY = baseYPosition + verticalOffset;
+        transform.position = new Vector3(currentX, currentY, transform.position.z);
     }
     
     /// <summary>
@@ -767,6 +819,7 @@ public class Wave : MonoBehaviour
     /// </summary>
     private void DestroyWave()
     {
+        isMoving = false; // 停止移动
         transform.DOKill();
         
         // 通知MainGameManager这个wave已完成（用于spawnAlly技能）

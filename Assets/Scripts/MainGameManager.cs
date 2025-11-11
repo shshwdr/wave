@@ -349,8 +349,18 @@ public class MainGameManager : MonoBehaviour
         if (currentState == GameState.PlayerTurn && !isProcessing)
         {
             HandlePlayerInput();
-            HandleMouseHover();
-            HandleTouchInput(); // 处理触屏输入
+            
+            // 区分鼠标和触屏输入，避免冲突
+            if (Input.touchCount > 0)
+            {
+                // 有触屏输入时，只处理触屏
+                HandleTouchInput();
+            }
+            else
+            {
+                // 没有触屏输入时，处理鼠标悬停
+                HandleMouseHover();
+            }
         }
         else if (isProcessing)
         {
@@ -649,11 +659,34 @@ public class MainGameManager : MonoBehaviour
         if (isProcessing)
             return;
         
+        // 确保相机已初始化
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                Debug.LogWarning("MainGameManager: 无法找到主相机，触屏输入无法工作");
+                return;
+            }
+        }
+        
         // 检查触摸输入
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
-            Vector3 touchWorldPos = mainCamera.ScreenToWorldPoint(touch.position);
+            
+            // 正确转换屏幕坐标到世界坐标（需要设置z值）
+            Vector3 touchScreenPos = touch.position;
+            // 对于正交相机，使用相机的z位置；对于透视相机，使用nearClipPlane
+            if (mainCamera.orthographic)
+            {
+                touchScreenPos.z = Mathf.Abs(mainCamera.transform.position.z);
+            }
+            else
+            {
+                touchScreenPos.z = mainCamera.nearClipPlane;
+            }
+            Vector3 touchWorldPos = mainCamera.ScreenToWorldPoint(touchScreenPos);
             touchWorldPos.z = 0;
             
             // 检查是否触摸到敌人或tile
@@ -726,41 +759,47 @@ public class MainGameManager : MonoBehaviour
     }
     
     /// <summary>
-    /// 获取指定位置的敌人
+    /// 获取指定位置的敌人（基于spriteRenderer的实际sprite区域）
     /// </summary>
     private Enemy GetEnemyAtPosition(Vector3 worldPos)
     {
         if (enemyManager == null)
             return null;
         
-        // 使用OverlapPoint检测位置下的碰撞体
-        Collider2D hitCollider = Physics2D.OverlapPoint(worldPos);
-        if (hitCollider != null)
+        // 遍历所有敌人，检查点击位置是否在spriteRenderer的实际sprite区域内
+        foreach (var enemy in enemyManager.ActiveEnemies)
         {
-            Enemy enemy = hitCollider.GetComponent<Enemy>();
-            if (enemy == null)
+            if (enemy == null || enemy.IsDead)
+                continue;
+                
+            SpriteRenderer sr = enemy.GetComponent<SpriteRenderer>();
+            if (sr == null)
+                sr = enemy.GetComponentInChildren<SpriteRenderer>();
+                
+            if (sr != null && sr.enabled && sr.sprite != null)
             {
-                enemy = hitCollider.GetComponentInParent<Enemy>();
-            }
-            if (enemy != null && !enemy.IsDead)
-            {
-                return enemy;
-            }
-        }
-        
-        // 如果OverlapPoint没有检测到，尝试使用OverlapCircle
-        float checkRadius = 0.5f;
-        Collider2D[] colliders = Physics2D.OverlapCircleAll(worldPos, checkRadius);
-        foreach (var collider in colliders)
-        {
-            Enemy enemy = collider.GetComponent<Enemy>();
-            if (enemy == null)
-            {
-                enemy = collider.GetComponentInParent<Enemy>();
-            }
-            if (enemy != null && !enemy.IsDead)
-            {
-                return enemy;
+                // 检查世界坐标是否在sprite的bounds内
+                Bounds spriteBounds = sr.bounds;
+                if (spriteBounds.Contains(worldPos))
+                {
+                    // 进一步检查是否点击在sprite的实际像素上（非透明区域）
+                    // 将世界坐标转换为sprite的本地坐标
+                    Vector3 localPos = sr.transform.InverseTransformPoint(worldPos);
+                    
+                    // 获取sprite的像素坐标
+                    Rect spriteRect = sr.sprite.rect;
+                    Vector2 pixelPos = new Vector2(
+                        (localPos.x / spriteBounds.size.x) * spriteRect.width + spriteRect.width * 0.5f,
+                        (localPos.y / spriteBounds.size.y) * spriteRect.height + spriteRect.height * 0.5f
+                    );
+                    
+                    // 检查像素是否在sprite范围内（简化检查，只检查bounds）
+                    if (pixelPos.x >= 0 && pixelPos.x < spriteRect.width &&
+                        pixelPos.y >= 0 && pixelPos.y < spriteRect.height)
+                    {
+                        return enemy;
+                    }
+                }
             }
         }
         
@@ -768,7 +807,7 @@ public class MainGameManager : MonoBehaviour
     }
     
     /// <summary>
-    /// 获取鼠标下的敌人
+    /// 获取鼠标下的敌人（基于spriteRenderer的实际sprite区域）
     /// </summary>
     private Enemy GetEnemyUnderMouse()
     {
@@ -781,40 +820,8 @@ public class MainGameManager : MonoBehaviour
         Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
         mouseWorldPos.z = 0;
         
-        // 使用OverlapPoint检测鼠标位置下的碰撞体
-        Collider2D hitCollider = Physics2D.OverlapPoint(mouseWorldPos);
-        if (hitCollider != null)
-        {
-            Enemy enemy = hitCollider.GetComponent<Enemy>();
-            if (enemy == null)
-            {
-                // 尝试从父对象获取
-                enemy = hitCollider.GetComponentInParent<Enemy>();
-            }
-            if (enemy != null && !enemy.IsDead)
-            {
-                return enemy;
-            }
-        }
-        
-        // 如果OverlapPoint没有检测到，尝试遍历所有敌人检查距离
-        // 这对于某些collider设置可能更可靠
-        float checkRadius = 0.5f; // 检查半径
-        Collider2D[] colliders = Physics2D.OverlapCircleAll(mouseWorldPos, checkRadius);
-        foreach (var collider in colliders)
-        {
-            Enemy enemy = collider.GetComponent<Enemy>();
-            if (enemy == null)
-            {
-                enemy = collider.GetComponentInParent<Enemy>();
-            }
-            if (enemy != null && !enemy.IsDead)
-            {
-                return enemy;
-            }
-        }
-        
-        return null;
+        // 使用与GetEnemyAtPosition相同的逻辑
+        return GetEnemyAtPosition(mouseWorldPos);
     }
     
     /// <summary>
