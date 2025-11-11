@@ -7,9 +7,10 @@ using DG.Tweening;
 /// </summary>
 public class DamageNumber : MonoBehaviour
 {
+    private static bool damageNumberMoveLeft = true;
     [SerializeField] private TMP_Text damageText;
-    [SerializeField] private float jumpHeight = 1f;
-    [SerializeField] private float duration = 2f;
+    [SerializeField] private float jumpHeight = 0.8f;
+    [SerializeField] private float duration = 1.5f;
     [SerializeField] private Color damageColor = Color.red;
     [SerializeField] private Color healColor = Color.green;
 
@@ -26,12 +27,16 @@ public class DamageNumber : MonoBehaviour
                 textObj.transform.localPosition = Vector3.zero;
                 
                 RectTransform rectTransform = textObj.AddComponent<RectTransform>();
+                
+                //rectTransform.sizeDelta = new Vector2(100, 50);
                 rectTransform.anchorMin = Vector2.zero;
-                rectTransform.anchorMax = Vector2.zero;
-                rectTransform.sizeDelta = new Vector2(100, 50);
+                rectTransform.anchorMax = Vector2.one;
+                rectTransform.offsetMin = Vector2.zero;
+                rectTransform.offsetMax = Vector2.zero;
                 
                 damageText = textObj.AddComponent<TextMeshProUGUI>();
-                damageText.fontSize = 36;
+                damageText.fontSize = 30;
+                damageText.enableWordWrapping = false;
                 damageText.alignment = TextAlignmentOptions.Center;
             }
         }
@@ -58,6 +63,9 @@ public class DamageNumber : MonoBehaviour
         
         // 向上跳跃并淡出
         Vector3 targetPosition = worldPosition + Vector3.up * jumpHeight;
+
+        targetPosition += Vector3.left * (damageNumberMoveLeft ? 1f : -1f) * Random.Range(0.4f,0.8f);
+        damageNumberMoveLeft = !damageNumberMoveLeft;
         
         Sequence sequence = DOTween.Sequence();
         sequence.Append(transform.DOMove(targetPosition, duration).SetEase(Ease.OutQuad));

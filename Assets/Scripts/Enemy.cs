@@ -245,7 +245,7 @@ public class Enemy : MonoBehaviour
         currentHealth = Mathf.Max(0, currentHealth);
 
         // 显示伤害数字
-        DamageNumber.CreateDamageNumber(damage, transform.position + Vector3.up * 0.5f, false);
+        DamageNumber.CreateDamageNumber(damage, transform.position, false);
 
         // 击退效果（只有shouldKnockback为true时才击退）
         if (shouldKnockback && knockbackTiles > 0)
@@ -648,7 +648,7 @@ public class Enemy : MonoBehaviour
                 // 近战攻击，直接造成伤害
                 PlayerManager.Instance.TakeDamage(damage);
                 // 显示伤害数字
-                DamageNumber.CreateDamageNumber(damage, transform.position + Vector3.left * 0.5f, false);
+                DamageNumber.CreateDamageNumber(damage, transform.position, false);
             }
         }
     }
@@ -913,7 +913,7 @@ public class Enemy : MonoBehaviour
         }
         
         // 显示治疗数字
-        DamageNumber.CreateDamageNumber(amount, transform.position + Vector3.up * 0.5f, true);
+        DamageNumber.CreateDamageNumber(amount, transform.position, true);
     }
     
     /// <summary>

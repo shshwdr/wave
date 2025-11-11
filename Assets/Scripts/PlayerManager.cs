@@ -331,7 +331,7 @@ public class PlayerManager : Singleton<PlayerManager>
         targetEnemy.TakeDamage(damage, Vector3.right, false, 0, 0f);
         
         // 显示伤害数字
-        DamageNumber.CreateDamageNumber(damage, targetEnemy.transform.position + Vector3.up * 0.5f, false);
+        DamageNumber.CreateDamageNumber(damage, targetEnemy.transform.position, false);
     }
 
     /// <summary>

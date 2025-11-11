@@ -1948,7 +1948,7 @@ public class MainGameManager : MonoBehaviour
                 
                 // 显示伤害数字
                 Vector3 attackPos = enemy.transform.position;
-                DamageNumber.CreateDamageNumber(damage, attackPos + Vector3.left * 0.5f, false);
+                DamageNumber.CreateDamageNumber(damage, attackPos, false);
                 
                 // 销毁到达最左边的敌人
                 enemy.Die();

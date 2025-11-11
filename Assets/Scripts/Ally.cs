@@ -117,7 +117,7 @@ public class Ally : MonoBehaviour
         currentHealth = Mathf.Max(0, currentHealth);
 
         // 显示伤害数字
-        DamageNumber.CreateDamageNumber(damage, transform.position + Vector3.up * 0.5f, false);
+        DamageNumber.CreateDamageNumber(damage, transform.position, false);
 
         // 更新血条
         if (healthBar != null)
@@ -176,7 +176,7 @@ public class Ally : MonoBehaviour
         // 显示回血数字
         if (actualHeal > 0)
         {
-            DamageNumber.CreateDamageNumber(actualHeal, transform.position + Vector3.up * 0.5f, true);
+            DamageNumber.CreateDamageNumber(actualHeal, transform.position, true);
         }
         
         // 更新血条
