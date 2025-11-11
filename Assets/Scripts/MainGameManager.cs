@@ -37,6 +37,7 @@ public class MainGameManager : MonoBehaviour
     public bool showShopAtBeginning;
     [SerializeField] public GameObject allyPrefab;
     [SerializeField] public GameObject allyProjectile;
+    [SerializeField] public GameObject damagePrefab;
     
     private enum GameState
     {
@@ -1142,12 +1143,13 @@ public class MainGameManager : MonoBehaviour
         }
         
         int waveIndex = 0;
+        int tilesUsed = connectedTiles.Count; // 使用的tile数量
         foreach (var pos in connectedTiles)
         {
             Vector3 worldPos = boardManager.GridToWorldPosition(pos);
             bool isFirstWave = (waveIndex == 0);
             // 如果只有一个tile且有pure技能，传递pure信息
-            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue);
+            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed);
 
             boardManager.RemoveTile(pos);
             waveIndex++;
@@ -1167,7 +1169,7 @@ public class MainGameManager : MonoBehaviour
     /// <summary>
     /// 创建波浪攻击
     /// </summary>
-    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f, bool hasPure = false, int pureValue = 0)
+    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f, bool hasPure = false, int pureValue = 0, int tilesUsed = 1)
     {
         if (wavePrefab == null)
             return;
@@ -1179,7 +1181,7 @@ public class MainGameManager : MonoBehaviour
             wave = waveObj.AddComponent<Wave>();
         }
 
-        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue);
+        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue, tilesUsed);
     }
 
     /// <summary>

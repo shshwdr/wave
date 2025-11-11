@@ -1,7 +1,7 @@
 ﻿identifier,name,description,hp,hpIncrease,attack,attackIncrease,speed,range,skill,skillValue,skillCD,gold,idleIndex,walkIndex,attackIndex,beAttackIndex,dieIndex
 normal,normal,No special ability.,50,10,10,5,1,1,,,,1,0|1,2|3,0|4,0|5,5|6
 hp,hp,"High HP, harder to defeat.",200,20,20,5,1,1,,,,1,,,,,
-archer,archer,Can perform ranged attacks.,80,10,5,5,1,4,,,,1,,,,,
+archer,archer,Can perform ranged attacks.,80,10,5,5,1,8,,,,1,,,,,
 speed,speed,Moves faster than normal enemies.,70,10,5,5,2,1,,,,1,,,,,
 healer,healer,Can heal nearby allies each turn.,100,10,10,5,1,1,heal,2,2,1,,,,,
 fog,fog,Creates fog that hides nearby tiles.,120,10,10,5,1,1,createFog,3,2,1,,,,,

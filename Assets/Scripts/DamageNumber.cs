@@ -85,33 +85,25 @@ public class DamageNumber : MonoBehaviour
     /// </summary>
     public static void CreateDamageNumber(int damage, Vector3 worldPosition, bool isHeal = false)
     {
-        GameObject damageObj = new GameObject("DamageNumber");
-        DamageNumber damageNumber = damageObj.AddComponent<DamageNumber>();
+        //GameObject damageObj = new GameObject("DamageNumber");
+        //DamageNumber damageNumber = damageObj.AddComponent<DamageNumber>();
         
         // 如果是世界坐标，需要转换为屏幕坐标显示
         Camera mainCamera = Camera.main;
-        if (mainCamera != null)
-        {
+       // if (mainCamera != null)
+       // {
             Vector3 screenPos = mainCamera.WorldToScreenPoint(worldPosition);
             
             // 创建Canvas用于显示
-            Canvas canvas = FindObjectOfType<Canvas>();
-            if (canvas == null)
-            {
-                GameObject canvasObj = new GameObject("DamageCanvas");
-                canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
-                canvasObj.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-            }
+            //if (canvas == null)
+            //{
+                GameObject canvasObj = Instantiate(Resources.Load<GameObject>("damageNumber"));
+            //}
             
-            damageObj.transform.SetParent(canvas.transform);
-            
-            RectTransform rectTransform = damageObj.AddComponent<RectTransform>();
-            rectTransform.position = screenPos;
-        }
+       // }
         
-        damageNumber.ShowDamage(damage, worldPosition, isHeal);
+       canvasObj.GetComponentInChildren<RectTransform>().position = screenPos;
+        canvasObj.GetComponent<DamageNumber>().ShowDamage(damage, worldPosition, isHeal);
     }
 }
 

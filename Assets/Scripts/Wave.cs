@@ -68,6 +68,7 @@ public class Wave : MonoBehaviour
     private float baseYPosition = 0f; // 基础Y位置（起始位置的Y坐标）
     private int columnIndex = 0; // 列索引（用于计算相位偏移）
     private bool isMoving = false; // 是否正在移动
+    private int tilesUsed = 1; // 使用的tile数量（用于moreTileMoreDamage和encourageMoreTiles技能）
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -107,7 +108,7 @@ public class Wave : MonoBehaviour
     /// <summary>
     /// 初始化波浪
     /// </summary>
-    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f, bool hasPureFlag = false, int pureValueParam = 0)
+    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f, bool hasPureFlag = false, int pureValueParam = 0, int tilesUsedCount = 1)
     {
         startPosition = spawnPosition;
         travelDistance = distance;
@@ -128,6 +129,7 @@ public class Wave : MonoBehaviour
         hitEnemyCount = 0; // 重置击中敌人计数
         hasTarget = false; // 重置target技能
         targetValue = 0;
+        tilesUsed = tilesUsedCount; // 记录使用的tile数量
         
         // 初始化波动相关变量
         columnIndex = gridPos.x; // 列索引
@@ -354,7 +356,31 @@ public class Wave : MonoBehaviour
         int colorIndex = (int)waveColor; // TileColor枚举值：Red=0, Yellow=1, Blue=2, Green=3
         List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
 
-        // 先应用buffNextDamage的伤害加成
+        // 先处理moreTileMoreDamage技能（需要在最开始处理，因为它改变基础伤害）
+        bool hasMoreTileMoreDamage = false;
+        int moreTileMoreDamageValue = 0;
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (SkillManager.Instance.HasSkill(identifier))
+            {
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "moreTileMoreDamage")
+                {
+                    hasMoreTileMoreDamage = true;
+                    moreTileMoreDamageValue = SkillManager.Instance.GetSkillValue(identifier);
+                    break;
+                }
+            }
+        }
+        
+        if (hasMoreTileMoreDamage)
+        {
+            // 基础伤害变成 value% base damage × tiles used
+            float baseDamage = 20f; // 基础伤害
+            damage = baseDamage * (moreTileMoreDamageValue / 100f) * tilesUsed;
+        }
+        
+        // 应用buffNextDamage的伤害加成
         damage = damage * damageMultiplier;
 
         foreach (var identifier in skillIdentifiers)
@@ -477,6 +503,10 @@ public class Wave : MonoBehaviour
                     hasTarget = true;
                     targetValue = value;
                     break;
+                    
+                case "encourageMoreTiles":
+                    // encourageMoreTiles在最后处理，这里只标记
+                    break;
             }
         }
         
@@ -490,6 +520,24 @@ public class Wave : MonoBehaviour
         if (hasFocus && focusValue > 0)
         {
             damage = damage * (1f + focusValue / 100f);
+        }
+        
+        // 最后处理encourageMoreTiles技能（如果生成的wave的方块数量>value，伤害增加150%）
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (SkillManager.Instance.HasSkill(identifier))
+            {
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "encourageMoreTiles")
+                {
+                    int value = SkillManager.Instance.GetSkillValue(identifier);
+                    if (tilesUsed > value)
+                    {
+                        damage = damage * 2.5f; // 增加150% = 乘以2.5
+                    }
+                    break;
+                }
+            }
         }
     }
     
