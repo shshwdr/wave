@@ -324,7 +324,7 @@ public class SpriteRenderAnim : MonoBehaviour
         string folderPath = $"enemy/{folderName}";
         
         Object[] objects = Resources.LoadAll(folderPath);
-        return objects != null && objects.Length > 0;
+        return objects != null && objects.Length > 2;
     }
 }
 
