@@ -1546,15 +1546,16 @@ public class MainGameManager : MonoBehaviour
         
         // 获取wave的攻击力（使用当前wave的基础伤害，如果有多个wave则使用平均）
         float waveDamage = 20f; // 基础伤害
-        if (waveGroupTotalDamage.ContainsKey(waveGroupId) && waveGroupActiveWaveCount.ContainsKey(waveGroupId))
-        {
-            // 计算平均伤害（总伤害 / wave数量）
-            int waveCount = waveGroupActiveWaveCount[waveGroupId];
-            if (waveCount > 0)
-            {
-                waveDamage = waveGroupTotalDamage[waveGroupId] / waveCount;
-            }
-        }
+        //目前只考虑基础伤害就好
+        // if (waveGroupTotalDamage.ContainsKey(waveGroupId) && waveGroupActiveWaveCount.ContainsKey(waveGroupId))
+        // {
+        //     // 计算平均伤害（总伤害 / wave数量）
+        //     int waveCount = waveGroupActiveWaveCount[waveGroupId];
+        //     if (waveCount > 0)
+        //     {
+        //         waveDamage = waveGroupTotalDamage[waveGroupId] / waveCount;
+        //     }
+        // }
         
         // 所有ally向右侧发射投射物
         foreach (var ally in allyManager.ActiveAllies)
@@ -1571,32 +1572,56 @@ public class MainGameManager : MonoBehaviour
     /// </summary>
     private void CreateAllyProjectile(Ally ally, int damage)
     {
-        if (boardManager == null || ally == null)
+        if (boardManager == null || ally == null || allyProjectile == null)
             return;
             
         // 创建投射物GameObject
         GameObject projectileObj = Instantiate(allyProjectile);
-        SpriteRenderer sr = projectileObj.GetComponentInChildren<SpriteRenderer>();
         
         Vector3 startPos = ally.transform.position;
         // 目标位置：右侧（假设向右飞行10个单位）
         Vector3 targetPos = startPos + Vector3.right * 10f;
         
         projectileObj.transform.position = startPos;
-        projectileObj.transform.localScale = Vector3.one * 0.3f;
+        // 保持prefab的原始scale，不强制设置
         
         float projectileSpeed = 10f;
         float travelTime = 10f / projectileSpeed;
         
+        Vector2Int allyGridPos = ally.GridPosition;
+        bool hasHitEnemy = false; // 标记是否已击中敌人
+        
         projectileObj.transform.DOMove(targetPos, travelTime)
             .SetEase(Ease.Linear)
+            .OnUpdate(() =>
+            {
+                // 在移动过程中每帧检查是否碰到敌人
+                if (hasHitEnemy || enemyManager == null)
+                    return;
+                
+                // 将当前世界坐标转换为网格坐标
+                Vector3 currentWorldPos = projectileObj.transform.position;
+                Vector2Int currentGridPos = boardManager.WorldToGridPosition(currentWorldPos);
+                
+                // 检查当前位置是否有敌人
+                foreach (var enemy in enemyManager.ActiveEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead && enemy.GridPosition == currentGridPos)
+                    {
+                        // 击中敌人，立即停止移动并造成伤害
+                        hasHitEnemy = true;
+                        projectileObj.transform.DOKill(); // 停止移动
+                        enemy.TakeDamage(damage, Vector3.right, false, 0, 0f);
+                        Destroy(projectileObj); // 销毁投射物
+                        return;
+                    }
+                }
+            })
             .OnComplete(() =>
             {
-                // 检查是否击中敌人
-                if (enemyManager != null)
+                // 如果到达目标位置还没击中敌人，检查路径上的敌人（作为备用检查）
+                if (!hasHitEnemy && enemyManager != null)
                 {
-                    // 检查投射物路径上的敌人
-                    Vector2Int allyGridPos = ally.GridPosition;
                     for (int x = allyGridPos.x + 1; x < boardManager.Width; x++)
                     {
                         Vector2Int checkPos = new Vector2Int(x, allyGridPos.y);

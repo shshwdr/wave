@@ -663,14 +663,14 @@ public class Enemy : MonoBehaviour
             boardManager = FindObjectOfType<BoardManager>();
         }
         
-        if (boardManager == null || targetAlly == null)
+        if (boardManager == null || targetAlly == null || enemyInfo == null)
             return;
             
-        // 创建投射物GameObject（使用默认投射物）
-        var projectPrefab = Resources.Load<GameObject>("Projectile/default");
+        // 创建投射物GameObject（使用和攻击玩家一样的prefab）
+        var projectPrefab = Resources.Load<GameObject>("Projectile/" + enemyInfo.identifier);
         if (projectPrefab == null)
         {
-            // 如果没有默认投射物，创建一个简单的
+            // 如果没有找到对应的prefab，创建一个简单的可见投射物
             GameObject projectileObj = new GameObject("Projectile");
             SpriteRenderer sr = projectileObj.AddComponent<SpriteRenderer>();
             sr.color = Color.red;
@@ -690,8 +690,8 @@ public class Enemy : MonoBehaviour
                 .SetEase(Ease.Linear)
                 .OnComplete(() =>
                 {
+                    // 只调用TakeDamage，它会自己创建伤害数字
                     targetAlly.TakeDamage(damage);
-                    DamageNumber.CreateDamageNumber(damage, targetPos, false);
                     Destroy(projectileObj);
                 });
         }
@@ -711,8 +711,8 @@ public class Enemy : MonoBehaviour
                 .SetEase(Ease.Linear)
                 .OnComplete(() =>
                 {
+                    // 只调用TakeDamage，它会自己创建伤害数字
                     targetAlly.TakeDamage(damage);
-                    DamageNumber.CreateDamageNumber(damage, targetPos, false);
                     Destroy(projectileObj);
                 });
         }
