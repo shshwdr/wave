@@ -1,5 +1,5 @@
 ﻿enemies,level,startEnemyCount,gold,difficulty
-archer|3,0,3,3,0
+normal|3,0,3,3,0
 speed|2|normal|3,1,3,4,0
 archer|1|normal|3|speed|1|archer|1,2,3,5,0
 healer|2|normal|2|speed|2|archer|2|healer|2,3,3,5,1

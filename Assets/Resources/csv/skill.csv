@@ -29,5 +29,5 @@ focus,Focus,"This wave will attack only the first enemy, damage increase {0}%","
 nextWaveTwice,nextWaveTwice,,,red,,nextWaveTwice,,,,3,3,,
 damageBottom,damageBottom,"When hit the most right line, hit enemy on the whole right line with {0}% damage","When hit the most right line, hit enemy on the whole right line with {0}% damage",red,,damageBottom,100,1,0,3,3,,
 healWhenSpawn,healWhenSpawn,"for each tile used to generate wave, heal {0}% lost hp","for each tile used to generate wave, heal {0}% lost hp",green,,healWhenSpawn,3,,,3,3,,
-moreTileMoreDamage,Scale,{0}% base damage × tiles used.,{0}% base damage × tiles used.,red,1,moreTileMoreDamage,20|25,2,1,3,3,,2
-encourageMoreTiles,Mega Wave,Waves formed from more than {0} tiles deal +150% damage.,Waves formed from more than {0} tiles deal +150% damage.,green,1,encourageMoreTiles,10|8,2,1,3,3,,
+moreTileMoreDamage,Scale,{0}% base damage × tiles used.,{0}% base damage × tiles used.,red,0,moreTileMoreDamage,20|25,2,1,3,3,,4
+encourageMoreTiles,Mega Wave,Waves formed from more than {0} tiles deal +150% damage.,Waves formed from more than {0} tiles deal +150% damage.,green,0,encourageMoreTiles,10|8,2,1,3,3,,

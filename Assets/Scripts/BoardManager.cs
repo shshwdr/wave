@@ -312,37 +312,37 @@ public class BoardManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 让所有格子从上往下掉落填补空缺
+    /// 让所有格子从右往左掉落填补空缺
     /// </summary>
     public void ApplyGravity()
     {
-        // 按列处理，每列从上往下移动填补空位
-        for (int x = 0; x < boardWidth; x++)
+        // 按行处理，每行从右往左移动填补空位
+        for (int y = 0; y < boardHeight; y++)
         {
-            int writeIndex = 0; // 下一个要写入的位置（从下往上）
+            int writeIndex = 0; // 下一个要写入的位置（从左往右）
 
-            // 从下往上遍历，收集所有非空格子
-            for (int y = 0; y < boardHeight; y++)
+            // 从左往右遍历，收集所有非空格子，把它们移到左边
+            for (int x = 0; x < boardWidth; x++)
             {
                 if (board[x, y] != null)
                 {
-                    if (writeIndex != y)
+                    if (writeIndex != x)
                     {
-                        // 移动格子到新位置
-                        board[x, writeIndex] = board[x, y];
+                        // 移动格子到新位置（向左移动）
+                        board[writeIndex, y] = board[x, y];
                         board[x, y] = null;
-                        board[x, writeIndex].SetGridPosition(new Vector2Int(x, writeIndex));
+                        board[writeIndex, y].SetGridPosition(new Vector2Int(writeIndex, y));
                         
-                        // 掉落动画（向下移动）
-                        Vector3 targetPos = GridToWorldPosition(new Vector2Int(x, writeIndex));
-                        board[x, writeIndex].FallAnimation(targetPos);
+                        // 掉落动画（向左移动）
+                        Vector3 targetPos = GridToWorldPosition(new Vector2Int(writeIndex, y));
+                        board[writeIndex, y].FallAnimation(targetPos);
                     }
                     writeIndex++;
                 }
             }
 
-            // 填充空位（在顶部生成新格子）
-            for (int y = writeIndex; y < boardHeight; y++)
+            // 填充空位（在右侧生成新格子）
+            for (int x = writeIndex; x < boardWidth; x++)
             {
                 if (board[x, y] == null && tileCellPrefab != null)
                 {
@@ -357,15 +357,15 @@ public class BoardManager : MonoBehaviour
                     TileColor randomColor = GetWeightedRandomColor();
                     Vector2Int gridPos = new Vector2Int(x, y);
                     
-                    // 从上方生成（动画效果）
-                    Vector3 startPos = GridToWorldPosition(new Vector2Int(x, boardHeight));
+                    // 从右侧生成（动画效果）
+                    Vector3 startPos = GridToWorldPosition(new Vector2Int(boardWidth, y));
                     Vector3 targetPos = GridToWorldPosition(gridPos);
                     tileObj.transform.position = startPos;
                     
                     tile.Init(randomColor, gridPos);
                     board[x, y] = tile;
                     
-                    // 掉落动画（向下移动）
+                    // 掉落动画（向左移动）
                     tile.FallAnimation(targetPos);
                 }
             }
