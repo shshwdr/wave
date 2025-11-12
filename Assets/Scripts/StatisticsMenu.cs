@@ -26,7 +26,12 @@ public class StatisticsMenu : MenuBase
     [SerializeField] private Button restartButton; // 胜利时显示
     [SerializeField] private Button closeButtonOverride; // 商店中显示（覆盖MenuBase的closeButton）
     
+    [Header("技能详情显示")]
+    [SerializeField] private GameObject skillDetailPanel;
+    [SerializeField] private TMP_Text skillDetailText;
+    
     private bool isWinMode = false; // true = 胜利模式, false = 商店模式
+    private List<ColorStatistic> currentStats = new List<ColorStatistic>(); // 当前显示的统计列表
     
     protected override void Awake()
     {
@@ -60,6 +65,155 @@ public class StatisticsMenu : MenuBase
         {
             closeButtonOverride.onClick.AddListener(() => Hide());
             closeButtonOverride.gameObject.SetActive(false); // 默认隐藏
+        }
+        
+        // 初始化技能详情面板
+        InitSkillDetailPanel();
+        
+        // 初始化颜色区域的悬停事件
+        for (int i = 0; i < 4; i++)
+        {
+            int colorIndex = i;
+            if (colorArea[i] != null && colorArea[i].button != null)
+            {
+                EventTrigger trigger = colorArea[i].button.gameObject.GetComponent<EventTrigger>();
+                if (trigger == null)
+                {
+                    trigger = colorArea[i].button.gameObject.AddComponent<EventTrigger>();
+                }
+                
+                EventTrigger.Entry entryEnter = new EventTrigger.Entry();
+                entryEnter.eventID = EventTriggerType.PointerEnter;
+                entryEnter.callback.AddListener((data) => OnColorAreaButtonHover(colorIndex, true));
+                trigger.triggers.Add(entryEnter);
+                
+                EventTrigger.Entry entryExit = new EventTrigger.Entry();
+                entryExit.eventID = EventTriggerType.PointerExit;
+                entryExit.callback.AddListener((data) => OnColorAreaButtonHover(colorIndex, false));
+                trigger.triggers.Add(entryExit);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 初始化技能详情面板
+    /// </summary>
+    private void InitSkillDetailPanel()
+    {
+        if (skillDetailPanel == null)
+        {
+            // 创建技能详情面板（左上角）
+            GameObject canvasObj = GameObject.Find("Canvas");
+            if (canvasObj == null)
+            {
+                canvasObj = new GameObject("Canvas");
+                Canvas canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObj.AddComponent<CanvasScaler>();
+                canvasObj.AddComponent<GraphicRaycaster>();
+            }
+            
+            skillDetailPanel = new GameObject("SkillDetailPanel");
+            skillDetailPanel.transform.SetParent(canvasObj.transform);
+            RectTransform rectTransform = skillDetailPanel.AddComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0, 1);
+            rectTransform.anchorMax = new Vector2(0, 1);
+            rectTransform.pivot = new Vector2(0, 1);
+            rectTransform.anchoredPosition = new Vector2(20, -20);
+            rectTransform.sizeDelta = new Vector2(400, 300);
+            
+            // 添加背景
+            Image bg = skillDetailPanel.AddComponent<Image>();
+            bg.color = new Color(0, 0, 0, 0.7f);
+            
+            // 添加文本
+            GameObject textObj = new GameObject("SkillDetailText");
+            textObj.transform.SetParent(skillDetailPanel.transform);
+            RectTransform textRect = textObj.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.anchoredPosition = Vector2.zero;
+            textRect.offsetMin = new Vector2(10, 10);
+            textRect.offsetMax = new Vector2(-10, -10);
+            
+            skillDetailText = textObj.AddComponent<TextMeshProUGUI>();
+            skillDetailText.fontSize = 26;
+            skillDetailText.color = Color.white;
+            skillDetailText.alignment = TextAlignmentOptions.TopLeft;
+            if (CSVLoader.Instance != null && CSVLoader.Instance.font != null)
+            {
+                skillDetailText.font = CSVLoader.Instance.font;
+            }
+        }
+        
+        if (skillDetailPanel != null)
+        {
+            skillDetailPanel.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// 颜色区域按钮悬停事件
+    /// </summary>
+    private void OnColorAreaButtonHover(int colorIndex, bool isEntering)
+    {
+        if (skillDetailPanel == null || skillDetailText == null)
+            return;
+        
+        if (isEntering)
+        {
+            // 显示该颜色所有技能的详情
+            if (PlayerManager.Instance != null && SkillManager.Instance != null)
+            {
+                List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+                string detailText = "";
+                foreach (var identifier in skillIdentifiers)
+                {
+                    if (SkillManager.Instance.HasSkill(identifier))
+                    {
+                        string description = SkillManager.Instance.GetSkillDescription(identifier, false);
+                        detailText += description + "\n";
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(detailText))
+                {
+                    skillDetailText.text = detailText;
+                    skillDetailPanel.SetActive(true);
+                }
+            }
+        }
+        else
+        {
+            skillDetailPanel.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// 显示技能详情（用于技能图标悬停）
+    /// </summary>
+    public void ShowSkillDetail(string identifier)
+    {
+        if (skillDetailPanel == null || skillDetailText == null || SkillManager.Instance == null)
+            return;
+        
+        string description = SkillManager.Instance.GetSkillDescription(identifier, false);
+        if (!string.IsNullOrEmpty(description))
+        {
+            skillDetailText.text = description;
+            skillDetailPanel.SetActive(true);
+        }
+    }
+    
+    /// <summary>
+    /// 隐藏技能详情
+    /// </summary>
+    public void HideSkillDetail()
+    {
+        if (skillDetailPanel != null)
+        {
+            skillDetailPanel.SetActive(false);
         }
     }
     
@@ -182,17 +336,23 @@ public class StatisticsMenu : MenuBase
                         {
                             // 初始化图标（传入null作为menu参数，禁用拖拽功能）
                             icon.Init(identifier, i, null);
-                            // 禁用拖拽事件
+                            // 禁用拖拽事件，但保留悬停事件
+                            // SkillIconUI已经实现了IPointerEnterHandler和IPointerExitHandler，会自动处理悬停
+                            // 只需要禁用拖拽相关的接口
                             EventTrigger trigger = iconObj.GetComponent<EventTrigger>();
                             if (trigger != null)
                             {
-                                trigger.enabled = false;
+                                // 移除拖拽相关的事件
+                                trigger.triggers.RemoveAll(entry => 
+                                    entry.eventID == EventTriggerType.BeginDrag || 
+                                    entry.eventID == EventTriggerType.Drag || 
+                                    entry.eventID == EventTriggerType.EndDrag);
                             }
-                            // 禁用CanvasGroup的交互（防止拖拽）
+                            // 禁用CanvasGroup的拖拽交互，但保留悬停（需要blocksRaycasts为true以支持IPointerEnterHandler）
                             CanvasGroup canvasGroup = iconObj.GetComponent<CanvasGroup>();
                             if (canvasGroup != null)
                             {
-                                canvasGroup.blocksRaycasts = false;
+                                canvasGroup.blocksRaycasts = true; // 允许射线检测以支持悬停
                             }
                         }
                     }
@@ -216,13 +376,13 @@ public class StatisticsMenu : MenuBase
         }
         
         // 获取要显示的统计
-        List<ColorStatistic> stats = null;
+        currentStats = null;
         if (isWinMode)
         {
             // 胜利模式：显示最后一回合的统计
             if (StatisticsManager.Instance != null)
             {
-                stats = StatisticsManager.Instance.GetLastRoundStatistics();
+                currentStats = StatisticsManager.Instance.GetLastRoundStatistics();
             }
         }
         else
@@ -230,11 +390,11 @@ public class StatisticsMenu : MenuBase
             // 商店模式：显示上一回合的统计
             if (StatisticsManager.Instance != null)
             {
-                stats = StatisticsManager.Instance.GetLastRoundStatistics();
+                currentStats = StatisticsManager.Instance.GetLastRoundStatistics();
             }
         }
         
-        if (stats == null || stats.Count == 0)
+        if (currentStats == null || currentStats.Count == 0)
         {
             // 如果没有统计，显示提示
             GameObject noDataText = new GameObject("NoDataText");
@@ -245,21 +405,21 @@ public class StatisticsMenu : MenuBase
         }
         
         // 为每个颜色创建统计项
-        for (int i = 0; i < 4 && i < stats.Count; i++)
+        for (int i = 0; i < 4 && i < currentStats.Count; i++)
         {
-            ColorStatistic stat = stats[i];
+            ColorStatistic stat = currentStats[i];
             if (stat == null)
                 continue;
                 
             GameObject statItem = Instantiate(statisticItemPrefab, statisticsContentParent);
-            UpdateStatisticItem(statItem, stat);
+            UpdateStatisticItem(statItem, stat, currentStats);
         }
     }
     
     /// <summary>
     /// 更新统计项显示
     /// </summary>
-    private void UpdateStatisticItem(GameObject item, ColorStatistic stat)
+    private void UpdateStatisticItem(GameObject item, ColorStatistic stat, List<ColorStatistic> allStats)
     {
         // 假设statisticItemPrefab有以下子对象：
         // - ColorNameText (TMP_Text): 颜色名称
@@ -278,28 +438,113 @@ public class StatisticsMenu : MenuBase
         TMP_Text maxDamageText = item.transform.Find("MaxDamageText")?.GetComponent<TMP_Text>();
         TMP_Text totalDamageText = item.transform.Find("TotalDamageText")?.GetComponent<TMP_Text>();
         
+        // 找出每个项目的最大值
+        int maxTiles = 0;
+        int maxWaves = 0;
+        int maxWaveSize = 0;
+        float maxAverageDamage = 0f;
+        float maxMaxDamage = 0f;
+        float maxTotalDamage = 0f;
+        
+        foreach (var s in allStats)
+        {
+            if (s == null) continue;
+            if (s.totalTilesGenerated > maxTiles) maxTiles = s.totalTilesGenerated;
+            if (s.totalWavesGenerated > maxWaves) maxWaves = s.totalWavesGenerated;
+            if (s.maxWaveSize > maxWaveSize) maxWaveSize = s.maxWaveSize;
+            if (s.averageDamagePerWaveGroup > maxAverageDamage) maxAverageDamage = s.averageDamagePerWaveGroup;
+            if (s.maxDamagePerWaveGroup > maxMaxDamage) maxMaxDamage = s.maxDamagePerWaveGroup;
+            if (s.totalDamage > maxTotalDamage) maxTotalDamage = s.totalDamage;
+        }
+        
         string colorName = stat.color.ToString();
         
         // if (colorNameText != null)
         //     colorNameText.text = $"{colorName} Color";
         
         if (totalTilesText != null)
-            totalTilesText.text = $"Tiles Generated\n{stat.totalTilesGenerated}";
+        {
+            totalTilesText.text = $"Tiles Cleared\n{stat.totalTilesGenerated}";
+            // 如果是最大值，显示为红色
+            if (stat.totalTilesGenerated == maxTiles && maxTiles > 0)
+            {
+                totalTilesText.color = Color.red;
+            }
+            else
+            {
+                totalTilesText.color = Color.white;
+            }
+        }
         
         if (totalWavesText != null)
+        {
             totalWavesText.text = $"Waves Generated\n{stat.totalWavesGenerated}";
+            // 如果是最大值，显示为红色
+            if (stat.totalWavesGenerated == maxWaves && maxWaves > 0)
+            {
+                totalWavesText.color = Color.red;
+            }
+            else
+            {
+                totalWavesText.color = Color.white;
+            }
+        }
         
         if (maxWaveSizeText != null)
-            maxWaveSizeText.text = $"Max Wave Size\n{stat.maxWaveSize}";
+        {
+            maxWaveSizeText.text = $"Max Size\n{stat.maxWaveSize}";
+            // 如果是最大值，显示为红色
+            if (stat.maxWaveSize == maxWaveSize && maxWaveSize > 0)
+            {
+                maxWaveSizeText.color = Color.red;
+            }
+            else
+            {
+                maxWaveSizeText.color = Color.white;
+            }
+        }
         
         if (averageDamageText != null)
-            averageDamageText.text = $"Ave Wave Damage\n{stat.averageDamagePerWaveGroup:F1}";
+        {
+            averageDamageText.text = $"Ave Damage\n{stat.averageDamagePerWaveGroup:F1}";
+            // 如果是最大值，显示为红色
+            if (Mathf.Approximately(stat.averageDamagePerWaveGroup, maxAverageDamage) && maxAverageDamage > 0)
+            {
+                averageDamageText.color = Color.red;
+            }
+            else
+            {
+                averageDamageText.color = Color.white;
+            }
+        }
         
         if (maxDamageText != null)
-            maxDamageText.text = $"Max Wave Damage\n{stat.maxDamagePerWaveGroup:F1}";
+        {
+            maxDamageText.text = $"Max Damage\n{stat.maxDamagePerWaveGroup:F1}";
+            // 如果是最大值，显示为红色
+            if (Mathf.Approximately(stat.maxDamagePerWaveGroup, maxMaxDamage) && maxMaxDamage > 0)
+            {
+                maxDamageText.color = Color.red;
+            }
+            else
+            {
+                maxDamageText.color = Color.white;
+            }
+        }
         
         if (totalDamageText != null)
+        {
             totalDamageText.text = $"Total Damage\n{stat.totalDamage:F1}";
+            // 如果是最大值，显示为红色
+            if (Mathf.Approximately(stat.totalDamage, maxTotalDamage) && maxTotalDamage > 0)
+            {
+                totalDamageText.color = Color.red;
+            }
+            else
+            {
+                totalDamageText.color = Color.white;
+            }
+        }
     }
     
     /// <summary>
@@ -320,6 +565,13 @@ public class StatisticsMenu : MenuBase
     {
         base.Show(immediate);
         UpdateDisplay();
+    }
+    
+    public override void Hide(bool immediate = false)
+    {
+        // 隐藏技能详情面板
+        HideSkillDetail();
+        base.Hide(immediate);
     }
 }
 

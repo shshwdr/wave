@@ -12,6 +12,7 @@ public class DamageNumber : MonoBehaviour
     [SerializeField] private float jumpHeight = 0.8f;
     [SerializeField] private float duration = 1.5f;
     [SerializeField] private Color damageColor = Color.red;
+    [SerializeField] private Color zeroDamageColor = Color.gray;
     [SerializeField] private Color healColor = Color.green;
 
     private void Awake()
@@ -61,7 +62,7 @@ public class DamageNumber : MonoBehaviour
         
         // 设置文本和颜色
         damageText.text = isHeal ? $"+{damage}" : $"-{damage}";
-        damageText.color = isHeal ? healColor : damageColor;
+        damageText.color = isHeal ? healColor : (damage == 0? zeroDamageColor:damageColor);
         
         // 重置初始状态
         transform.localScale = Vector3.one;

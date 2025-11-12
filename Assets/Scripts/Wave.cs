@@ -71,6 +71,7 @@ public class Wave : MonoBehaviour
     private int columnIndex = 0; // 列索引（用于计算相位偏移）
     private bool isMoving = false; // 是否正在移动
     private int tilesUsed = 1; // 使用的tile数量（用于moreTileMoreDamage和encourageMoreTiles技能）
+    private bool moveBackward = false; // 是否向后移动（向左）
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -110,11 +111,19 @@ public class Wave : MonoBehaviour
     /// <summary>
     /// 初始化波浪
     /// </summary>
-    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f, bool hasPureFlag = false, int pureValueParam = 0, int tilesUsedCount = 1)
+    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f, bool hasPureFlag = false, int pureValueParam = 0, int tilesUsedCount = 1, bool backward = false)
     {
         startPosition = spawnPosition;
         travelDistance = distance;
-        targetPosition = spawnPosition + Vector3.right * travelDistance;
+        moveBackward = backward;
+        if (moveBackward)
+        {
+            targetPosition = spawnPosition + Vector3.left * travelDistance; // 向左移动
+        }
+        else
+        {
+            targetPosition = spawnPosition + Vector3.right * travelDistance; // 向右移动
+        }
         hitEnemies.Clear();
         clearedTiles.Clear(); // 重置已清除的tile列表
         waveColor = color;
@@ -181,8 +190,8 @@ public class Wave : MonoBehaviour
             CheckDamageBottomTrigger();
         }
         
-        // 开始检测位置变化，清除经过的tile的fog和dirt
-        if (boardManager != null)
+        // 开始检测位置变化，清除经过的tile的fog和dirt（只有向前移动的波浪清除）
+        if (boardManager != null && !moveBackward)
         {
             InvokeRepeating(nameof(CheckAndClearFogDirt), 0.05f, 0.05f);
         }
@@ -214,7 +223,17 @@ public class Wave : MonoBehaviour
         }
         
         // 计算水平位置（线性移动）
-        float currentX = Mathf.Lerp(startPosition.x, targetPosition.x, horizontalProgress);
+        float currentX;
+        if (moveBackward)
+        {
+            // 向后移动（向左）
+            currentX = Mathf.Lerp(startPosition.x, targetPosition.x, horizontalProgress);
+        }
+        else
+        {
+            // 向前移动（向右）
+            currentX = Mathf.Lerp(startPosition.x, targetPosition.x, horizontalProgress);
+        }
         
         // 计算垂直波动
         // 每两列之间相差半个周期（π），所以相位偏移 = columnIndex * π
@@ -317,7 +336,8 @@ public class Wave : MonoBehaviour
     /// </summary>
     private void CheckDamageBottomTrigger()
     {
-        if (damageBottomTriggered || boardManager == null)
+        // 向后移动的波浪不触发damageBottom
+        if (damageBottomTriggered || boardManager == null || moveBackward)
             return;
 
         // 使用Update检测位置变化
@@ -632,7 +652,16 @@ public class Wave : MonoBehaviour
                     hitEnemyCount++; // 增加击中敌人计数
                 }
                 
-                Vector3 direction = (enemy.transform.position - transform.position).normalized;
+                // 计算击退方向（向前移动的波浪向右击退，向后移动的波浪向左击退）
+                Vector3 direction;
+                if (moveBackward)
+                {
+                    direction = Vector3.left; // 向后移动的波浪向左击退
+                }
+                else
+                {
+                    direction = (enemy.transform.position - transform.position).normalized; // 向前移动的波浪正常计算方向
+                }
                 float finalDamage = damage;
                 
                 // 应用damageIncreaseWhenHitMore技能（在应用其他技能之前）

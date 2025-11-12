@@ -178,6 +178,15 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         {
             parentMenu.ShowSkillDetail(skillIdentifier);
         }
+        else
+        {
+            // 如果没有parentMenu（在StatisticsMenu中），尝试找到StatisticsMenu
+            StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
+            if (statisticsMenu != null)
+            {
+                statisticsMenu.ShowSkillDetail(skillIdentifier);
+            }
+        }
     }
 
     /// <summary>
@@ -188,6 +197,15 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         if (parentMenu != null)
         {
             parentMenu.HideSkillDetail();
+        }
+        else
+        {
+            // 如果没有parentMenu（在StatisticsMenu中），尝试找到StatisticsMenu
+            StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
+            if (statisticsMenu != null)
+            {
+                statisticsMenu.HideSkillDetail();
+            }
         }
     }
 

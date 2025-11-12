@@ -230,6 +230,7 @@ public class Enemy : MonoBehaviour
         {
             shieldActive = false;
             UpdateShieldDisplay();
+            DamageNumber.CreateDamageNumber(0, transform.position, false);
             // 伤害被吃掉，不造成伤害
             return;
         }

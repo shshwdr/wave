@@ -341,6 +341,9 @@ public class MainGameManager : MonoBehaviour
         }
 
         currentState = GameState.PlayerTurn;
+        
+        // 每回合开始时恢复所有shield敌人的盾牌
+        ResetAllEnemyShields();
     }
 
     private void Update()
@@ -394,6 +397,13 @@ public class MainGameManager : MonoBehaviour
         // 处理中时不允许操作
         if (isProcessing)
             return;
+        
+        // 如果统计菜单打开，不响应输入
+        StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
+        if (statisticsMenu != null && statisticsMenu.IsActive)
+        {
+            return;
+        }
 
         // Shift + 鼠标左键 - 任意位置交换
         if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
@@ -610,6 +620,13 @@ public class MainGameManager : MonoBehaviour
         // 如果技能选择界面打开，不响应hover
         SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
         if (skillMenu != null && skillMenu.IsActive)
+        {
+            return;
+        }
+        
+        // 如果统计菜单打开，不响应hover
+        StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
+        if (statisticsMenu != null && statisticsMenu.IsActive)
         {
             return;
         }
@@ -1165,6 +1182,35 @@ public class MainGameManager : MonoBehaviour
             }
         }
         
+        // 检查是否有frontAndBack技能
+        bool hasFrontAndBack = false;
+        if (PlayerManager.Instance != null && SkillManager.Instance != null)
+        {
+            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+            foreach (var identifier in skillIdentifiers)
+            {
+                if (SkillManager.Instance.HasSkill(identifier))
+                {
+                    SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                    if (skillInfo != null && skillInfo.effect == "frontAndBack")
+                    {
+                        hasFrontAndBack = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // 如果有frontAndBack技能，需要创建两倍的wave（向前和向后）
+        int waveCountMultiplier = hasFrontAndBack ? 2 : 1;
+        waveGroupActiveWaveCount[currentWaveGroupId] = connectedTiles.Count * waveCountMultiplier;
+        
+        // 记录统计：wave group生成（总共生成/消除了几次）
+        if (StatisticsManager.Instance != null)
+        {
+            StatisticsManager.Instance.RecordWaveGenerated(waveColor);
+        }
+        
         int waveIndex = 0;
         int tilesUsed = connectedTiles.Count; // 使用的tile数量
         Vector2Int firstTilePos = connectedTiles.Count > 0 ? connectedTiles[0] : Vector2Int.zero; // 保存第一个tile的位置用于显示回血数字
@@ -1173,16 +1219,17 @@ public class MainGameManager : MonoBehaviour
             Vector3 worldPos = boardManager.GridToWorldPosition(pos);
             bool isFirstWave = (waveIndex == 0);
             // 如果只有一个tile且有pure技能，传递pure信息
-            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed);
+            // 创建向前移动的波浪
+            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, false);
+
+            // 如果有frontAndBack技能，同时创建向后移动的波浪
+            if (hasFrontAndBack)
+            {
+                CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, false, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, true);
+            }
 
             boardManager.RemoveTile(pos);
             waveIndex++;
-            
-            // 记录统计：wave生成
-            if (StatisticsManager.Instance != null)
-            {
-                StatisticsManager.Instance.RecordWaveGenerated(waveColor);
-            }
         }
         
         // 应用healWhenSpawn技能（整个wave group只回一次血）
@@ -1202,7 +1249,7 @@ public class MainGameManager : MonoBehaviour
     /// <summary>
     /// 创建波浪攻击
     /// </summary>
-    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f, bool hasPure = false, int pureValue = 0, int tilesUsed = 1)
+    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f, bool hasPure = false, int pureValue = 0, int tilesUsed = 1, bool backward = false)
     {
         if (wavePrefab == null)
             return;
@@ -1214,10 +1261,13 @@ public class MainGameManager : MonoBehaviour
             wave = waveObj.AddComponent<Wave>();
         }
 
-        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue, tilesUsed);
+        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue, tilesUsed, backward);
         
-        // 清除周围（上下左右）的dirt地块
-        ClearAdjacentDirt(gridPos);
+        // 清除周围（上下左右）的dirt地块（只有向前移动的波浪清除）
+        if (!backward)
+        {
+            ClearAdjacentDirt(gridPos);
+        }
     }
     
     /// <summary>
@@ -1925,6 +1975,9 @@ public class MainGameManager : MonoBehaviour
                     // 否则进入玩家回合
                     isProcessing = false;
                     currentState = GameState.PlayerTurn;
+                    
+                    // 每回合开始时恢复所有shield敌人的盾牌
+                    ResetAllEnemyShields();
                 });
             });
         }
@@ -1932,6 +1985,9 @@ public class MainGameManager : MonoBehaviour
         {
             isProcessing = false;
             currentState = GameState.PlayerTurn;
+            
+            // 每回合开始时恢复所有shield敌人的盾牌
+            ResetAllEnemyShields();
         }
     }
 
@@ -2157,6 +2213,23 @@ public class MainGameManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 恢复所有shield敌人的盾牌（每回合开始时调用）
+    /// </summary>
+    private void ResetAllEnemyShields()
+    {
+        if (enemyManager == null)
+            return;
+            
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead)
+            {
+                enemy.ResetShield();
+            }
+        }
+    }
+    
     public void Restart()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
