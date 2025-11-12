@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// 统计菜单 - 可以在商店中打开显示上一回合的统计，或胜利时显示
@@ -29,6 +30,12 @@ public class StatisticsMenu : MenuBase
     [Header("技能详情显示")]
     [SerializeField] private GameObject skillDetailPanel;
     [SerializeField] private TMP_Text skillDetailText;
+    
+    [FormerlySerializedAs("backgroundColor1")]
+    [Header("背景设置")]
+    [SerializeField] private Color backgroundColorWin; // 商店模式的背景颜色
+    [SerializeField] private Color backgroundColor2; // 胜利模式的背景颜色
+    [SerializeField] private Image backgroundImage; // 胜利模式的背景图片
     
     private bool isWinMode = false; // true = 胜利模式, false = 商店模式
     private List<ColorStatistic> currentStats = new List<ColorStatistic>(); // 当前显示的统计列表
@@ -245,6 +252,32 @@ public class StatisticsMenu : MenuBase
         UpdateColorAreas();
         UpdateStatistics();
         UpdateButtons();
+        UpdateBackground();
+    }
+    
+    /// <summary>
+    /// 更新背景显示
+    /// </summary>
+    private void UpdateBackground()
+    {
+        if (isWinMode)
+        {
+            // 胜利模式：显示backgroundColor2和backgroundImage
+            if (backgroundImage != null)
+            {
+                backgroundImage.gameObject.SetActive(true);
+                backgroundImage.color = backgroundColorWin;
+            }
+        }
+        else
+        {
+            // 商店模式：显示backgroundColor1，隐藏backgroundImage
+            if (backgroundImage != null)
+            {
+                backgroundImage.gameObject.SetActive(true);
+                backgroundImage.color = backgroundColor2;
+            }
+        }
     }
     
     /// <summary>
@@ -269,7 +302,7 @@ public class StatisticsMenu : MenuBase
             }
             if (titleText != null)
             {
-                titleText.text = "You Win";
+                titleText.text = "YOU WIN!";
             }
         }
         else

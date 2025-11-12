@@ -2118,14 +2118,22 @@ public class MainGameManager : MonoBehaviour
             allyManager.ClearAllAllies();
         }
 
-        // 检查是否是最终胜利（可以根据关卡或其他条件判断）
-        // 这里假设如果玩家等级达到某个值就胜利，或者可以根据LevelManager判断
-        bool isGameWin = false; // 可以根据实际需求判断
-        if (LevelManager.Instance != null)
+        // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
+        bool isGameWin = false;
+        if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
         {
-            // 可以检查是否还有下一关
-            LevelInfo nextLevel = LevelManager.Instance.GetNextLevel(playerLevel + 1);
-            if (nextLevel == null)
+            // 找到levelInfoMap中level值最大的那个
+            int maxLevel = -1;
+            foreach (var kvp in CSVLoader.Instance.levelInfoMap)
+            {
+                if (kvp.Value.level > maxLevel)
+                {
+                    maxLevel = kvp.Value.level;
+                }
+            }
+            
+            // 如果当前玩家等级已经达到或超过最大level，说明战胜了最后一个level
+            if (maxLevel >= 0 && playerLevel >= maxLevel)
             {
                 isGameWin = true;
             }

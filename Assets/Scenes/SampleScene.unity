@@ -186,6 +186,11 @@ MonoBehaviour:
   titleText: {fileID: 641791683}
   restartButton: {fileID: 67092725}
   closeButtonOverride: {fileID: 1388863978}
+  skillDetailPanel: {fileID: 0}
+  skillDetailText: {fileID: 0}
+  backgroundColorWin: {r: 0.7960785, g: 0.43529415, b: 0.38431376, a: 1}
+  backgroundColor2: {r: 0.9686275, g: 0.8745099, b: 0.45098042, a: 1}
+  backgroundImage: {fileID: 1096489338}
 --- !u!1001 &31871989
 PrefabInstance:
   m_ObjectHideFlags: 0
