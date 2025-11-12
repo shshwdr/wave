@@ -58,6 +58,8 @@ public class Wave : MonoBehaviour
     private int highHPValue = 0; // highHP的值
     private bool hasHealWhenPass = false; // 是否有healWhenPass技能
     private int healWhenPassValue = 0; // healWhenPass的值
+    private bool hasHealWhenSpawn = false; // 是否有healWhenSpawn技能
+    private int healWhenSpawnValue = 0; // healWhenSpawn的值
     private bool hasHitAddColor = false; // 是否有hitAddColor技能
     private bool hasFocus = false; // 是否有focus技能
     private int focusValue = 0; // focus的值
@@ -477,6 +479,12 @@ public class Wave : MonoBehaviour
                     healWhenPassValue = value;
                     break;
                     
+                case "healWhenSpawn":
+                    // 生成时恢复血量（每个tile恢复value%的已损失血量）
+                    hasHealWhenSpawn = true;
+                    healWhenSpawnValue = value;
+                    break;
+                    
                 case "addDamageWhenPass":
                     // 经过同色tile时整个wave group增加伤害（在CheckAndClearFogDirt中处理）
                     // 这里只标记，实际处理在MainGameManager中
@@ -538,6 +546,33 @@ public class Wave : MonoBehaviour
                     break;
                 }
             }
+        }
+    }
+    
+    /// <summary>
+    /// 应用healWhenSpawn技能（生成时恢复血量）
+    /// </summary>
+    private void ApplyHealWhenSpawn()
+    {
+        if (!hasHealWhenSpawn || PlayerManager.Instance == null)
+            return;
+        
+        // 计算已损失血量
+        int maxHealth = PlayerManager.Instance.MaxHealth;
+        int currentHealth = PlayerManager.Instance.CurrentHealth;
+        int lostHealth = maxHealth - currentHealth;
+        
+        // if (lostHealth <= 0)
+        //     return; // 没有损失血量，不需要恢复
+        //
+        // 每个tile恢复 value% 的已损失血量，总回血量 = lostHealth × value% × tilesUsed
+        float healPerTile = lostHealth * healWhenSpawnValue / 100f;
+        int totalHeal = (int)(healPerTile * tilesUsed);
+        
+        //if (totalHeal > 0)
+        {
+            PlayerManager.Instance.Heal(totalHeal);
+            DamageNumber.CreateDamageNumber(totalHeal, transform.position, true);
         }
     }
     

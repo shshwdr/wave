@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Sinbad;
+using TMPro;
 using UnityEngine;
 
 public class SkillInfo
@@ -50,6 +51,7 @@ public class LevelInfo
 }
 public class CSVLoader : Singleton<CSVLoader>
 {
+    public TMP_FontAsset font;
     public Dictionary<string, SkillInfo> cardInfoMap = new Dictionary<string, SkillInfo>();
     public Dictionary<string, EnemyInfo> enemyInfoMap = new Dictionary<string, EnemyInfo>();
     public Dictionary<int, LevelInfo> levelInfoMap = new Dictionary<int, LevelInfo>();

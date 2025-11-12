@@ -40,6 +40,12 @@ public class DamageNumber : MonoBehaviour
                 damageText.alignment = TextAlignmentOptions.Center;
             }
         }
+        
+        // 从CSVLoader获取font（无论是新创建的还是已存在的）
+        if (damageText != null && CSVLoader.Instance != null && CSVLoader.Instance.font != null)
+        {
+            damageText.font = CSVLoader.Instance.font;
+        }
     }
 
     /// <summary>

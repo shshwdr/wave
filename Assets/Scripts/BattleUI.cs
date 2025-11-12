@@ -11,6 +11,8 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private TMP_Text healthText;
     [SerializeField] private TMP_Text swapCountText;
     [SerializeField] private TMP_Text levelText;
+    [SerializeField] private TMP_Text damageText;
+    
     [SerializeField] private TMP_Text enemyCountText; // 剩余敌人数显示
     [SerializeField] private TMP_Text goldText; // 金币显示
     [SerializeField] private Image healthBarFill;
@@ -81,8 +83,10 @@ public class BattleUI : MonoBehaviour
         // 更新等级显示
         if (levelText != null && mainGameManager != null)
         {
-            levelText.text = $"Level: {mainGameManager.PlayerLevel}";
+            levelText.text = $"Level: {mainGameManager.PlayerLevel+1}";
         }
+        
+        damageText.text = $"Wave Damage: 20";
 
         // 更新剩余敌人显示
         if (enemyCountText != null && enemyManager != null)

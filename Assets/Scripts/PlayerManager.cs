@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 /// <summary>
 /// 玩家管理器 - 管理玩家血量和交换次数
@@ -221,6 +223,14 @@ public class PlayerManager : Singleton<PlayerManager>
         currentHealth = Mathf.Max(0, currentHealth);
         
         Debug.Log($"玩家受到 {damage} 伤害，当前血量: {currentHealth}/{maxHealth}");
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            TakeDamage(40);
+        }
     }
 
     /// <summary>

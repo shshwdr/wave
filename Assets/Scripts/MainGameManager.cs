@@ -200,6 +200,11 @@ public class MainGameManager : MonoBehaviour
             skillDisplayText.fontSize = 26;
             skillDisplayText.color = Color.white;
             skillDisplayText.alignment = TextAlignmentOptions.TopLeft;
+            // 从CSVLoader获取font
+            if (CSVLoader.Instance != null && CSVLoader.Instance.font != null)
+            {
+                skillDisplayText.font = CSVLoader.Instance.font;
+            }
         }
 
         if (skillDisplayPanel != null)
@@ -255,6 +260,11 @@ public class MainGameManager : MonoBehaviour
             enemyDescriptionText.fontSize = 26;
             enemyDescriptionText.color = Color.white;
             enemyDescriptionText.alignment = TextAlignmentOptions.TopLeft;
+            // 从CSVLoader获取font
+            if (CSVLoader.Instance != null && CSVLoader.Instance.font != null)
+            {
+                enemyDescriptionText.font = CSVLoader.Instance.font;
+            }
         }
 
         if (enemyDescriptionPanel != null)
@@ -1144,6 +1154,7 @@ public class MainGameManager : MonoBehaviour
         
         int waveIndex = 0;
         int tilesUsed = connectedTiles.Count; // 使用的tile数量
+        Vector2Int firstTilePos = connectedTiles.Count > 0 ? connectedTiles[0] : Vector2Int.zero; // 保存第一个tile的位置用于显示回血数字
         foreach (var pos in connectedTiles)
         {
             Vector3 worldPos = boardManager.GridToWorldPosition(pos);
@@ -1154,6 +1165,9 @@ public class MainGameManager : MonoBehaviour
             boardManager.RemoveTile(pos);
             waveIndex++;
         }
+        
+        // 应用healWhenSpawn技能（整个wave group只回一次血）
+        ApplyHealWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
 
         // 立即应用重力（与波浪移动同时进行）
         // 等待一小段时间让消除动画完成，然后开始重力
@@ -1182,8 +1196,98 @@ public class MainGameManager : MonoBehaviour
         }
 
         wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue, tilesUsed);
+        
+        // 清除周围（上下左右）的dirt地块
+        ClearAdjacentDirt(gridPos);
+    }
+    
+    /// <summary>
+    /// 清除指定位置周围（上下左右）的dirt地块
+    /// </summary>
+    private void ClearAdjacentDirt(Vector2Int gridPos)
+    {
+        if (boardManager == null)
+            return;
+        
+        // 上下左右四个方向
+        Vector2Int[] directions = new Vector2Int[]
+        {
+            new Vector2Int(0, 1),   // 上
+            new Vector2Int(0, -1),  // 下
+            new Vector2Int(-1, 0),  // 左
+            new Vector2Int(1, 0)    // 右
+        };
+        
+        foreach (var dir in directions)
+        {
+            Vector2Int adjacentPos = gridPos + dir;
+            
+            // 检查位置是否有效
+            if (!boardManager.IsValidPosition(adjacentPos))
+                continue;
+            
+            // 获取相邻的tile
+            TileCell adjacentTile = boardManager.GetTile(adjacentPos);
+            if (adjacentTile != null && adjacentTile.IsDirty)
+            {
+                // 清除dirt状态
+                adjacentTile.SetDirty(false);
+            }
+        }
     }
 
+    /// <summary>
+    /// 应用healWhenSpawn技能（整个wave group只回一次血）
+    /// </summary>
+    private void ApplyHealWhenSpawnForWaveGroup(TileColor waveColor, int tilesUsed, Vector2Int firstTilePos)
+    {
+        if (PlayerManager.Instance == null || SkillManager.Instance == null)
+            return;
+        
+        int colorIndex = (int)waveColor;
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+        
+        // 检查是否有healWhenSpawn技能
+        bool hasHealWhenSpawn = false;
+        int healWhenSpawnValue = 0;
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (SkillManager.Instance.HasSkill(identifier))
+            {
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "healWhenSpawn")
+                {
+                    hasHealWhenSpawn = true;
+                    healWhenSpawnValue = SkillManager.Instance.GetSkillValue(identifier);
+                    break;
+                }
+            }
+        }
+        
+        if (!hasHealWhenSpawn)
+            return;
+        
+        // 计算已损失血量
+        int maxHealth = PlayerManager.Instance.MaxHealth;
+        int currentHealth = PlayerManager.Instance.CurrentHealth;
+        int lostHealth = maxHealth - currentHealth;
+        
+        if (lostHealth <= 0)
+            return; // 没有损失血量，不需要恢复
+        
+        // 每个tile恢复 value% 的已损失血量，总回血量 = lostHealth × value% × tilesUsed
+        float healPerTile = lostHealth * healWhenSpawnValue / 100f;
+        int totalHeal = (int)(healPerTile * tilesUsed);
+        
+        if (totalHeal > 0)
+        {
+            PlayerManager.Instance.Heal(totalHeal);
+            // 在第一个wave的位置显示回血数字
+            Vector3 firstWavePos = boardManager.GridToWorldPosition(firstTilePos);
+            DamageNumber.CreateDamageNumber(totalHeal, firstWavePos, true);
+        }
+    }
+    
     /// <summary>
     /// 触发damageBottom效果（最右列上下爆炸）
     /// </summary>

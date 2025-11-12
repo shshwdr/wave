@@ -72,6 +72,11 @@ public class EnemyHealthBar : MonoBehaviour
         healthText.fontSize = 12;
         healthText.color = Color.white;
         healthText.alignment = TextAlignmentOptions.Center;
+        // 从CSVLoader获取font
+        if (CSVLoader.Instance != null && CSVLoader.Instance.font != null)
+        {
+            healthText.font = CSVLoader.Instance.font;
+        }
     }
 
     /// <summary>
