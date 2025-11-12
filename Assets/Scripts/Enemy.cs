@@ -422,13 +422,39 @@ public class Enemy : MonoBehaviour
                 // 计算伤害：红色wave伤害 * value%
                 float collisionDamage = redWaveDamage * (hitTakeDamageValue / 100f);
                 
+                // 确定hitTakeDamage是哪个颜色的技能（通常是黄色）
+                TileColor hitTakeDamageColor = TileColor.Yellow;
+                foreach (var skill in allSkills)
+                {
+                    if (skill.effect == "hitTakeDamage")
+                    {
+                        if (skill.color != null)
+                        {
+                            string colorStr = skill.color.ToLower();
+                            if (colorStr == "red") hitTakeDamageColor = TileColor.Red;
+                            else if (colorStr == "yellow") hitTakeDamageColor = TileColor.Yellow;
+                            else if (colorStr == "blue") hitTakeDamageColor = TileColor.Blue;
+                            else if (colorStr == "green") hitTakeDamageColor = TileColor.Green;
+                        }
+                        break;
+                    }
+                }
+                
                 // 对自己造成伤害（不触发击退，避免无限循环）
                 TakeDamage((int)collisionDamage, Vector3.right, false, 0, 0f);
                 
                 // 对碰撞的敌人造成伤害
+                float totalDamage = collisionDamage;
                 if (collidedEnemy != null && !collidedEnemy.IsDead)
                 {
                     collidedEnemy.TakeDamage((int)collisionDamage, Vector3.left, false, 0, 0f);
+                    totalDamage += collisionDamage; // 两个敌人都受到伤害
+                }
+                
+                // 记录统计
+                if (StatisticsManager.Instance != null)
+                {
+                    StatisticsManager.Instance.RecordNonWaveDamage(hitTakeDamageColor, totalDamage);
                 }
             }
         }

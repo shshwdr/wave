@@ -334,6 +334,12 @@ public class MainGameManager : MonoBehaviour
             enemyManager.SpawnEnemiesRandomly();
         }
 
+        // 开始新回合统计
+        if (StatisticsManager.Instance != null)
+        {
+            StatisticsManager.Instance.StartNewRound();
+        }
+
         currentState = GameState.PlayerTurn;
     }
 
@@ -1131,6 +1137,13 @@ public class MainGameManager : MonoBehaviour
         // 更新wave group的活跃wave数量
         waveGroupActiveWaveCount[currentWaveGroupId] = connectedTiles.Count;
         
+        // 记录统计：tiles生成和wave group大小
+        if (StatisticsManager.Instance != null)
+        {
+            StatisticsManager.Instance.RecordTilesGenerated(waveColor, connectedTiles.Count);
+            StatisticsManager.Instance.RecordWaveGroupSize(waveColor, connectedTiles.Count);
+        }
+        
         // 检查是否有pure技能（如果只有一个tile，伤害增加）
         bool hasPure = false;
         int pureValue = 0;
@@ -1164,6 +1177,12 @@ public class MainGameManager : MonoBehaviour
 
             boardManager.RemoveTile(pos);
             waveIndex++;
+            
+            // 记录统计：wave生成
+            if (StatisticsManager.Instance != null)
+            {
+                StatisticsManager.Instance.RecordWaveGenerated(waveColor);
+            }
         }
         
         // 应用healWhenSpawn技能（整个wave group只回一次血）
@@ -1483,9 +1502,20 @@ public class MainGameManager : MonoBehaviour
             waveGroupAddDamageWhenPass.Remove(waveGroupId);
         }
         
-        // 如果这个wave group的所有wave都完成了，检查spawnAlly技能和noAttackNoCost技能
+        // 如果这个wave group的所有wave都完成了，记录wave group伤害并检查spawnAlly技能
         if (waveGroupActiveWaveCount[waveGroupId] <= 0)
         {
+            // 记录wave group的总伤害
+            if (waveGroupTotalDamage.ContainsKey(waveGroupId) && waveGroupColor.ContainsKey(waveGroupId))
+            {
+                float totalDamage = waveGroupTotalDamage[waveGroupId];
+                TileColor waveColor = waveGroupColor[waveGroupId];
+                if (StatisticsManager.Instance != null && totalDamage > 0)
+                {
+                    StatisticsManager.Instance.RecordWaveGroupDamage(waveColor, totalDamage);
+                }
+            }
+            
             MainGameManager instance = FindObjectOfType<MainGameManager>();
             if (instance != null)
             {
@@ -2032,22 +2062,50 @@ public class MainGameManager : MonoBehaviour
             allyManager.ClearAllAllies();
         }
 
-        // 显示技能选择界面
-        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
-        if (skillMenu == null)
+        // 检查是否是最终胜利（可以根据关卡或其他条件判断）
+        // 这里假设如果玩家等级达到某个值就胜利，或者可以根据LevelManager判断
+        bool isGameWin = false; // 可以根据实际需求判断
+        if (LevelManager.Instance != null)
         {
-            // 如果没有找到，创建一个新的
-            GameObject menuObj = new GameObject("SkillSelectMenu");
-            skillMenu = menuObj.AddComponent<SkillSelectMenu>();
-        }
-
-        skillMenu.ShowSkillSelection(
-            () =>
+            // 可以检查是否还有下一关
+            LevelInfo nextLevel = LevelManager.Instance.GetNextLevel(playerLevel + 1);
+            if (nextLevel == null)
             {
-                // 确认按钮点击，进入下一关
-                Debug.Log("确认配置，进入下一关");
+                isGameWin = true;
             }
-        );
+        }
+        
+        if (isGameWin)
+        {
+            // 显示胜利统计菜单
+            StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
+            if (statisticsMenu == null)
+            {
+                // 如果没有找到，创建一个新的
+                GameObject menuObj = new GameObject("StatisticsMenu");
+                statisticsMenu = menuObj.AddComponent<StatisticsMenu>();
+            }
+            statisticsMenu.ShowWinStatistics();
+        }
+        else
+        {
+            // 显示技能选择界面
+            SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+            if (skillMenu == null)
+            {
+                // 如果没有找到，创建一个新的
+                GameObject menuObj = new GameObject("SkillSelectMenu");
+                skillMenu = menuObj.AddComponent<SkillSelectMenu>();
+            }
+
+            skillMenu.ShowSkillSelection(
+                () =>
+                {
+                    // 确认按钮点击，进入下一关
+                    Debug.Log("确认配置，进入下一关");
+                }
+            );
+        }
     }
 
     /// <summary>

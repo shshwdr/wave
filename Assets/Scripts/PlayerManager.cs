@@ -293,6 +293,7 @@ public class PlayerManager : Singleton<PlayerManager>
                 allSkills.AddRange(SkillManager.Instance.GetOwnedSkillsByColor(color));
             }
             
+            TileColor overhealColor = TileColor.Red; // 默认红色
             foreach (var skill in allSkills)
             {
                 if (skill.effect == "overhealDoDamage")
@@ -305,7 +306,16 @@ public class PlayerManager : Singleton<PlayerManager>
                     {
                         // 对随机敌人造成伤害
                         int damage = (int)(overheal * (value / 100f));
-                        ApplyOverhealDamage(damage);
+                        // 确定是哪个颜色的技能
+                        if (skill.color != null)
+                        {
+                            string colorStr = skill.color.ToLower();
+                            if (colorStr == "red") overhealColor = TileColor.Red;
+                            else if (colorStr == "yellow") overhealColor = TileColor.Yellow;
+                            else if (colorStr == "blue") overhealColor = TileColor.Blue;
+                            else if (colorStr == "green") overhealColor = TileColor.Green;
+                        }
+                        ApplyOverhealDamage(damage, overhealColor);
                     }
                     break; // 只应用一次
                 }
@@ -316,7 +326,7 @@ public class PlayerManager : Singleton<PlayerManager>
     /// <summary>
     /// 应用溢出治疗造成的伤害
     /// </summary>
-    private void ApplyOverhealDamage(int damage)
+    private void ApplyOverhealDamage(int damage, TileColor color)
     {
         EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
         if (enemyManager == null || damage <= 0)
@@ -342,6 +352,12 @@ public class PlayerManager : Singleton<PlayerManager>
         
         // 显示伤害数字
         DamageNumber.CreateDamageNumber(damage, targetEnemy.transform.position, false);
+        
+        // 记录统计
+        if (StatisticsManager.Instance != null)
+        {
+            StatisticsManager.Instance.RecordNonWaveDamage(color, damage);
+        }
     }
 
     /// <summary>

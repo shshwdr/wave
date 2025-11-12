@@ -37,6 +37,9 @@ public class SkillSelectMenu : MenuBase
     
     [Header("金币显示")]
     [SerializeField] private TMP_Text goldText;
+    
+    [Header("统计按钮")]
+    [SerializeField] private Button statisticsButton;
 
     private Action onConfirm; // 确认按钮的回调
     private Dictionary<string, SkillIconUI> skillIconMap = new Dictionary<string, SkillIconUI>(); // 技能identifier -> UI实例
@@ -109,6 +112,12 @@ public class SkillSelectMenu : MenuBase
         if (confirmButton != null)
         {
             confirmButton.onClick.AddListener(OnConfirmClicked);
+        }
+        
+        // 初始化统计按钮
+        if (statisticsButton != null)
+        {
+            statisticsButton.onClick.AddListener(OnStatisticsClicked);
         }
     }
 
@@ -405,6 +414,21 @@ public class SkillSelectMenu : MenuBase
 
         // 回调
         onConfirm?.Invoke();
+    }
+    
+    /// <summary>
+    /// 统计按钮点击事件
+    /// </summary>
+    private void OnStatisticsClicked()
+    {
+        StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
+        if (statisticsMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("StatisticsMenu");
+            statisticsMenu = menuObj.AddComponent<StatisticsMenu>();
+        }
+        statisticsMenu.ShowLastRoundStatistics();
     }
 
 
