@@ -2357,7 +2357,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2575620268183036779, guid: aa3bce8286d946b42a65d092ca899b44, type: 3}
       propertyPath: m_text
-      value: 'statistic
+      value: 'Statistic
 
 '
       objectReference: {fileID: 0}
@@ -4612,7 +4612,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.8342363, g: 0.8396226, b: 0.51882344, a: 1}
+  m_Color: {r: 0.98823535, g: 0.7686275, b: 0.54509807, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
