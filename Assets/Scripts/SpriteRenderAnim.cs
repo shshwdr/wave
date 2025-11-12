@@ -147,7 +147,9 @@ public class SpriteRenderAnim : MonoBehaviour
         
         if (sprites != null && sprites.Length > 0)
         {
-            PlayAnim(sprites, false);
+            
+            PlayAnimThenFollow("special", "idle");
+            //PlayAnim(sprites, false);
         }
     }
 

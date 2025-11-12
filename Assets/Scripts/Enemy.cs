@@ -1056,7 +1056,7 @@ public class Enemy : MonoBehaviour
             
         // 找到离自己最近的可用格子（右侧）
         List<Vector2Int> candidatePositions = new List<Vector2Int>();
-        for (int x = gridPosition.x + 1; x < board.Width; x++)
+        for (int x = gridPosition.x - 1; x < board.Width; x++)
         {
             for (int y = 0; y < board.Height; y++)
             {

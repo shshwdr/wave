@@ -648,7 +648,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfdf8f43775817547a32fa243d61db9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
+  maxHealth: 10000
   maxSwapCount: 2
   startGold: 0
 --- !u!1 &161327308
@@ -4767,6 +4767,7 @@ MonoBehaviour:
   spawnOffsetY: 0
   healthBarPrefab: {fileID: 0}
   healthBarCanvas: {fileID: 0}
+  useSmartMovement: 0
 --- !u!1 &2025883769
 GameObject:
   m_ObjectHideFlags: 0
