@@ -9,7 +9,7 @@ public class Enemy : MonoBehaviour
 {
     [Header("属性")]
     [SerializeField] private int defaultMaxHealth = 100;
-    [SerializeField] private float moveSpeed = 1f;
+    [SerializeField] protected float moveSpeed = 1f;
     [SerializeField] private float knockbackForce = 2f;
     [SerializeField] private float knockbackDuration = 0.3f;
 
@@ -818,7 +818,7 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// 敌人行动（每回合调用）
     /// </summary>
-    public void TakeAction()
+    public virtual void TakeAction()
     {
         if (isDead)
             return;
@@ -1142,7 +1142,7 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// 死亡
     /// </summary>
-    public void Die()
+    public virtual void Die()
     {
         if (isDead)
             return;

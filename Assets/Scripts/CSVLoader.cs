@@ -48,6 +48,8 @@ public class LevelInfo
     public int gold;
     public int startEnemyCount;
     public int difficulty;
+    public string bossIdentifier;
+    public bool hasEvent;
 }
 public class CSVLoader : Singleton<CSVLoader>
 {

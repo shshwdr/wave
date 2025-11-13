@@ -29,8 +29,8 @@ public class EnemyManager : MonoBehaviour
     
     // 分批次加载敌人相关
     private LevelInfo currentLevelInfo;
-    private List<EnemySpawnInfo> remainingEnemies = new List<EnemySpawnInfo>(); // 剩余的敌人列表
-    private int currentSpawnIndex = 0; // 当前生成索引
+    public List<EnemySpawnInfo> remainingEnemies = new List<EnemySpawnInfo>(); // 剩余的敌人列表
+    public int currentSpawnIndex = 0; // 当前生成索引
     private int deadEnemyCount = 0; // 已死亡的敌人数量
 
     public List<Enemy> ActiveEnemies => activeEnemies;
@@ -528,7 +528,7 @@ public class EnemyManager : MonoBehaviour
     /// <summary>
     /// 查找可用的Y位置（不与其他敌人重叠）
     /// </summary>
-    private int FindAvailableYPosition(int x, int boardHeight)
+    public int FindAvailableYPosition(int x, int boardHeight)
     {
         // 收集所有已占用的y位置
         HashSet<int> occupiedY = new HashSet<int>();

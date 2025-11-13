@@ -214,10 +214,12 @@ public class Wave : MonoBehaviour
         // 计算水平移动进度（0到1）
         float horizontalProgress = elapsedTime / waveDuration;
         
-        // 如果已经到达目标位置，销毁wave
+        // 如果已经到达目标位置，检查是否击中boss，然后销毁wave
         if (horizontalProgress >= 1f)
         {
             CancelInvoke(nameof(CheckAndClearFogDirt));
+            // 在boss战中，检查是否击中boss
+            CheckBossCollision();
             DestroyWave();
             return;
         }
@@ -928,6 +930,61 @@ public class Wave : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 检查是否与boss碰撞（在wave到达目标位置时调用）
+    /// </summary>
+    private void CheckBossCollision()
+    {
+        Enemy boss = MainGameManager.GetCurrentBoss() as Enemy;
+        if (boss == null || boss.IsDead)
+            return;
+            
+        // 检查wave是否与boss碰撞（使用bounds检测）
+        Vector3 bossPos = boss.transform.position;
+        float distanceX = Mathf.Abs(transform.position.x - bossPos.x);
+        float distanceY = Mathf.Abs(transform.position.y - bossPos.y);
+        float collisionRange = 0.5f; // 碰撞范围
+        
+        if (distanceX <= collisionRange && distanceY <= collisionRange)
+        {
+            // 击中boss
+            if (!hitEnemies.Contains(boss))
+            {
+                hitEnemies.Add(boss);
+                hitEnemyCount++;
+            }
+            
+            // 计算伤害（和攻击敌人一样的逻辑）
+            Vector3 direction = (boss.transform.position - transform.position).normalized;
+            float finalDamage = damage;
+            
+            // 应用技能效果（简化版，只应用主要技能）
+            if (hasDamageIncreaseWhenHitMore && hitEnemyCount > 1)
+            {
+                float increaseMultiplier = 1f + (hitEnemyCount - 1) * (damageIncreaseWhenHitMoreValue / 100f);
+                finalDamage = finalDamage * increaseMultiplier;
+            }
+            
+            // 应用addDamageWhenPass技能
+            if (MainGameManager.HasAddDamageWhenPass(waveGroupId))
+            {
+                float addDamageValue = MainGameManager.GetAddDamageWhenPassValue(waveGroupId);
+                finalDamage = finalDamage * (1f + addDamageValue / 100f);
+            }
+            
+            // 对boss造成伤害
+            float redWaveBaseDamage = 20f;
+            if (waveColor == TileColor.Red)
+            {
+                redWaveBaseDamage = finalDamage;
+            }
+            boss.TakeDamage((int)finalDamage, direction, false, 0, redWaveBaseDamage);
+            
+            // 记录伤害
+            MainGameManager.RecordWaveDamage(waveGroupId, finalDamage);
+        }
+    }
+    
     /// <summary>
     /// 销毁波浪
     /// </summary>

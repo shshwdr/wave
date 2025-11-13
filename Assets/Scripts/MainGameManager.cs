@@ -16,6 +16,13 @@ public class MainGameManager : MonoBehaviour
     [SerializeField] private EnemyManager enemyManager;
     [SerializeField] private Camera mainCamera;
     private AllyManager allyManager;
+    
+    [Header("Boss设置")]
+    [SerializeField] private GameObject bossPrefab; // Boss prefab（和enemy使用同一个prefab）
+    private Boss currentBoss = null; // 当前boss
+    private LevelInfo currentLevelInfo = null; // 当前关卡信息
+    private List<EnemySpawnInfo> bossBattleEnemies = new List<EnemySpawnInfo>(); // boss战中的敌人列表
+    private int bossBattleEnemyIndex = 0; // boss战中当前敌人索引
 
     [Header("波浪设置")]
     [SerializeField] private GameObject wavePrefab;
@@ -306,10 +313,15 @@ public class MainGameManager : MonoBehaviour
             boardManager.GenerateRandomColors();
         }
 
-        // 清空敌人
+        // 清空敌人和boss
         if (enemyManager != null)
         {
             enemyManager.ClearAllEnemies();
+        }
+        if (currentBoss != null)
+        {
+            Destroy(currentBoss.gameObject);
+            currentBoss = null;
         }
         
         // 清空随从
@@ -323,15 +335,29 @@ public class MainGameManager : MonoBehaviour
         }
 
         // 从关卡管理器获取关卡信息并生成敌人
-        LevelInfo levelInfo = LevelManager.Instance.GetNextLevel(playerLevel);
-        if (levelInfo != null && enemyManager != null)
+        currentLevelInfo = LevelManager.Instance.GetNextLevel(playerLevel);
+        if (currentLevelInfo != null && enemyManager != null)
         {
-            enemyManager.SpawnEnemiesFromLevel(levelInfo);
+            enemyManager.SpawnEnemiesFromLevel(currentLevelInfo);
+            
+            // 检查是否有boss
+            if (!string.IsNullOrEmpty(currentLevelInfo.bossIdentifier))
+            {
+                SpawnBoss(currentLevelInfo.bossIdentifier);
+                // 初始化boss战敌人列表
+                bossBattleEnemies = LevelManager.Instance.ParseEnemies(currentLevelInfo.enemies);
+                bossBattleEnemyIndex = 0;
+            }
+            else
+            {
+                currentBoss = null;
+            }
         }
         else if (enemyManager != null)
         {
             // 如果没有关卡信息，使用随机生成
             enemyManager.SpawnEnemiesRandomly();
+            currentBoss = null;
         }
 
         // 开始新回合统计
@@ -1765,6 +1791,12 @@ public class MainGameManager : MonoBehaviour
             })
             .OnComplete(() =>
             {
+                // 如果到达目标位置还没击中敌人，检查是否击中boss
+                if (!hasHitEnemy)
+                {
+                    CheckAllyProjectileBossCollision(projectileObj, damage);
+                }
+                
                 // 如果到达目标位置还没击中敌人，检查路径上的敌人（作为备用检查）
                 if (!hasHitEnemy && enemyManager != null)
                 {
@@ -1787,6 +1819,30 @@ public class MainGameManager : MonoBehaviour
             });
     }
 
+    /// <summary>
+    /// 检查ally投射物是否击中boss
+    /// </summary>
+    private void CheckAllyProjectileBossCollision(GameObject projectileObj, int damage)
+    {
+        if (currentBoss == null || currentBoss.IsDead || projectileObj == null)
+            return;
+            
+        // 检查投射物是否与boss碰撞
+        Vector3 projectilePos = projectileObj.transform.position;
+        Vector3 bossPos = currentBoss.transform.position;
+        float distanceX = Mathf.Abs(projectilePos.x - bossPos.x);
+        float distanceY = Mathf.Abs(projectilePos.y - bossPos.y);
+        float collisionRange = 0.5f; // 碰撞范围
+        
+        if (distanceX <= collisionRange && distanceY <= collisionRange)
+        {
+            // 击中boss
+            projectileObj.transform.DOKill(); // 停止移动
+            currentBoss.TakeDamage(damage, Vector3.right, false, 0, 0f);
+            Destroy(projectileObj); // 销毁投射物
+        }
+    }
+    
     /// <summary>
     /// 生成随从
     /// </summary>
@@ -1912,21 +1968,44 @@ public class MainGameManager : MonoBehaviour
         currentState = GameState.EnemyTurn;
         isProcessing = true; // 敌人移动时也禁止操作
 
-        // 敌人向左移动
+        // 敌人向左移动（boss战和普通战斗都需要）
         if (enemyManager != null)
         {
             enemyManager.MoveAllEnemiesLeft(enemyMoveDistance, enemyMoveDuration);
-
-            // 每回合生成一个新敌人
+        }
+        
+        // 如果是boss战，处理boss移动和召唤小怪
+        if (currentBoss != null && !currentBoss.IsDead)
+        {
+            // Boss移动
+            currentBoss.StartMove();
+            
+            // Boss战中每回合召唤小怪（在敌人移动后）
             DOVirtual.DelayedCall(enemyMoveDuration + 0.1f, () =>
             {
-                enemyManager.SpawnEnemyEachTurn();
+                // 先尝试正常生成敌人
+                bool normalSpawnSucceeded = false;
+                if (enemyManager != null)
+                {
+                    // 检查是否还有敌人可以生成
+                    if (enemyManager.currentSpawnIndex < enemyManager.remainingEnemies.Count)
+                    {
+                        enemyManager.SpawnEnemyEachTurn();
+                        normalSpawnSucceeded = true;
+                    }
+                }
                 
-                // 敌人回合结束后，检查胜利条件
+                // 如果正常生成失败（所有敌人已生成完），则从boss战敌人列表循环生成
+                if (!normalSpawnSucceeded)
+                {
+                    SpawnBossBattleEnemy();
+                }
+                
+                // Boss回合结束后，检查胜利条件
                 DOVirtual.DelayedCall(0.1f, () =>
                 {
-                    // 检查是否可以完成关卡（所有敌人死亡且没有剩余敌人可生成）
-                    if (enemyManager != null && enemyManager.CanCompleteLevel())
+                    // 检查boss是否死亡
+                    if (currentBoss != null && currentBoss.IsDead)
                     {
                         CompleteLevel();
                         return;
@@ -1943,12 +2022,188 @@ public class MainGameManager : MonoBehaviour
         }
         else
         {
-            isProcessing = false;
-            currentState = GameState.PlayerTurn;
-            
-            // 每回合开始时恢复所有shield敌人的盾牌
-            ResetAllEnemyShields();
+            // 普通战斗：每回合生成一个新敌人
+            if (enemyManager != null)
+            {
+                DOVirtual.DelayedCall(enemyMoveDuration + 0.1f, () =>
+                {
+                    enemyManager.SpawnEnemyEachTurn();
+                    
+                    // 敌人回合结束后，检查胜利条件
+                    DOVirtual.DelayedCall(0.1f, () =>
+                    {
+                        // 检查是否可以完成关卡（所有敌人死亡且没有剩余敌人可生成）
+                        if (enemyManager != null && enemyManager.CanCompleteLevel())
+                        {
+                            CompleteLevel();
+                            return;
+                        }
+                        
+                        // 否则进入玩家回合
+                        isProcessing = false;
+                        currentState = GameState.PlayerTurn;
+                        
+                        // 每回合开始时恢复所有shield敌人的盾牌
+                        ResetAllEnemyShields();
+                    });
+                });
+            }
+            else
+            {
+                isProcessing = false;
+                currentState = GameState.PlayerTurn;
+                
+                // 每回合开始时恢复所有shield敌人的盾牌
+                ResetAllEnemyShields();
+            }
         }
+    }
+    
+    /// <summary>
+    /// 生成Boss
+    /// </summary>
+    private void SpawnBoss(string bossIdentifier)
+    {
+        if (boardManager == null || string.IsNullOrEmpty(bossIdentifier))
+            return;
+            
+        // 从enemyInfoMap获取boss信息
+        if (!CSVLoader.Instance.enemyInfoMap.ContainsKey(bossIdentifier))
+        {
+            Debug.LogWarning($"Boss identifier not found: {bossIdentifier}");
+            return;
+        }
+        
+        EnemyInfo bossInfo = CSVLoader.Instance.enemyInfoMap[bossIdentifier];
+        
+        // Boss位置：从上往下数第二行（y = boardHeight - 2），最右列再往右两格（x = boardWidth + 1）
+        int boardWidth = boardManager.Width;
+        int boardHeight = boardManager.Height;
+        Vector2Int bossGridPos = new Vector2Int(boardWidth + 1, boardHeight - 2);
+        Vector3 bossWorldPos = boardManager.GridToWorldPosition(bossGridPos);
+        
+        // 使用enemyPrefab或bossPrefab（如果设置了）
+        GameObject prefabToUse = bossPrefab != null ? bossPrefab : (enemyManager != null ? enemyManager.enemyPrefab : null);
+        if (prefabToUse == null)
+        {
+            Debug.LogError("Boss prefab not found!");
+            return;
+        }
+        
+        GameObject bossObj = Instantiate(prefabToUse, bossWorldPos, Quaternion.identity);
+        Boss boss = bossObj.GetComponent<Boss>();
+        if (boss == null)
+        {
+            boss = bossObj.AddComponent<Boss>();
+        }
+        
+        // 根据difficulty计算boss属性
+        int difficulty = currentLevelInfo != null ? currentLevelInfo.difficulty : 0;
+        int calculatedHP = bossInfo.hp + difficulty * bossInfo.hpIncrease;
+        
+        // 初始化boss
+        boss.InitBoss(bossGridPos, calculatedHP, bossInfo, boardManager);
+        
+        // 创建血条
+        if (enemyManager != null)
+        {
+            enemyManager.CreateHealthBar(boss);
+        }
+        
+        currentBoss = boss;
+        Debug.Log($"Boss spawned: {bossIdentifier}, HP: {calculatedHP}");
+    }
+    
+    /// <summary>
+    /// Boss战中每回合召唤小怪
+    /// </summary>
+    private void SpawnBossBattleEnemy()
+    {
+        if (currentBoss == null || currentBoss.IsDead || bossBattleEnemies.Count == 0)
+            return;
+            
+        // 如果所有敌人都召唤完了，从头开始
+        if (bossBattleEnemyIndex >= bossBattleEnemies.Count)
+        {
+            bossBattleEnemyIndex = 0;
+        }
+        
+        EnemySpawnInfo spawnInfo = bossBattleEnemies[bossBattleEnemyIndex];
+        bossBattleEnemyIndex++;
+        
+        // 每次只生成一个敌人（从spawnInfo.count中取1个）
+        if (enemyManager != null)
+        {
+            SpawnBossBattleEnemyFromInfo(spawnInfo.identifier);
+        }
+    }
+    
+    /// <summary>
+    /// 从信息生成Boss战中的敌人
+    /// </summary>
+    private void SpawnBossBattleEnemyFromInfo(string identifier)
+    {
+        if (enemyManager == null || boardManager == null || string.IsNullOrEmpty(identifier))
+            return;
+            
+        // 从enemyInfoMap获取敌人信息
+        if (!CSVLoader.Instance.enemyInfoMap.ContainsKey(identifier))
+        {
+            Debug.LogWarning($"Enemy identifier not found: {identifier}");
+            return;
+        }
+        
+        EnemyInfo enemyInfo = CSVLoader.Instance.enemyInfoMap[identifier];
+        
+        int boardWidth = boardManager.Width;
+        int boardHeight = boardManager.Height;
+        
+        // 敌人生成在底线（最右侧，x = boardWidth - 1）
+        int x = boardWidth - 1;
+        
+        // 找到一个不与其他敌人重叠的y位置
+        int y = enemyManager.FindAvailableYPosition(x, boardHeight);
+        if (y < 0)
+        {
+            Debug.LogWarning("无法找到可用的敌人生成位置");
+            return;
+        }
+        
+        Vector2Int gridPos = new Vector2Int(x, y);
+        Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
+        worldPos += new Vector3(0, enemyManager.SpawnOffsetY, 0);
+        
+        GameObject enemyObj = Instantiate(enemyManager.enemyPrefab, worldPos, Quaternion.identity);
+        Enemy enemy = enemyObj.GetComponent<Enemy>();
+        if (enemy == null)
+        {
+            enemy = enemyObj.AddComponent<Enemy>();
+        }
+        
+        // 根据difficulty计算敌人属性
+        int difficulty = currentLevelInfo != null ? currentLevelInfo.difficulty : 0;
+        int calculatedHP = enemyInfo.hp + difficulty * enemyInfo.hpIncrease;
+        int calculatedAttack = enemyInfo.attack + difficulty * enemyInfo.attackIncrease;
+        
+        // 使用计算后的hp初始化
+        enemy.Init(gridPos, calculatedHP, enemyInfo);
+        // 设置计算后的攻击力
+        enemy.SetAttack(calculatedAttack);
+        
+        // 创建血条
+        enemyManager.CreateHealthBar(enemy);
+        
+        // 添加到EnemyManager
+        enemyManager.ActiveEnemies.Add(enemy);
+    }
+    
+    /// <summary>
+    /// 获取当前Boss（用于wave和ally攻击）
+    /// </summary>
+    public static Boss GetCurrentBoss()
+    {
+        MainGameManager instance = FindObjectOfType<MainGameManager>();
+        return instance != null ? instance.currentBoss : null;
     }
 
     /// <summary>
@@ -2026,7 +2281,7 @@ public class MainGameManager : MonoBehaviour
     /// <summary>
     /// 关卡完成
     /// </summary>
-    private void CompleteLevel()
+    public void CompleteLevel()
     {
         currentState = GameState.LevelComplete;
         isProcessing = true;

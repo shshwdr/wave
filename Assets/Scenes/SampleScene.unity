@@ -2929,6 +2929,7 @@ MonoBehaviour:
   boardManager: {fileID: 0}
   enemyManager: {fileID: 0}
   mainCamera: {fileID: 0}
+  bossPrefab: {fileID: 6933099978010375556, guid: 0a73cef9e7c61764fb4fdf87e09a0e7b, type: 3}
   wavePrefab: {fileID: 6338519160598375692, guid: 31c116da941207c468062d6a395e48fd, type: 3}
   waveParent: {fileID: 2107722006}
   tileMoveDistance: 1
