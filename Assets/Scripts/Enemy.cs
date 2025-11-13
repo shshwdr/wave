@@ -941,6 +941,9 @@ public class Enemy : MonoBehaviour
         
         // 显示治疗数字
         DamageNumber.CreateDamageNumber(amount, transform.position, true);
+        
+        // 创建回血效果
+        HealEffect.CreateHealEffect(transform.position);
     }
     
     /// <summary>
@@ -994,10 +997,14 @@ public class Enemy : MonoBehaviour
         if (board == null)
             return;
             
-        // 获取所有有效的tile位置（不包括已经有dirt的）
+        // 获取所有有效的tile位置（不包括已经有dirt的，不包括最左边一列）
         List<Vector2Int> availableTiles = new List<Vector2Int>();
         for (int x = 0; x < board.Width; x++)
         {
+            // 跳过最左边一列（x=0）
+            if (x == 0)
+                continue;
+                
             for (int y = 0; y < board.Height; y++)
             {
                 TileCell tile = board.GetTile(new Vector2Int(x, y));

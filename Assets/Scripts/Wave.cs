@@ -292,6 +292,7 @@ public class Wave : MonoBehaviour
                         int healValue = (int)(maxHealth * healWhenPassValue / 100f);
                         PlayerManager.Instance.Heal(healValue);
                         DamageNumber.CreateDamageNumber(healValue, transform.position, true);
+                        // 回血效果已在PlayerManager.Heal()中创建
                     }
                     
                     // 应用addDamageWhenPass技能（整个wave group共享）
@@ -315,7 +316,7 @@ public class Wave : MonoBehaviour
                     }
                 }
                 
-                // 清除fog和dirt
+                // 清除fog和dirt（和fog一样的逻辑）
                 if (tile.HasFog)
                 {
                     tile.SetFog(false);
@@ -325,7 +326,7 @@ public class Wave : MonoBehaviour
                     tile.SetDirty(false);
                 }
                 
-                // 记录已清除的tile
+                // 记录已清除的tile（无论是否有fog或dirt都记录，避免重复处理）
                 clearedTiles.Add(currentGridPos);
             }
         }
@@ -783,6 +784,7 @@ public class Wave : MonoBehaviour
                     int healValue = (int)(finalDamage * healAmount / 100f);
                     PlayerManager.Instance.Heal(healValue);
                     DamageNumber.CreateDamageNumber(healValue, transform.position, true);
+                    // 回血效果已在PlayerManager.Heal()中创建
                 }
                 
                 // 应用hitAddColor技能（击中敌人时改变场上tile颜色）

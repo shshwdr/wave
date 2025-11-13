@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ad80de629658d7448b3a6cbf502784d2
+guid: 9dc9b6d04b80ec346b9adebef49ec188
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -123,7 +123,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Fog_special_0_0
+      name: Healer_hurt_0_0
       rect:
         serializedVersion: 2
         x: 0
@@ -137,29 +137,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 00000000000000000800000000000000
-      internalID: 0
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Fog_special_0_1
-      rect:
-        serializedVersion: 2
-        x: 128
-        y: 0
-        width: 128
-        height: 128
-      alignment: 7
-      pivot: {x: 0.5, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 00000000000000000800000000000000
-      internalID: 0
+      spriteID: 0a0592629911daa60800000000000000
+      internalID: 7686819488459215008
       vertices: []
       indices: 
       edges: []
@@ -175,10 +154,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Fog_atk_0_0: -4331762421980742451
-      Fog_atk_0_1: -1406811818727373875
-      Fog_special_0_0: 0
-      Fog_special_0_1: 0
+      Healer_hurt_0_0: 7686819488459215008
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

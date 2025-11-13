@@ -1262,47 +1262,6 @@ public class MainGameManager : MonoBehaviour
         }
 
         wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue, tilesUsed, backward);
-        
-        // 清除周围（上下左右）的dirt地块（只有向前移动的波浪清除）
-        if (!backward)
-        {
-            ClearAdjacentDirt(gridPos);
-        }
-    }
-    
-    /// <summary>
-    /// 清除指定位置周围（上下左右）的dirt地块
-    /// </summary>
-    private void ClearAdjacentDirt(Vector2Int gridPos)
-    {
-        if (boardManager == null)
-            return;
-        
-        // 上下左右四个方向
-        Vector2Int[] directions = new Vector2Int[]
-        {
-            new Vector2Int(0, 1),   // 上
-            new Vector2Int(0, -1),  // 下
-            new Vector2Int(-1, 0),  // 左
-            new Vector2Int(1, 0)    // 右
-        };
-        
-        foreach (var dir in directions)
-        {
-            Vector2Int adjacentPos = gridPos + dir;
-            
-            // 检查位置是否有效
-            if (!boardManager.IsValidPosition(adjacentPos))
-                continue;
-            
-            // 获取相邻的tile
-            TileCell adjacentTile = boardManager.GetTile(adjacentPos);
-            if (adjacentTile != null && adjacentTile.IsDirty)
-            {
-                // 清除dirt状态
-                adjacentTile.SetDirty(false);
-            }
-        }
     }
 
     /// <summary>
@@ -1354,6 +1313,7 @@ public class MainGameManager : MonoBehaviour
             // 在第一个wave的位置显示回血数字
             Vector3 firstWavePos = boardManager.GridToWorldPosition(firstTilePos);
             DamageNumber.CreateDamageNumber(totalHeal, firstWavePos, true);
+            // 回血效果已在PlayerManager.Heal()中创建
         }
     }
     

@@ -39,20 +39,6 @@ public class SpriteSplitter
             }
         }
 
-        // 处理enemy根目录下的png文件（如果有的话）
-        string[] rootGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { enemyPath });
-        foreach (string guid in rootGuids)
-        {
-            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
-            // 确保文件在根目录，不在子文件夹中
-            string relativePath = assetPath.Substring(enemyPath.Length + 1);
-            if (assetPath.EndsWith(".png", System.StringComparison.OrdinalIgnoreCase) && 
-                !relativePath.Contains("/"))
-            {
-                ProcessTexture(assetPath, ref processedCount, ref errorCount);
-            }
-        }
-
         AssetDatabase.Refresh();
         Debug.Log($"处理完成! 成功: {processedCount}, 失败: {errorCount}");
     }

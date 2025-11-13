@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ad80de629658d7448b3a6cbf502784d2
+guid: 8729b6b73b4160045aa80a65b9139a1e
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -123,7 +123,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Fog_special_0_0
+      name: Healer_special_0_0
       rect:
         serializedVersion: 2
         x: 0
@@ -137,14 +137,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 00000000000000000800000000000000
-      internalID: 0
+      spriteID: 397fe8e94394293c0800000000000000
+      internalID: -4354337399366551661
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Fog_special_0_1
+      name: Healer_special_0_1
       rect:
         serializedVersion: 2
         x: 128
@@ -158,8 +158,71 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 00000000000000000800000000000000
-      internalID: 0
+      spriteID: c3824e396e124fdc0800000000000000
+      internalID: -3606220127409526724
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Healer_special_0_2
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 0
+        width: 128
+        height: 128
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b4ead18b5209084a0800000000000000
+      internalID: -6593111362793263541
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Healer_special_0_3
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 0
+        width: 128
+        height: 128
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f640a0a013c9c22e0800000000000000
+      internalID: -2149171187726810001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Healer_special_0_4
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 0
+        width: 128
+        height: 128
+      alignment: 7
+      pivot: {x: 0.5, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 05f912a6ac018d500800000000000000
+      internalID: 421105026709167952
       vertices: []
       indices: 
       edges: []
@@ -175,10 +238,11 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Fog_atk_0_0: -4331762421980742451
-      Fog_atk_0_1: -1406811818727373875
-      Fog_special_0_0: 0
-      Fog_special_0_1: 0
+      Healer_special_0_0: -4354337399366551661
+      Healer_special_0_1: -3606220127409526724
+      Healer_special_0_2: -6593111362793263541
+      Healer_special_0_3: -2149171187726810001
+      Healer_special_0_4: 421105026709167952
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

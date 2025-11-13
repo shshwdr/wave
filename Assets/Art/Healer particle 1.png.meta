@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ad80de629658d7448b3a6cbf502784d2
+guid: 2a09bcbea5644cf4fa47d2bed53d287c
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -43,9 +43,9 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
-  spriteMeshType: 1
+  spriteMeshType: 0
   alignment: 7
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 100
@@ -123,7 +123,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Fog_special_0_0
+      name: Healer particle_0_0
       rect:
         serializedVersion: 2
         x: 0
@@ -137,29 +137,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 00000000000000000800000000000000
-      internalID: 0
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Fog_special_0_1
-      rect:
-        serializedVersion: 2
-        x: 128
-        y: 0
-        width: 128
-        height: 128
-      alignment: 7
-      pivot: {x: 0.5, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 00000000000000000800000000000000
-      internalID: 0
+      spriteID: 596df6748fe9af160800000000000000
+      internalID: 7060130155044263573
       vertices: []
       indices: 
       edges: []
@@ -175,10 +154,7 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Fog_atk_0_0: -4331762421980742451
-      Fog_atk_0_1: -1406811818727373875
-      Fog_special_0_0: 0
-      Fog_special_0_1: 0
+      Healer particle_0_0: 7060130155044263573
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

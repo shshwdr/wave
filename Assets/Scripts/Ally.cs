@@ -177,6 +177,8 @@ public class Ally : MonoBehaviour
         if (actualHeal > 0)
         {
             DamageNumber.CreateDamageNumber(actualHeal, transform.position, true);
+            // 创建回血效果
+            HealEffect.CreateHealEffect(transform.position);
         }
         
         // 更新血条

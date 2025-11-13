@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: ad80de629658d7448b3a6cbf502784d2
+guid: a8f5df2963008df429daa448b3d917f9
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -123,7 +123,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Fog_special_0_0
+      name: Healer_move_0_0
       rect:
         serializedVersion: 2
         x: 0
@@ -137,14 +137,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 00000000000000000800000000000000
-      internalID: 0
+      spriteID: ab68fcaefe23679d0800000000000000
+      internalID: -2776976114209290566
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Fog_special_0_1
+      name: Healer_move_0_1
       rect:
         serializedVersion: 2
         x: 128
@@ -158,8 +158,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 00000000000000000800000000000000
-      internalID: 0
+      spriteID: 28bf5e5b1aea23190800000000000000
+      internalID: -7984127179809752190
       vertices: []
       indices: 
       edges: []
@@ -175,10 +175,8 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Fog_atk_0_0: -4331762421980742451
-      Fog_atk_0_1: -1406811818727373875
-      Fog_special_0_0: 0
-      Fog_special_0_1: 0
+      Healer_move_0_0: -2776976114209290566
+      Healer_move_0_1: -7984127179809752190
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -243,6 +243,13 @@ public class PlayerManager : Singleton<PlayerManager>
         currentHealth = Mathf.Min(maxHealth, currentHealth);
         int actualHeal = currentHealth - oldHealth;
         
+        // 如果有实际回血，创建回血效果
+        if (actualHeal > 0)
+        {
+            Vector3 playerPosition = transform != null ? transform.position : Vector3.zero;
+            HealEffect.CreateHealEffect(playerPosition);
+        }
+        
         // 检查是否有summonHeal技能，如果有则给所有ally也回血
         if (SkillManager.Instance != null)
         {

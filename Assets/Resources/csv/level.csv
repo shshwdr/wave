@@ -4,11 +4,11 @@ speed|2|normal|3,1,3,4,0
 archer|1|normal|3|speed|1|archer|1,2,3,5,0
 healer|1|normal|3|speed|1|archer|1|healer|1,3,3,5,0
 normal|3|speed|1|healer|2|archer|2|healer|2,4,3,5,1
-fog|1|normal|3|archer|1|fog|2|healer|1,5,4,5,1
-hp|1|fog|2|normal|2|speed|2|hp|1|archer|2|healer|2,6,4,5,1
-dirty|1|normal|2|speed|2|dirty|1|archer|2|healer|2,7,4,5,2
-dirty|2|speed|2|dirty|2|archer|2|healer|2|fog|2|hp|2,8,4,5,2
+fog|1|normal|3|archer|1|fog|1|healer|1,5,4,5,1
+hp|1|fog|2|normal|2|speed|2|hp|1|archer|2|healer|2|fog|1,6,4,5,1
+dirty|1|normal|2|speed|2|archer|2|healer|2|dirty|1,7,4,5,2
+dirty|1|speed|2|dirty|1|archer|2|healer|2|fog|1|hp|2,8,4,5,2
 summon|1|healer|2|speed|2|fog|2|archer|2,9,4,5,2
-summon|1|healer|2|speed|2|fog|2|archer|2|dirty|2|summon|1|healer|2,10,5,5,2
+summon|1|healer|2|speed|2|fog|1|archer|2|dirty|1|summon|1|healer|2|fog|1,10,5,5,2
 shield|1|normal|3|summon|1|fog|1|archer|2|dirty|2|shield|1,11,5,6,2
-shield|2|summon|2|speed|1|healer|2|speed|1|fog|2|speed|1|archer|2|shield|2|healer|2,12,5,6,3
+shield|2|summon|2|speed|1|healer|2|speed|1|fog|1|speed|1|archer|2|shield|2|healer|2|dirty|1,12,5,6,3
