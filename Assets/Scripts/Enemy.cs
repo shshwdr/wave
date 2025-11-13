@@ -1002,7 +1002,7 @@ public class Enemy : MonoBehaviour
         for (int x = 0; x < board.Width; x++)
         {
             // 跳过最左边一列（x=0）
-            if (x == 0)
+            if (x <= 1)
                 continue;
                 
             for (int y = 0; y < board.Height; y++)
