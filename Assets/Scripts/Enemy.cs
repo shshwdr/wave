@@ -31,7 +31,7 @@ public class Enemy : MonoBehaviour
     private Vector3 spriteRendererOriginalLocalPos; // spriteRenderer的原始本地位置
     private Tween jumpTween; // 当前的跳跃动画
     private EnemyInfo enemyInfo; // 敌人信息
-    private BoardManager boardManager; // 棋盘管理器引用
+    protected BoardManager boardManager; // 棋盘管理器引用
     
     // 技能系统
     private string currentSkill = ""; // 当前技能名称
@@ -130,7 +130,7 @@ public class Enemy : MonoBehaviour
                 skillValue = 0;
                 skillCooldown = 0;
             }
-            currentCooldown = skillCooldown; // 初始冷却时间等于技能冷却时间
+            currentCooldown = 0; // 初始冷却时间等于技能冷却时间
         }
         
         // 初始化动画系统
@@ -943,7 +943,7 @@ public class Enemy : MonoBehaviour
         DamageNumber.CreateDamageNumber(amount, transform.position, true);
         
         // 创建回血效果
-        HealEffect.CreateHealEffect(transform.position);
+        HealEffect.CreateHealEffect(transform);
     }
     
     /// <summary>
@@ -1358,7 +1358,7 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// 尝试播放特殊技能动画
     /// </summary>
-    private void TryPlaySpecialAnimation()
+    protected void TryPlaySpecialAnimation()
     {
         if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
             return;

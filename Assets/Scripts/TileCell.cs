@@ -13,6 +13,8 @@ public class TileCell : MonoBehaviour
     [Header("Fog和Dirt")]
     public GameObject fogObject; // fog的GameObject
     public GameObject dirtObject; // dirt的GameObject
+    [Header("Disable")]
+    public GameObject disableObject; // disable的GameObject
     
     private TileColor currentColor;
     private Vector2Int gridPosition;
@@ -20,12 +22,14 @@ public class TileCell : MonoBehaviour
     private Color originalColor;
     private bool hasFog = false; // 是否有fog
     private bool isDirty = false; // 是否有dirt
+    private bool isDisabled = false; // 是否被禁用
     
     public TileColor Color => currentColor;
     public Vector2Int GridPosition => gridPosition;
     public bool IsHighlighted => isHighlighted;
     public bool HasFog => hasFog;
     public bool IsDirty => isDirty;
+    public bool IsDisabled => isDisabled;
 
     /// <summary>
     /// 初始化格子
@@ -230,6 +234,52 @@ public class TileCell : MonoBehaviour
         
         // 创建一个简单的矩形sprite（如果没有sprite，使用颜色填充）
         dirtObject = dirt;
+    }
+    
+    /// <summary>
+    /// 设置disable状态
+    /// </summary>
+    public void SetDisabled(bool disabled)
+    {
+        isDisabled = disabled;
+        UpdateDisableVisual();
+    }
+    
+    /// <summary>
+    /// 更新disable视觉表现
+    /// </summary>
+    private void UpdateDisableVisual()
+    {
+        if (disableObject != null)
+        {
+            disableObject.SetActive(isDisabled);
+        }
+        else if (isDisabled)
+        {
+            // 如果没有disableObject，创建一个简单的disable效果
+            CreateDisableObject();
+        }
+    }
+    
+    /// <summary>
+    /// 创建disable GameObject
+    /// </summary>
+    private void CreateDisableObject()
+    {
+        if (disableObject != null)
+            return;
+            
+        GameObject disable = new GameObject("Disable");
+        disable.transform.SetParent(transform);
+        disable.transform.localPosition = Vector3.zero;
+        disable.transform.localScale = Vector3.one;
+        
+        SpriteRenderer disableRenderer = disable.AddComponent<SpriteRenderer>();
+        disableRenderer.color = new Color(1f, 0f, 0f, 0.5f); // 红色半透明
+        disableRenderer.sortingOrder = 6; // 在tile和fog/dirt上方
+        
+        // 创建一个简单的矩形sprite（如果没有sprite，使用颜色填充）
+        disableObject = disable;
     }
 }
 

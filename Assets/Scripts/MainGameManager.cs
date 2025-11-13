@@ -823,47 +823,72 @@ public class MainGameManager : MonoBehaviour
     /// </summary>
     private Enemy GetEnemyAtPosition(Vector3 worldPos)
     {
-        if (enemyManager == null)
-            return null;
-        
-        // 遍历所有敌人，检查点击位置是否在spriteRenderer的实际sprite区域内
-        foreach (var enemy in enemyManager.ActiveEnemies)
+        // 首先检查Boss
+        if (currentBoss != null && !currentBoss.IsDead)
         {
-            if (enemy == null || enemy.IsDead)
-                continue;
-                
-            SpriteRenderer sr = enemy.GetComponent<SpriteRenderer>();
-            if (sr == null)
-                sr = enemy.GetComponentInChildren<SpriteRenderer>();
-                
-            if (sr != null && sr.enabled && sr.sprite != null)
+            if (IsPositionInEnemyBounds(currentBoss, worldPos))
             {
-                // 检查世界坐标是否在sprite的bounds内
-                Bounds spriteBounds = sr.bounds;
-                if (spriteBounds.Contains(worldPos))
+                return currentBoss;
+            }
+        }
+        
+        // 然后检查普通敌人
+        if (enemyManager != null)
+        {
+            foreach (var enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy == null || enemy.IsDead)
+                    continue;
+                    
+                if (IsPositionInEnemyBounds(enemy, worldPos))
                 {
-                    // 进一步检查是否点击在sprite的实际像素上（非透明区域）
-                    // 将世界坐标转换为sprite的本地坐标
-                    Vector3 localPos = sr.transform.InverseTransformPoint(worldPos);
-                    
-                    // 获取sprite的像素坐标
-                    Rect spriteRect = sr.sprite.rect;
-                    Vector2 pixelPos = new Vector2(
-                        (localPos.x / spriteBounds.size.x) * spriteRect.width + spriteRect.width * 0.5f,
-                        (localPos.y / spriteBounds.size.y) * spriteRect.height + spriteRect.height * 0.5f
-                    );
-                    
-                    // 检查像素是否在sprite范围内（简化检查，只检查bounds）
-                    if (pixelPos.x >= 0 && pixelPos.x < spriteRect.width &&
-                        pixelPos.y >= 0 && pixelPos.y < spriteRect.height)
-                    {
-                        return enemy;
-                    }
+                    return enemy;
                 }
             }
         }
         
         return null;
+    }
+    
+    /// <summary>
+    /// 检查位置是否在敌人的sprite范围内
+    /// </summary>
+    private bool IsPositionInEnemyBounds(Enemy enemy, Vector3 worldPos)
+    {
+        if (enemy == null)
+            return false;
+            
+        SpriteRenderer sr = enemy.GetComponent<SpriteRenderer>();
+        if (sr == null)
+            sr = enemy.GetComponentInChildren<SpriteRenderer>();
+            
+        if (sr != null && sr.enabled && sr.sprite != null)
+        {
+            // 检查世界坐标是否在sprite的bounds内
+            Bounds spriteBounds = sr.bounds;
+            if (spriteBounds.Contains(worldPos))
+            {
+                // 进一步检查是否点击在sprite的实际像素上（非透明区域）
+                // 将世界坐标转换为sprite的本地坐标
+                Vector3 localPos = sr.transform.InverseTransformPoint(worldPos);
+                
+                // 获取sprite的像素坐标
+                Rect spriteRect = sr.sprite.rect;
+                Vector2 pixelPos = new Vector2(
+                    (localPos.x / spriteBounds.size.x) * spriteRect.width + spriteRect.width * 0.5f,
+                    (localPos.y / spriteBounds.size.y) * spriteRect.height + spriteRect.height * 0.5f
+                );
+                
+                // 检查像素是否在sprite范围内（简化检查，只检查bounds）
+                if (pixelPos.x >= 0 && pixelPos.x < spriteRect.width &&
+                    pixelPos.y >= 0 && pixelPos.y < spriteRect.height)
+                {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
     
     /// <summary>
@@ -1977,6 +2002,12 @@ public class MainGameManager : MonoBehaviour
         // 如果是boss战，处理boss移动和召唤小怪
         if (currentBoss != null && !currentBoss.IsDead)
         {
+            // 更新blockColor的剩余回合数（在玩家回合结束时减少）
+            currentBoss.UpdateBlockColorTurns();
+            
+            // Boss执行技能（TakeAction）
+            currentBoss.TakeAction();
+            
             // Boss移动
             currentBoss.StartMove();
             

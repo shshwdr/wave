@@ -1,5 +1,6 @@
 using UnityEngine;
 using DG.Tweening;
+using System.Collections.Generic;
 
 /// <summary>
 /// Boss类，继承Enemy
@@ -13,8 +14,12 @@ public class Boss : Enemy
     private Vector3 startWorldPos; // 起始世界位置
     private bool movingDown = true; // 是否向下移动
     private int moveCount = 0; // 移动计数
-    private BoardManager boardManager;
     private bool isMoving = false; // 是否正在移动
+    
+    // Boss技能系统
+    private int loopSkillIndex = 0; // loop技能的当前索引（0=blockColor, 1=healAll）
+    private TileColor blockedColor = TileColor.Red; // 被block的颜色
+    private int blockColorRemainingTurns = 0; // blockColor剩余回合数
     
     /// <summary>
     /// 初始化Boss
@@ -104,13 +109,220 @@ public class Boss : Enemy
     }
     
     /// <summary>
-    /// 重写TakeAction方法，Boss不执行攻击和技能，只移动（移动由MainGameManager控制）
+    /// 重写TakeAction方法，Boss执行技能（不执行攻击）
     /// </summary>
     public override void TakeAction()
     {
-        // Boss不执行攻击和技能，移动由MainGameManager的StartMove()控制
-        // 所以这里什么都不做
-        return;
+        if (IsDead)
+            return;
+            
+        // 使用反射访问父类的技能相关字段
+        var currentSkillField = typeof(Enemy).GetField("currentSkill", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var skillValueField = typeof(Enemy).GetField("skillValue", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var skillCooldownField = typeof(Enemy).GetField("skillCooldown", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var currentCooldownField = typeof(Enemy).GetField("currentCooldown", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        if (currentSkillField == null || skillValueField == null || skillCooldownField == null || currentCooldownField == null)
+            return;
+            
+        string currentSkill = (string)currentSkillField.GetValue(this);
+        int skillValue = (int)skillValueField.GetValue(this);
+        int skillCooldown = (int)skillCooldownField.GetValue(this);
+        int currentCooldown = (int)currentCooldownField.GetValue(this);
+        
+        // 检查主动技能（冷却时间>0）
+        if (skillCooldown > 0)
+        {
+            currentCooldown--;
+            if (currentCooldown <= 0)
+            {
+                // 使用技能
+                UseBossSkill(currentSkill, skillValue);
+                currentCooldown = skillCooldown; // 重置冷却
+                currentCooldownField.SetValue(this, currentCooldown);
+            }
+            else
+            {
+                currentCooldownField.SetValue(this, currentCooldown);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 使用Boss技能
+    /// </summary>
+    private void UseBossSkill(string skillName, int value)
+    {
+        if (string.IsNullOrEmpty(skillName))
+            return;
+            
+        // 播放特殊技能动画
+        TryPlaySpecialAnimation();
+        
+        if (skillName == "blockColor")
+        {
+            UseBlockColorSkill(value);
+        }
+        else if (skillName == "healAll")
+        {
+            UseHealAllSkill();
+        }
+        else if (skillName == "loop")
+        {
+            UseLoopSkill(value);
+        }
+    }
+    
+    /// <summary>
+    /// 使用blockColor技能：找到场面上最多的颜色，接下来的skillValue回合，玩家不能消除这个颜色
+    /// </summary>
+    private void UseBlockColorSkill(int turns)
+    {
+        if (boardManager == null)
+            return;
+            
+        // 统计场上每种颜色的数量
+        Dictionary<TileColor, int> colorCount = new Dictionary<TileColor, int>();
+        for (int x = 0; x < boardManager.Width; x++)
+        {
+            for (int y = 0; y < boardManager.Height; y++)
+            {
+                TileCell tile = boardManager.GetTile(new Vector2Int(x, y));
+                if (tile != null)
+                {
+                    TileColor color = tile.Color;
+                    if (colorCount.ContainsKey(color))
+                    {
+                        colorCount[color]++;
+                    }
+                    else
+                    {
+                        colorCount[color] = 1;
+                    }
+                }
+            }
+        }
+        
+        // 找到数量最多的颜色
+        TileColor mostColor = TileColor.Red;
+        int maxCount = 0;
+        foreach (var kvp in colorCount)
+        {
+            if (kvp.Value > maxCount)
+            {
+                maxCount = kvp.Value;
+                mostColor = kvp.Key;
+            }
+        }
+        
+        // 如果之前有被block的颜色，先恢复
+        if (blockColorRemainingTurns > 0)
+        {
+            RestoreBlockedColor();
+        }
+        
+        // 禁用该颜色的所有tile
+        blockedColor = mostColor;
+        blockColorRemainingTurns = turns;
+        
+        for (int x = 0; x < boardManager.Width; x++)
+        {
+            for (int y = 0; y < boardManager.Height; y++)
+            {
+                TileCell tile = boardManager.GetTile(new Vector2Int(x, y));
+                if (tile != null && tile.Color == mostColor)
+                {
+                    tile.SetDisabled(true);
+                }
+            }
+        }
+        
+        Debug.Log($"Boss使用blockColor技能，禁用颜色: {mostColor}，持续{turns}回合");
+    }
+    
+    /// <summary>
+    /// 更新blockColor的剩余回合数（在玩家回合结束时调用）
+    /// </summary>
+    public void UpdateBlockColorTurns()
+    {
+        if (blockColorRemainingTurns > 0)
+        {
+            blockColorRemainingTurns--;
+            if (blockColorRemainingTurns <= 0)
+            {
+                // 恢复被block的颜色
+                RestoreBlockedColor();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 恢复被block的颜色
+    /// </summary>
+    private void RestoreBlockedColor()
+    {
+        if (boardManager == null)
+            return;
+            
+        for (int x = 0; x < boardManager.Width; x++)
+        {
+            for (int y = 0; y < boardManager.Height; y++)
+            {
+                TileCell tile = boardManager.GetTile(new Vector2Int(x, y));
+                if (tile != null && tile.Color == blockedColor)
+                {
+                    tile.SetDisabled(false);
+                }
+            }
+        }
+        
+        blockColorRemainingTurns = 0;
+        Debug.Log($"Boss blockColor效果结束，恢复颜色: {blockedColor}");
+    }
+    
+    /// <summary>
+    /// 使用healAll技能：恢复场上所有怪物的已损失血量的一半
+    /// </summary>
+    private void UseHealAllSkill()
+    {
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (enemyManager == null)
+            return;
+            
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead)
+            {
+                int lostHealth = enemy.MaxHealth - enemy.CurrentHealth;
+                int healAmount = lostHealth / 2; // 恢复已损失血量的一半
+                if (healAmount > 0)
+                {
+                    enemy.Heal(healAmount);
+                }
+            }
+        }
+        
+        Debug.Log("Boss使用healAll技能，恢复所有怪物已损失血量的一半");
+    }
+    
+    /// <summary>
+    /// 使用loop技能：循环执行blockColor和healAll
+    /// </summary>
+    private void UseLoopSkill(int value)
+    {
+        // 根据loopSkillIndex决定执行哪个技能
+        if (loopSkillIndex == 0)
+        {
+            // 执行blockColor
+            UseBlockColorSkill(value);
+            loopSkillIndex = 1; // 下次执行healAll
+        }
+        else
+        {
+            // 执行healAll
+            UseHealAllSkill();
+            loopSkillIndex = 0; // 下次执行blockColor
+        }
     }
     
     /// <summary>

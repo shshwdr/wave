@@ -10,6 +10,6 @@ summon,Swamp Herald,Can summon smaller minions to assist in battle.,200,10,10,5,
 shield,shield,Generates a shield each turn that blocks the first incoming attack.,100,10,10,5,1,1,ignoreFirstAttack,,,1
 moveForward,moveForward,moveForward,70,10,10,5,1,1,hitMoveForward,,,1
 removeWave,removeWave,removeWave,70,10,10,5,1,1,removeWave,,,1
-elite,elite,elite,800,0,10,0,0,0,,,,
-elite2,elite,elite,1000,0,10,0,0,0,,,,
-boss,boss,boss,2000,0,10,0,0,0,,,,
+elite,elite,You can only win by defeating it in this battle.\nIt will disable certain colors.,800,0,10,0,0,0,blockColor,2,4,
+elite2,elite,You can only win by defeating it in this battle.\nIt will heal all enemies.,1000,0,10,0,0,0,healAll,,3,
+boss,boss,You can only win by defeating it in this battle.\nIt will disable certain colors.\nIt will heal all enemies.,2000,0,10,0,0,0,loop,2,3,
