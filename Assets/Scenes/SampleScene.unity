@@ -648,7 +648,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfdf8f43775817547a32fa243d61db9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
+  maxHealth: 1
   maxSwapCount: 2
   startGold: 0
 --- !u!1 &161327308
@@ -2939,7 +2939,7 @@ MonoBehaviour:
   skillDisplayText: {fileID: 0}
   enemyDescriptionPanel: {fileID: 0}
   enemyDescriptionText: {fileID: 0}
-  showShopAtBeginning: 0
+  showShopAtBeginning: 1
   allyPrefab: {fileID: 1301853740920789355, guid: 3ae5e562d6ec64c44a24e6e76cced702, type: 3}
   allyProjectile: {fileID: 4774102499940393064, guid: 6428cff0341872248820a0459fd4b2fb, type: 3}
   damagePrefab: {fileID: 0}
@@ -4768,6 +4768,7 @@ MonoBehaviour:
   spawnOffsetY: 0
   healthBarPrefab: {fileID: 0}
   healthBarCanvas: {fileID: 0}
+  currentSpawnIndex: 0
 --- !u!1 &2025883769
 GameObject:
   m_ObjectHideFlags: 0

@@ -2289,24 +2289,102 @@ public class MainGameManager : MonoBehaviour
     /// </summary>
     private void RetryLevel()
     {
-        // 恢复血量到关卡开始前
-        if (PlayerManager.Instance != null && levelStartHealth >= 0)
+        // 如果玩家等级 > 0，回到这场战斗前的商店页面
+        // 如果玩家等级 == 0（第一关），重新开始这场战斗
+        if (playerLevel > 0)
         {
-            PlayerManager.Instance.SetHealth(levelStartHealth);
+            playerLevel--;
+            // 回到商店页面
+            // 先重置游戏状态
+            isProcessing = false;
+            currentState = GameState.PlayerTurn;
+            
+            // 清空棋盘、敌人、boss、随从
+            if (boardManager != null)
+            {
+                boardManager.ClearBoard();
+            }
+            if (enemyManager != null)
+            {
+                enemyManager.ClearAllEnemies();
+            }
+            if (currentBoss != null)
+            {
+                Destroy(currentBoss.gameObject);
+                currentBoss = null;
+            }
+            if (allyManager == null)
+            {
+                allyManager = FindObjectOfType<AllyManager>();
+            }
+            if (allyManager != null)
+            {
+                allyManager.ClearAllAllies();
+            }
+            
+            // 关闭技能显示和敌人描述显示
+            if (skillDisplayPanel != null)
+            {
+                skillDisplayPanel.SetActive(false);
+            }
+            if (enemyDescriptionPanel != null)
+            {
+                enemyDescriptionPanel.SetActive(false);
+            }
+
+            if (PlayerManager.Instance != null && levelStartHealth >= 0)
+            {
+                PlayerManager.Instance.SetHealth(levelStartHealth);
+            }
+            
+            // 清空所有随从
+            if (allyManager == null)
+            {
+                allyManager = FindObjectOfType<AllyManager>();
+            }
+            if (allyManager != null)
+            {
+                allyManager.ClearAllAllies();
+            }
+            // 显示商店页面
+            SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+            if (skillMenu != null)
+            {
+                skillMenu.ShowSkillSelection(
+                    () =>
+                    {
+                        // 确认按钮点击，进入下一关
+                        Debug.Log("确认配置，进入下一关");
+                    }
+                );
+            }
+            else
+            {
+                Debug.LogWarning("SkillSelectMenu not found, cannot show shop");
+            }
         }
-        
-        // 清空所有随从
-        if (allyManager == null)
+        else
         {
-            allyManager = FindObjectOfType<AllyManager>();
+            // 第一关死亡，重新开始战斗
+            // 恢复血量到关卡开始前
+            if (PlayerManager.Instance != null && levelStartHealth >= 0)
+            {
+                PlayerManager.Instance.SetHealth(levelStartHealth);
+            }
+            
+            // 清空所有随从
+            if (allyManager == null)
+            {
+                allyManager = FindObjectOfType<AllyManager>();
+            }
+            if (allyManager != null)
+            {
+                allyManager.ClearAllAllies();
+            }
+            
+            // 重新开始当前关卡
+            StartBattle();
         }
-        if (allyManager != null)
-        {
-            allyManager.ClearAllAllies();
-        }
-        
-        // 重新开始当前关卡
-        StartBattle();
     }
 
     /// <summary>
@@ -2484,6 +2562,9 @@ public class MainGameManager : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// 重新开始（重新加载场景）
+    /// </summary>
     public void Restart()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
