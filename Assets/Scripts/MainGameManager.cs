@@ -83,6 +83,21 @@ public class MainGameManager : Singleton<MainGameManager>
     // 保存关卡开始时的血量（用于重试关卡）
     private int levelStartHealth = -1;
     
+    // 回合计数（用于奖励关卡）
+    private int currentTurn = 0;
+    
+    /// <summary>
+    /// 获取剩余回合数（如果turns为0则返回-1，表示不显示）
+    /// </summary>
+    public int GetRemainingTurns()
+    {
+        if (currentLevelInfo == null || currentLevelInfo.turns == 0)
+        {
+            return -1; // 不显示回合数
+        }
+        return Mathf.Max(0, currentLevelInfo.turns - currentTurn);
+    }
+    
     /// <summary>
     /// 玩家等级提升
     /// </summary>
@@ -368,6 +383,9 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             StatisticsManager.Instance.StartNewRound();
         }
+
+        // 初始化回合计数（用于奖励关卡）
+        currentTurn = 0;
 
         currentState = GameState.PlayerTurn;
         
@@ -2007,6 +2025,21 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void EndPlayerTurn()
     {
+        // 增加回合计数
+        currentTurn++;
+        
+        // 检查回合数限制（奖励关卡）
+        if (currentLevelInfo != null && currentLevelInfo.turns > 0)
+        {
+            if (currentTurn >= currentLevelInfo.turns)
+            {
+                // 回合数达到限制，结束关卡并默认胜利
+                Debug.Log($"回合数达到限制 ({currentLevelInfo.turns})，关卡结束");
+                CompleteLevel();
+                return;
+            }
+        }
+        
         currentState = GameState.EnemyTurn;
         isProcessing = true; // 敌人移动时也禁止操作
 

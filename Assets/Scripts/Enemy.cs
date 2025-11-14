@@ -43,6 +43,9 @@ public class Enemy : MonoBehaviour
     private bool hasShield = false; // 是否有shield技能
     private bool shieldActive = false; // 盾牌是否激活（每回合开始时为true）
     
+    // LockHP敌人系统
+    private bool hasLockHP = false; // 是否有lockHP技能
+    
     // Buff/Debuff系统
     private int vulnerableStacks = 0; // vulnerable层数
 
@@ -110,6 +113,16 @@ public class Enemy : MonoBehaviour
             shieldActive = true;
         }
         UpdateShieldDisplay();
+        
+        // 初始化lockHP系统
+        hasLockHP = false;
+        if (enemyInfo != null && enemyInfo.skill != null && enemyInfo.skill.Count > 0)
+        {
+            if (enemyInfo.skill[0] == "lockHP")
+            {
+                hasLockHP = true;
+            }
+        }
         
         // 初始化buff系统
         vulnerableStacks = 0;
@@ -233,6 +246,12 @@ public class Enemy : MonoBehaviour
             DamageNumber.CreateDamageNumber(0, transform.position, false);
             // 伤害被吃掉，不造成伤害
             return;
+        }
+        
+        // 应用lockHP技能：每次被攻击只掉1滴血
+        if (hasLockHP)
+        {
+            damage = 1;
         }
         
         // 应用vulnerable debuff（每层增加5%伤害）
@@ -1184,6 +1203,13 @@ public class Enemy : MonoBehaviour
             healthBar.SetVisible(false);
         }
 
+        // 敌人死亡时给玩家金币
+        if (enemyInfo != null && enemyInfo.gold > 0 && PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.AddGold(enemyInfo.gold);
+            Debug.Log($"敌人死亡，获得 {enemyInfo.gold} gold");
+        }
+        
         // 通知EnemyManager更新敌人计数
         EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
         if (enemyManager != null)

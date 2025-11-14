@@ -37,6 +37,7 @@ public class EnemyInfo
     public int skillCD;
     public int attackIncrease;
     public int hpIncrease;
+    public int gold;
     public Sprite icon=> Resources.Load<Sprite>("enemy/"+identifier);
 
 }
@@ -50,6 +51,7 @@ public class LevelInfo
     public int difficulty;
     public string bossIdentifier;
     public bool hasEvent;
+    public int turns;
 }
 public class CSVLoader : Singleton<CSVLoader>
 {
@@ -71,8 +73,11 @@ public class CSVLoader : Singleton<CSVLoader>
             enemyInfoMap.Add(enemyInfo.identifier, enemyInfo);
         }
         var levelInfos = CsvUtil.LoadObjects<LevelInfo>("level");
+        int i = 0;
         foreach (var levelInfo in levelInfos)
         {
+            levelInfo.level = i;
+            i++;
             levelInfoMap.Add(levelInfo.level, levelInfo);
         }
     }

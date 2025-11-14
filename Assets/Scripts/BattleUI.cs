@@ -15,6 +15,7 @@ public class BattleUI : MonoBehaviour
     
     [SerializeField] private TMP_Text enemyCountText; // 剩余敌人数显示
     [SerializeField] private TMP_Text goldText; // 金币显示
+    [SerializeField] private TMP_Text turnsRemainingText; // 剩余回合数显示
     [SerializeField] private Image healthBarFill;
     [SerializeField] private Image swapCountBarFill;
 
@@ -100,6 +101,21 @@ public class BattleUI : MonoBehaviour
         if (goldText != null && playerManager != null)
         {
             goldText.text = $"Gold: {playerManager.Gold}";
+        }
+
+        // 更新剩余回合数显示（只在turns不为0时显示）
+        if (turnsRemainingText != null && mainGameManager != null)
+        {
+            int remainingTurns = mainGameManager.GetRemainingTurns();
+            if (remainingTurns >= 0)
+            {
+                turnsRemainingText.text = $"Turns: {remainingTurns}";
+                turnsRemainingText.gameObject.SetActive(true);
+            }
+            else
+            {
+                turnsRemainingText.gameObject.SetActive(false);
+            }
         }
     }
 }
