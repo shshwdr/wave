@@ -1207,6 +1207,14 @@ public class Enemy : MonoBehaviour
         if (enemyInfo != null && enemyInfo.gold > 0 && PlayerManager.Instance != null)
         {
             PlayerManager.Instance.AddGold(enemyInfo.gold);
+            
+            // 记录从chest获得的金钱（用于gold关卡统计）
+            MainGameManager mainGameManager = FindObjectOfType<MainGameManager>();
+            if (mainGameManager != null)
+            {
+                mainGameManager.RecordGoldFromChest(enemyInfo.gold);
+            }
+            
             Debug.Log($"敌人死亡，获得 {enemyInfo.gold} gold");
         }
         

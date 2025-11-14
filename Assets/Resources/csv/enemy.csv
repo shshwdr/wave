@@ -13,4 +13,4 @@ removeWave,removeWave,removeWave,70,10,10,5,1,1,removeWave,,,
 elite,elite,You can only win by defeating it in this battle.\nIt will disable certain colors.,700,0,10,0,0,0,blockColor,2,4,
 elite2,elite,You can only win by defeating it in this battle.\nIt will heal all enemies.,1000,0,10,0,0,0,healAll,,3,
 boss,boss,You can only win by defeating it in this battle.\nIt will disable certain colors.\nIt will heal all enemies.,2000,0,10,0,0,0,loop,2,3,
-chest,chest,chest,3,1,0,0,0,0,lockHP,,,1
+chest,chest,Take Max 1 damage per time,4,1,0,0,1,0,lockHP,,,1

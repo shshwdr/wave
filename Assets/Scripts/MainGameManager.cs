@@ -86,6 +86,17 @@ public class MainGameManager : Singleton<MainGameManager>
     // 回合计数（用于奖励关卡）
     private int currentTurn = 0;
     
+    // 跟踪gold关卡中从chest（敌人）获得的金钱
+    private int goldFromChests = 0;
+    
+    /// <summary>
+    /// 获取当前关卡信息
+    /// </summary>
+    public LevelInfo GetCurrentLevelInfo()
+    {
+        return currentLevelInfo;
+    }
+    
     /// <summary>
     /// 获取剩余回合数（如果turns为0则返回-1，表示不显示）
     /// </summary>
@@ -96,6 +107,17 @@ public class MainGameManager : Singleton<MainGameManager>
             return -1; // 不显示回合数
         }
         return Mathf.Max(0, currentLevelInfo.turns - currentTurn);
+    }
+    
+    /// <summary>
+    /// 记录从chest（敌人）获得的金钱（用于gold关卡统计）
+    /// </summary>
+    public void RecordGoldFromChest(int gold)
+    {
+        if (currentLevelInfo != null && currentLevelInfo.type == "gold")
+        {
+            goldFromChests += gold;
+        }
     }
     
     /// <summary>
@@ -386,11 +408,49 @@ public class MainGameManager : Singleton<MainGameManager>
 
         // 初始化回合计数（用于奖励关卡）
         currentTurn = 0;
+        
+        // 重置从chest获得的金钱计数
+        goldFromChests = 0;
 
         currentState = GameState.PlayerTurn;
         
         // 每回合开始时恢复所有shield敌人的盾牌
         ResetAllEnemyShields();
+        
+        // 显示关卡开始toast
+        ShowLevelStartToast();
+    }
+    
+    /// <summary>
+    /// 显示关卡开始toast
+    /// </summary>
+    private void ShowLevelStartToast()
+    {
+        if (currentLevelInfo == null || ToastManager.Instance == null)
+            return;
+        
+        string message = "";
+        string type = currentLevelInfo.type != null ? currentLevelInfo.type.ToLower() : "";
+        
+        switch (type)
+        {
+            case "gold":
+                int turns = currentLevelInfo.turns > 0 ? currentLevelInfo.turns : 0;
+                message = $"Destroy chests to collect gold in {turns} turns!";
+                break;
+            case "boss":
+                message = "Defeat the boss to win!";
+                break;
+            case "normal":
+            default:
+                message = "Eliminate all enemies to win!";
+                break;
+        }
+        
+        if (!string.IsNullOrEmpty(message))
+        {
+            ToastManager.Instance.ShowToast(message);
+        }
     }
 
     private void Update()
@@ -2445,29 +2505,33 @@ public class MainGameManager : Singleton<MainGameManager>
         currentState = GameState.LevelComplete;
         isProcessing = true;
 
-        // 掉落gold（使用当前玩家等级对应的关卡信息）
-        if (LevelManager.Instance != null && PlayerManager.Instance != null && CSVLoader.Instance != null)
+        int totalGoldEarned = 0;
+        int levelGold = 0;
+        
+        // 掉落gold（使用当前关卡信息）
+        if (currentLevelInfo != null && currentLevelInfo.gold > 0 && PlayerManager.Instance != null)
         {
-            // 查找当前玩家等级对应的关卡信息
-            LevelInfo levelInfo = null;
-            if (CSVLoader.Instance.levelInfoMap != null)
-            {
-                // 查找匹配玩家等级的关卡
-                foreach (var kvp in CSVLoader.Instance.levelInfoMap)
-                {
-                    if (kvp.Value.level == playerLevel)
-                    {
-                        levelInfo = kvp.Value;
-                        break;
-                    }
-                }
-            }
-            
-            if (levelInfo != null && levelInfo.gold > 0)
-            {
-                PlayerManager.Instance.AddGold(levelInfo.gold);
-                Debug.Log($"关卡完成，获得 {levelInfo.gold} gold");
-            }
+            PlayerManager.Instance.AddGold(currentLevelInfo.gold);
+            levelGold = currentLevelInfo.gold;
+            totalGoldEarned += currentLevelInfo.gold;
+            Debug.Log($"关卡完成，获得 {currentLevelInfo.gold} gold");
+        }
+        
+        // 如果是gold关卡，添加从chest获得的金钱
+        if (currentLevelInfo != null && currentLevelInfo.type == "gold" && goldFromChests > 0)
+        {
+            totalGoldEarned += goldFromChests;
+        }
+        
+        // 显示获得的金钱toast
+        if (totalGoldEarned > 0 && ToastManager.Instance != null)
+        {
+            string message = $"Earned {totalGoldEarned} gold!";
+            // if (currentLevelInfo != null && currentLevelInfo.type == "gold" && goldFromChests > 0)
+            // {
+            //     message = $"Earned {totalGoldEarned} gold! ({levelGold} from level + {goldFromChests} from chests)";
+            // }
+            ToastManager.Instance.ShowToast(message);
         }
 
         // 关闭技能显示

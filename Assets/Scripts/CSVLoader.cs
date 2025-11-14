@@ -52,6 +52,7 @@ public class LevelInfo
     public string bossIdentifier;
     public bool hasEvent;
     public int turns;
+    public string type;
 }
 public class CSVLoader : Singleton<CSVLoader>
 {

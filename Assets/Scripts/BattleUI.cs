@@ -89,12 +89,25 @@ public class BattleUI : MonoBehaviour
         
         damageText.text = $"Wave Damage: 20";
 
-        // 更新剩余敌人显示
-        if (enemyCountText != null && enemyManager != null)
+        // 更新剩余敌人显示（只在normal模式下显示）
+        if (enemyCountText != null && enemyManager != null && mainGameManager != null)
         {
-            int remaining = enemyManager.GetRemainingEnemyCount();
-            int total = enemyManager.GetTotalEnemyCount();
-            enemyCountText.text = $"Enemies: {remaining}/{total}";
+            // 获取当前关卡类型
+            LevelInfo currentLevelInfo = mainGameManager.GetCurrentLevelInfo();
+            string levelType = currentLevelInfo != null && currentLevelInfo.type != null ? currentLevelInfo.type.ToLower() : "normal";
+            
+            // 只在normal模式下显示
+            if (levelType == "normal")
+            {
+                int remaining = enemyManager.GetRemainingEnemyCount();
+                int total = enemyManager.GetTotalEnemyCount();
+                enemyCountText.text = $"Enemies: {remaining}/{total}";
+                enemyCountText.gameObject.SetActive(true);
+            }
+            else
+            {
+                enemyCountText.gameObject.SetActive(false);
+            }
         }
 
         // 更新金币显示
