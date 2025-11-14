@@ -1,0 +1,31 @@
+{
+    "name": "CFXRDemo",
+    "rootNamespace": "",
+    "references": [
+        "GUID:785156d0baf9e564e92265c9169511bb",
+        "GUID:fb9ff7b799c73af479a69874581439d3",
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95",
+        "GUID:15fc0a57446b3144c949da3e2b9737a9",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.universal",
+            "expression": "12.0.0",
+            "define": "CFXR_URP_INSTALLED"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "CFXR_NEW_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}

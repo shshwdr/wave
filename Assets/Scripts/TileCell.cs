@@ -31,6 +31,9 @@ public class TileCell : MonoBehaviour
     private Tween bounceTween; // 当前的弹动动画
     private Vector3 originalWorldPosition; // 原始世界位置
 
+    [Header("生成效果")]
+    [SerializeField] private GameObject spawnEffect; // 生成效果对象
+
     
     public TileColor Color => currentColor;
     public Vector2Int GridPosition => gridPosition;
@@ -150,6 +153,33 @@ public class TileCell : MonoBehaviour
         // 取消之前的动画
         transform.DOKill();
         
+        // 处理spawnEffect：移动到外层并激活，1秒后移除
+        if (spawnEffect != null)
+        {
+            // 保存spawnEffect的世界位置
+            Vector3 spawnEffectWorldPos = spawnEffect.transform.position;
+            Quaternion spawnEffectWorldRot = spawnEffect.transform.rotation;
+            
+            // 将spawnEffect移动到tileCell的外层（父对象）
+            spawnEffect.transform.SetParent(transform.parent);
+            
+            // 保持世界位置和旋转不变
+            spawnEffect.transform.position = spawnEffectWorldPos;
+            spawnEffect.transform.rotation = spawnEffectWorldRot;
+            
+            // 激活spawnEffect
+            spawnEffect.SetActive(true);
+            
+            // 1秒后移除spawnEffect
+            DOVirtual.DelayedCall(1f, () =>
+            {
+                if (spawnEffect != null)
+                {
+                    Destroy(spawnEffect);
+                }
+            });
+        }
+        
         // 提高sort order，让消除的方块显示在其他方块上方
         if (spriteRenderer != null)
         {
@@ -160,19 +190,19 @@ public class TileCell : MonoBehaviour
         Sequence destroySequence = DOTween.Sequence();
         
         // 第一步：快速放大到1.5倍（0.1秒）
-        destroySequence.Append(transform.DOScale(Vector3.one * 1.5f, 0.1f)
+        destroySequence.Append(transform.DOScale(Vector3.one * 1.5f, 0.2f)
             .SetEase(Ease.OutQuad));
         
         // 第二步：同时旋转360度并缩小到0（0.2秒）
-        destroySequence.Append(transform.DORotate(new Vector3(0, 0, 360f), 0.2f, RotateMode.FastBeyond360)
+        destroySequence.Append(transform.DORotate(new Vector3(0, 0, 360f), 0.3f, RotateMode.FastBeyond360)
             .SetEase(Ease.InBack));
-        destroySequence.Join(transform.DOScale(Vector3.zero, 0.2f)
+        destroySequence.Join(transform.DOScale(Vector3.zero, 0.3f)
             .SetEase(Ease.InBack));
         
         // 如果有spriteRenderer，添加淡出效果
         if (spriteRenderer != null)
         {
-            destroySequence.Join(spriteRenderer.DOFade(0f, 0.2f)
+            destroySequence.Join(spriteRenderer.DOFade(0f, 0.3f)
                 .SetEase(Ease.InQuad));
         }
         

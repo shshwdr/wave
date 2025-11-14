@@ -3,7 +3,7 @@ normal,Drifter,No special ability.,50,10,10,5,1,1,,,,1
 hp,Tallhorn,"High HP, harder to defeat.",200,20,20,5,1,1,,,,1
 archer,Slinger,Can perform ranged attacks.,80,10,5,5,1,4,,,,1
 speed,Hoppit,Moves faster than normal enemies.,70,10,5,5,2,1,,,,1
-healer,healer,Can heal nearby allies each turn.,100,10,5,5,1,1,heal,2,2,1
+healer,healer,Can heal nearby allies each turn.,80,10,5,5,1,1,heal,2,2,1
 fog,Puffmo,Creates fog that hides tiles.,120,10,10,5,1,1,createFog,2,2,1
 dirty,dirty,"Covers tiles with dirt, making them uncontrollable.",120,10,10,5,1,1,dirtyWater,2,2,1
 summon,Swamp Herald,Can summon smaller minions to assist in battle.,200,10,10,5,1,1,summon|normal,1,2,1
