@@ -28,6 +28,8 @@ public class TileCell : MonoBehaviour
     private bool hasFog = false; // 是否有fog
     private bool isDirty = false; // 是否有dirt
     private bool isDisabled = false; // 是否被禁用
+    private Tween bounceTween; // 当前的弹动动画
+    private Vector3 originalWorldPosition; // 原始世界位置
 
     
     public TileColor Color => currentColor;
@@ -143,9 +145,38 @@ public class TileCell : MonoBehaviour
     /// <summary>
     /// 消除动画
     /// </summary>
-    public Tween DestroyAnimation(float duration = 0.2f)
+    public Tween DestroyAnimation(float duration = 0.3f)
     {
-        return transform.DOScale(Vector3.zero, duration).SetEase(Ease.InBack);
+        // 取消之前的动画
+        transform.DOKill();
+        
+        // 提高sort order，让消除的方块显示在其他方块上方
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.sortingOrder += 1;
+        }
+        
+        // 创建动画序列：先放大 -> 旋转 -> 缩小消失
+        Sequence destroySequence = DOTween.Sequence();
+        
+        // 第一步：快速放大到1.5倍（0.1秒）
+        destroySequence.Append(transform.DOScale(Vector3.one * 1.5f, 0.1f)
+            .SetEase(Ease.OutQuad));
+        
+        // 第二步：同时旋转360度并缩小到0（0.2秒）
+        destroySequence.Append(transform.DORotate(new Vector3(0, 0, 360f), 0.2f, RotateMode.FastBeyond360)
+            .SetEase(Ease.InBack));
+        destroySequence.Join(transform.DOScale(Vector3.zero, 0.2f)
+            .SetEase(Ease.InBack));
+        
+        // 如果有spriteRenderer，添加淡出效果
+        if (spriteRenderer != null)
+        {
+            destroySequence.Join(spriteRenderer.DOFade(0f, 0.2f)
+                .SetEase(Ease.InQuad));
+        }
+        
+        return destroySequence;
     }
 
     /// <summary>
@@ -295,6 +326,55 @@ public class TileCell : MonoBehaviour
         
         // 创建一个简单的矩形sprite（如果没有sprite，使用颜色填充）
         disableObject = disable;
+    }
+    
+    /// <summary>
+    /// 敌人踩到方块时的弹动效果：向下弹动一下然后恢复原位置
+    /// </summary>
+    public void BounceWhenStepped()
+    {
+        // 取消之前的弹动动画
+        if (bounceTween != null && bounceTween.IsActive())
+        {
+            bounceTween.Kill();
+        }
+        
+        // 记录当前世界位置作为原始位置
+        originalWorldPosition = transform.position;
+        
+        // 向下弹动的距离
+        float bounceDownDistance = 0.2f;
+        float bounceDuration = 0.3f;
+        
+        // 创建弹动序列：向下 -> 向上恢复
+        Sequence bounceSequence = DOTween.Sequence();
+        
+        // 向下弹动
+        bounceSequence.Append(transform.DOMoveY(originalWorldPosition.y - bounceDownDistance, bounceDuration * 0.4f)
+            .SetEase(Ease.OutQuad));
+        
+        // 向上恢复（带一点弹性）
+        bounceSequence.Append(transform.DOMoveY(originalWorldPosition.y, bounceDuration * 0.6f)
+            .SetEase(Ease.OutBounce));
+        
+        bounceSequence.OnComplete(() =>
+        {
+            // 确保最终位置准确
+            transform.position = originalWorldPosition;
+            bounceTween = null;
+        });
+        
+        bounceTween = bounceSequence;
+    }
+    
+    private void OnDestroy()
+    {
+        // 清理动画
+        if (bounceTween != null)
+        {
+            bounceTween.Kill();
+        }
+        transform.DOKill();
     }
 }
 

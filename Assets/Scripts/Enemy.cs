@@ -393,7 +393,19 @@ public class Enemy : MonoBehaviour
         
         // 移动到新位置
         transform.DOMove(targetWorldPos, knockbackDuration)
-            .SetEase(Ease.OutQuad);
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() =>
+            {
+                // 敌人踩到方块时，触发方块弹动效果
+                if (boardManager != null)
+                {
+                    TileCell tile = boardManager.GetTile(gridPosition);
+                    if (tile != null)
+                    {
+                        tile.BounceWhenStepped();
+                    }
+                }
+            });
         
         // 如果有hitTakeDamage技能，对自己和碰撞的敌人造成伤害
         if (SkillManager.Instance != null)
@@ -567,10 +579,20 @@ public class Enemy : MonoBehaviour
         // 播放移动动画（移动过程中）
         TryPlayMoveAnimation();
         
-        // 移动完成后切换到idle
+        // 移动完成后切换到idle，并触发方块弹动效果
         moveSequence.OnComplete(() =>
         {
             TryPlayIdleAnimation();
+            
+            // 敌人踩到方块时，触发方块弹动效果
+            if (boardManager != null)
+            {
+                TileCell tile = boardManager.GetTile(gridPosition);
+                if (tile != null)
+                {
+                    tile.BounceWhenStepped();
+                }
+            }
         });
     }
     
