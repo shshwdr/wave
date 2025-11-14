@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 一场战斗的游戏控制 - 回合制战斗系统
 /// </summary>
-public class MainGameManager : MonoBehaviour
+public class MainGameManager : Singleton<MainGameManager>
 {
     [Header("引用")]
     [SerializeField] private BoardManager boardManager;
@@ -45,6 +45,9 @@ public class MainGameManager : MonoBehaviour
     [SerializeField] public GameObject allyPrefab;
     [SerializeField] public GameObject allyProjectile;
     [SerializeField] public GameObject damagePrefab;
+    
+    
+    public List<Sprite> tileSprites;
     
     private enum GameState
     {
@@ -507,6 +510,9 @@ public class MainGameManager : MonoBehaviour
                     isDragging = true;
                     selectedTilePos = gridPos;
                     
+                    // 清除所有高亮效果，只保留showFrame
+                    ClearHighlights();
+                    
                     // 显示开始格子的框
                     TileCell startTile = boardManager.GetTile(gridPos);
                     if (startTile != null)
@@ -584,6 +590,17 @@ public class MainGameManager : MonoBehaviour
                         hoverTile.ShowFrame(false);
                     }
                 }
+                
+                // 延迟后在鼠标当前位置恢复highlight效果
+                Vector2Int finalGridPos = gridPos; // 保存最终位置
+                DOVirtual.DelayedCall(0.2f, () =>
+                {
+                    if (boardManager != null && boardManager.IsValidPosition(finalGridPos))
+                    {
+                        UpdateHighlightTiles(finalGridPos);
+                        lastHighlightPos = finalGridPos;
+                    }
+                });
                 
                 // 如果选中了两个不同的格子，交换位置
                 if (boardManager != null && 
@@ -682,8 +699,8 @@ public class MainGameManager : MonoBehaviour
         Vector2Int gridPos = GetMouseGridPosition();
         if (boardManager != null && boardManager.IsValidPosition(gridPos))
         {
-            // 如果鼠标位置改变了，更新高亮和技能显示
-            if (gridPos != lastHighlightPos && !waitingForSecondSwap)
+            // 如果鼠标位置改变了，更新高亮和技能显示（拖动时不更新高亮）
+            if (gridPos != lastHighlightPos && !waitingForSecondSwap && !isDragging)
             {
                 UpdateHighlightTiles(gridPos);
                 UpdateSkillDisplay(gridPos);

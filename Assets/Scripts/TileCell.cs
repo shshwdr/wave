@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
+using UnityEngine.UI;
 
 /// <summary>
 /// 棋盘格子类
@@ -10,6 +12,9 @@ public class TileCell : MonoBehaviour
     public SpriteRenderer spriteRenderer;
     [Header("框显示")]
     public GameObject frameObject; // 框的GameObject（可以是一个带SpriteRenderer的子对象）
+
+    public SpriteRenderer note;
+    public GameObject selectHighlight;
     [Header("Fog和Dirt")]
     public GameObject fogObject; // fog的GameObject
     public GameObject dirtObject; // dirt的GameObject
@@ -23,6 +28,7 @@ public class TileCell : MonoBehaviour
     private bool hasFog = false; // 是否有fog
     private bool isDirty = false; // 是否有dirt
     private bool isDisabled = false; // 是否被禁用
+
     
     public TileColor Color => currentColor;
     public Vector2Int GridPosition => gridPosition;
@@ -72,10 +78,15 @@ public class TileCell : MonoBehaviour
         if (spriteRenderer != null)
         {
             originalColor = TileColorUtil.GetUnityColor(currentColor);
+            selectHighlight.GetComponent<Image>().color = originalColor*2;
+            spriteRenderer.color = originalColor;
             if (!isHighlighted)
             {
-                spriteRenderer.color = originalColor;
+                selectHighlight.SetActive(false);
+                //spriteRenderer.color = originalColor;
             }
+            
+            //note.sprite = MainGameManager.Instance.tileSprites[(int)currentColor];
         }
     }
 
@@ -89,11 +100,15 @@ public class TileCell : MonoBehaviour
         {
             if (highlight)
             {
-                spriteRenderer.color = originalColor*2/3; // 高亮时显示为白色
+                
+                selectHighlight.SetActive(true);
+               // spriteRenderer.color = originalColor*2/3; // 高亮时显示为白色
             }
             else
             {
-                spriteRenderer.color = originalColor;
+                
+                selectHighlight.SetActive(false);
+                //spriteRenderer.color = originalColor;
             }
         }
     }
