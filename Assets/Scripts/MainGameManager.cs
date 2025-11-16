@@ -46,6 +46,8 @@ public class MainGameManager : Singleton<MainGameManager>
     [SerializeField] public GameObject allyProjectile;
     [SerializeField] public GameObject damagePrefab;
     
+    [Header("Puzzle设置")]
+    public bool isPublish = false; // 发布模式，禁用所有编辑快捷键
     
     public List<Sprite> tileSprites;
     
@@ -55,7 +57,9 @@ public class MainGameManager : Singleton<MainGameManager>
         EnemyTurn,
         Processing,        // 处理中（波浪攻击、敌人移动等）
         GameOver,
-        LevelComplete      // 关卡完成
+        LevelComplete,     // 关卡完成
+        PuzzleEdit,        // Puzzle编辑模式
+        PuzzlePlay         // Puzzle游戏模式
     }
 
     private GameState currentState = GameState.PlayerTurn;
@@ -88,6 +92,10 @@ public class MainGameManager : Singleton<MainGameManager>
     
     // 跟踪gold关卡中从chest（敌人）获得的金钱
     private int goldFromChests = 0;
+    
+    // Puzzle编辑模式相关
+    private bool isPuzzleEditMode = false;
+    private int[,] currentPuzzleData = null; // 当前编辑的puzzle数据（8x6）
     
     /// <summary>
     /// 获取当前关卡信息
@@ -441,6 +449,10 @@ public class MainGameManager : Singleton<MainGameManager>
             case "boss":
                 message = "Defeat the boss to win!";
                 break;
+            case "puzzle":
+                int puzzleTurns = currentLevelInfo.turns > 0 ? currentLevelInfo.turns : 0;
+                message = $"Clear all tiles in {puzzleTurns} turns!";
+                break;
             case "normal":
             default:
                 message = "Eliminate all enemies to win!";
@@ -462,6 +474,12 @@ public class MainGameManager : Singleton<MainGameManager>
         if (currentState == GameState.GameOver)
             return;
 
+        // 处理编辑模式快捷键（只在非发布模式下）
+        if (!isPublish)
+        {
+            HandleEditModeInput();
+        }
+
         // 敌人攻击逻辑现在由Enemy.TakeAction()处理，不再需要在这里检查
 
         // 检查玩家是否死亡
@@ -471,9 +489,18 @@ public class MainGameManager : Singleton<MainGameManager>
             return;
         }
 
-
+        // 编辑模式或puzzle游戏模式
+        if (currentState == GameState.PuzzleEdit)
+        {
+            HandlePuzzleEditInput();
+        }
+        else if (currentState == GameState.PuzzlePlay)
+        {
+            // Puzzle游戏模式：只能右键消除，禁用左键移动
+            HandlePuzzlePlayInput();
+        }
         // 玩家回合 - 处理输入和鼠标悬停（只有在没有处理中时）
-        if (currentState == GameState.PlayerTurn && !isProcessing)
+        else if (currentState == GameState.PlayerTurn && !isProcessing)
         {
             HandlePlayerInput();
             
@@ -1383,9 +1410,11 @@ public class MainGameManager : Singleton<MainGameManager>
 
         // 立即应用重力（与波浪移动同时进行）
         // 等待一小段时间让消除动画完成，然后开始重力
+        // puzzle模式不生成新tiles
+        bool isPuzzleMode = currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle";
         DOVirtual.DelayedCall(0.3f, () =>
         {
-            boardManager.ApplyGravity();
+            boardManager.ApplyGravity(!isPuzzleMode);
         });
 
         // 不再在这里直接调用EndPlayerTurn
@@ -1792,13 +1821,24 @@ public class MainGameManager : Singleton<MainGameManager>
             return;
         }
         
-        // 所有wave group都完成了，进入敌人回合
+        // 所有wave group都完成了
         // 重置noAttackNoCost触发标志（新的玩家回合）
         noAttackNoCostTriggeredThisTurn = false;
         
         DOVirtual.DelayedCall(0.1f, () =>
         {
             isProcessing = false;
+            
+            // 检查puzzle模式：如果所有tiles都消除了，完成关卡
+            if (currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle")
+            {
+                if (CheckAllTilesCleared())
+                {
+                    CompleteLevel();
+                    return;
+                }
+            }
+            
             EndPlayerTurn();
         });
     }
@@ -2682,6 +2722,391 @@ public class MainGameManager : Singleton<MainGameManager>
     public void Restart()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+    
+    /// <summary>
+    /// 处理编辑模式快捷键输入（x进入编辑，s保存，l加载，p进入puzzle游戏）
+    /// </summary>
+    private void HandleEditModeInput()
+    {
+        // X键：进入编辑模式
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            EnterPuzzleEditMode();
+        }
+        
+        // S键：保存当前puzzle
+        if (Input.GetKeyDown(KeyCode.S) && isPuzzleEditMode)
+        {
+            SaveCurrentPuzzle();
+        }
+        
+        // L键：加载第一个puzzle
+        if (Input.GetKeyDown(KeyCode.L) && isPuzzleEditMode)
+        {
+            LoadFirstPuzzle();
+        }
+        
+        // P键：进入puzzle游戏模式
+        if (Input.GetKeyDown(KeyCode.P) && isPuzzleEditMode)
+        {
+            EnterPuzzlePlayMode();
+        }
+    }
+    
+    /// <summary>
+    /// 进入puzzle编辑模式
+    /// </summary>
+    private void EnterPuzzleEditMode()
+    {
+        isPuzzleEditMode = true;
+        currentState = GameState.PuzzleEdit;
+        isProcessing = false;
+        
+        // 清除所有敌人
+        if (enemyManager != null)
+        {
+            enemyManager.ClearAllEnemies();
+        }
+        if (currentBoss != null)
+        {
+            Destroy(currentBoss.gameObject);
+            currentBoss = null;
+        }
+        
+        // 初始化puzzle数据（8x6）
+        currentPuzzleData = new int[8, 6];
+        
+        // 将所有格子变为黑色（删除所有格子，颜色值-1表示黑色/空）
+        if (boardManager != null)
+        {
+            for (int x = 0; x < 8; x++)
+            {
+                for (int y = 0; y < 6; y++)
+                {
+                    TileCell tile = boardManager.GetTile(new Vector2Int(x, y));
+                    if (tile != null)
+                    {
+                        // 删除格子
+                        Destroy(tile.gameObject);
+                        boardManager.SetTile(new Vector2Int(x, y), null);
+                    }
+                    currentPuzzleData[x, y] = -1; // -1表示空/黑色
+                }
+            }
+        }
+        
+        Debug.Log("进入Puzzle编辑模式");
+    }
+    
+    /// <summary>
+    /// 处理puzzle编辑模式输入
+    /// </summary>
+    private void HandlePuzzleEditInput()
+    {
+        if (boardManager == null || currentPuzzleData == null)
+            return;
+        
+        Vector2Int gridPos = GetMouseGridPosition();
+        if (!boardManager.IsValidPosition(gridPos))
+            return;
+        
+        // 检查是否按住数字键1-4
+        int colorIndex = -1;
+        if (Input.GetKey(KeyCode.Alpha1) || Input.GetKey(KeyCode.Keypad1))
+            colorIndex = 0;
+        else if (Input.GetKey(KeyCode.Alpha2) || Input.GetKey(KeyCode.Keypad2))
+            colorIndex = 1;
+        else if (Input.GetKey(KeyCode.Alpha3) || Input.GetKey(KeyCode.Keypad3))
+            colorIndex = 2;
+        else if (Input.GetKey(KeyCode.Alpha4) || Input.GetKey(KeyCode.Keypad4))
+            colorIndex = 3;
+        
+        if (colorIndex >= 0)
+        {
+            // 左键：设置格子颜色
+            if (Input.GetMouseButtonDown(0))
+            {
+                SetTileColor(gridPos, colorIndex);
+            }
+            // 右键：插入格子（向右挤）
+            else if (Input.GetMouseButtonDown(1))
+            {
+                InsertTileAtPosition(gridPos, colorIndex);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 设置格子颜色
+    /// </summary>
+    private void SetTileColor(Vector2Int gridPos, int colorIndex)
+    {
+        if (boardManager == null || currentPuzzleData == null)
+            return;
+        
+        TileCell tile = boardManager.GetTile(gridPos);
+        if (tile == null)
+        {
+            // 如果格子不存在，创建一个
+            if (boardManager.TileCellPrefab != null)
+            {
+                GameObject tileObj = Instantiate(boardManager.TileCellPrefab, boardManager.BoardParent);
+                tile = tileObj.GetComponent<TileCell>();
+                if (tile == null)
+                {
+                    tile = tileObj.AddComponent<TileCell>();
+                }
+                
+                Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
+                tileObj.transform.position = worldPos;
+                tile.Init((TileColor)colorIndex, gridPos);
+                boardManager.SetTile(gridPos, tile);
+            }
+        }
+        else
+        {
+            tile.SetColor((TileColor)colorIndex);
+        }
+        
+        currentPuzzleData[gridPos.x, gridPos.y] = colorIndex;
+    }
+    
+    /// <summary>
+    /// 在指定位置插入格子（向右挤）
+    /// </summary>
+    private void InsertTileAtPosition(Vector2Int gridPos, int colorIndex)
+    {
+        if (boardManager == null || currentPuzzleData == null)
+            return;
+        
+        // 检查该行是否已满
+        bool isRowFull = true;
+        for (int x = 0; x < 8; x++)
+        {
+            if (boardManager.GetTile(new Vector2Int(x, gridPos.y)) == null)
+            {
+                isRowFull = false;
+                break;
+            }
+        }
+        
+        if (isRowFull)
+        {
+            Debug.Log("该行已满，无法插入");
+            return;
+        }
+        
+        // 从右往左移动所有格子（从插入位置右侧的所有格子都向右移动）
+        for (int x = 7; x > gridPos.x; x--)
+        {
+            Vector2Int sourcePos = new Vector2Int(x - 1, gridPos.y);
+            TileCell tile = boardManager.GetTile(sourcePos);
+            
+            Vector2Int newPos = new Vector2Int(x, gridPos.y);
+            
+            // 移动tile到新位置
+            if (tile != null)
+            {
+                boardManager.SetTile(newPos, tile);
+                boardManager.SetTile(sourcePos, null);
+                tile.SetGridPosition(newPos);
+                
+                Vector3 targetPos = boardManager.GridToWorldPosition(newPos);
+                tile.FallAnimation(targetPos);
+            }
+            else
+            {
+                // 即使tile为null，也要更新puzzle数据
+                boardManager.SetTile(newPos, null);
+            }
+            
+            // 更新puzzle数据
+            currentPuzzleData[x, gridPos.y] = currentPuzzleData[x - 1, gridPos.y];
+        }
+        
+        // 在指定位置创建新格子
+        SetTileColor(gridPos, colorIndex);
+    }
+    
+    /// <summary>
+    /// 保存当前puzzle
+    /// </summary>
+    private void SaveCurrentPuzzle()
+    {
+        if (currentPuzzleData == null || PuzzleManager.Instance == null)
+            return;
+        
+        PuzzleManager.Instance.SavePuzzle(currentPuzzleData);
+        Debug.Log("Puzzle已保存");
+    }
+    
+    /// <summary>
+    /// 加载第一个puzzle
+    /// </summary>
+    private void LoadFirstPuzzle()
+    {
+        if (PuzzleManager.Instance == null || boardManager == null)
+            return;
+        
+        int[,] puzzleData = PuzzleManager.Instance.LoadFirstPuzzle();
+        if (puzzleData == null)
+            return;
+        
+        currentPuzzleData = puzzleData;
+        
+        // 清空棋盘
+        boardManager.ClearBoard();
+        boardManager.InitializeBoard();
+        
+        // 根据puzzle数据生成tiles
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 6; y++)
+            {
+                int colorValue = puzzleData[x, y];
+                if (colorValue >= 0 && colorValue < 4) // 有效的颜色值
+                {
+                    GameObject tileObj = Instantiate(boardManager.TileCellPrefab, boardManager.BoardParent);
+                    TileCell tile = tileObj.GetComponent<TileCell>();
+                    if (tile == null)
+                    {
+                        tile = tileObj.AddComponent<TileCell>();
+                    }
+                    
+                    Vector3 worldPos = boardManager.GridToWorldPosition(new Vector2Int(x, y));
+                    tileObj.transform.position = worldPos;
+                    tile.Init((TileColor)colorValue, new Vector2Int(x, y));
+                    boardManager.SetTile(new Vector2Int(x, y), tile);
+                }
+            }
+        }
+        
+        Debug.Log("Puzzle已加载");
+    }
+    
+    /// <summary>
+    /// 进入puzzle游戏模式
+    /// </summary>
+    private void EnterPuzzlePlayMode()
+    {
+        if (currentPuzzleData == null)
+        {
+            Debug.LogWarning("没有puzzle数据，无法进入游戏模式");
+            return;
+        }
+        
+        isPuzzleEditMode = false;
+        currentState = GameState.PuzzlePlay;
+        isProcessing = false;
+        
+        // 重置回合计数
+        currentTurn = 0;
+        
+        Debug.Log("进入Puzzle游戏模式");
+    }
+    
+    /// <summary>
+    /// 处理puzzle游戏模式输入（只能右键消除，禁用左键移动）
+    /// </summary>
+    private void HandlePuzzlePlayInput()
+    {
+        if (isProcessing)
+            return;
+        
+        // 只允许右键消除
+        if (Input.GetMouseButtonDown(1))
+        {
+            Vector2Int gridPos = GetMouseGridPosition();
+            if (boardManager != null && boardManager.IsValidPosition(gridPos))
+            {
+                ClearHighlights();
+                EliminateConnectedTiles(gridPos);
+            }
+        }
+        
+        // 禁用左键移动和交换
+        // 可以保留鼠标悬停高亮
+        HandleMouseHover();
+    }
+    
+    /// <summary>
+    /// 加载puzzle关卡
+    /// </summary>
+    private void LoadPuzzleLevel()
+    {
+        if (currentLevelInfo == null || string.IsNullOrEmpty(currentLevelInfo.typeIdentifier))
+        {
+            Debug.LogWarning("Puzzle关卡缺少typeIdentifier");
+            return;
+        }
+        
+        if (PuzzleManager.Instance == null || boardManager == null)
+            return;
+        
+        // 加载puzzle数据
+        int[,] puzzleData = PuzzleManager.Instance.LoadPuzzle(currentLevelInfo.typeIdentifier);
+        if (puzzleData == null)
+        {
+            Debug.LogWarning($"无法加载puzzle: {currentLevelInfo.typeIdentifier}");
+            return;
+        }
+        
+        // 清空棋盘
+        boardManager.ClearBoard();
+        boardManager.InitializeBoard();
+        
+        // 根据puzzle数据生成tiles
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 6; y++)
+            {
+                int colorValue = puzzleData[x, y];
+                if (colorValue >= 0 && colorValue < 4) // 有效的颜色值
+                {
+                    GameObject tileObj = Instantiate(boardManager.TileCellPrefab, boardManager.BoardParent);
+                    TileCell tile = tileObj.GetComponent<TileCell>();
+                    if (tile == null)
+                    {
+                        tile = tileObj.AddComponent<TileCell>();
+                    }
+                    
+                    Vector3 worldPos = boardManager.GridToWorldPosition(new Vector2Int(x, y));
+                    tileObj.transform.position = worldPos;
+                    tile.Init((TileColor)colorValue, new Vector2Int(x, y));
+                    boardManager.SetTile(new Vector2Int(x, y), tile);
+                }
+            }
+        }
+        
+        // 不生成敌人
+        if (enemyManager != null)
+        {
+            enemyManager.ClearAllEnemies();
+        }
+    }
+    
+    /// <summary>
+    /// 检查所有tiles是否都已清除（puzzle模式）
+    /// </summary>
+    private bool CheckAllTilesCleared()
+    {
+        if (boardManager == null)
+            return false;
+        
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 6; y++)
+            {
+                TileCell tile = boardManager.GetTile(new Vector2Int(x, y));
+                if (tile != null)
+                {
+                    return false; // 还有tile存在
+                }
+            }
+        }
+        
+        return true; // 所有tiles都已清除
     }
 }
 

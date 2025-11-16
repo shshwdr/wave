@@ -182,6 +182,27 @@ public class BoardManager : MonoBehaviour
         }
         return null;
     }
+    
+    /// <summary>
+    /// 设置格子（用于编辑模式）
+    /// </summary>
+    public void SetTile(Vector2Int gridPos, TileCell tile)
+    {
+        if (IsValidPosition(gridPos))
+        {
+            board[gridPos.x, gridPos.y] = tile;
+        }
+    }
+    
+    /// <summary>
+    /// 获取tileCellPrefab（用于编辑模式）
+    /// </summary>
+    public GameObject TileCellPrefab => tileCellPrefab;
+    
+    /// <summary>
+    /// 获取boardParent（用于编辑模式）
+    /// </summary>
+    public Transform BoardParent => boardParent;
 
     /// <summary>
     /// 检查位置是否有效
@@ -314,7 +335,7 @@ public class BoardManager : MonoBehaviour
     /// <summary>
     /// 让所有格子从右往左掉落填补空缺
     /// </summary>
-    public void ApplyGravity()
+    public void ApplyGravity(bool generateNewTiles = true)
     {
         // 按行处理，每行从右往左移动填补空位
         for (int y = 0; y < boardHeight; y++)
@@ -341,32 +362,35 @@ public class BoardManager : MonoBehaviour
                 }
             }
 
-            // 填充空位（在右侧生成新格子）
-            for (int x = writeIndex; x < boardWidth; x++)
+            // 填充空位（在右侧生成新格子）- puzzle模式不生成新格子
+            if (generateNewTiles)
             {
-                if (board[x, y] == null && tileCellPrefab != null)
+                for (int x = writeIndex; x < boardWidth; x++)
                 {
-                    GameObject tileObj = Instantiate(tileCellPrefab, boardParent);
-                    TileCell tile = tileObj.GetComponent<TileCell>();
-                    if (tile == null)
+                    if (board[x, y] == null && tileCellPrefab != null)
                     {
-                        tile = tileObj.AddComponent<TileCell>();
-                    }
+                        GameObject tileObj = Instantiate(tileCellPrefab, boardParent);
+                        TileCell tile = tileObj.GetComponent<TileCell>();
+                        if (tile == null)
+                        {
+                            tile = tileObj.AddComponent<TileCell>();
+                        }
 
-                    // 根据权重随机颜色
-                    TileColor randomColor = GetWeightedRandomColor();
-                    Vector2Int gridPos = new Vector2Int(x, y);
-                    
-                    // 从右侧生成（动画效果）
-                    Vector3 startPos = GridToWorldPosition(new Vector2Int(boardWidth, y));
-                    Vector3 targetPos = GridToWorldPosition(gridPos);
-                    tileObj.transform.position = startPos;
-                    
-                    tile.Init(randomColor, gridPos);
-                    board[x, y] = tile;
-                    
-                    // 掉落动画（向左移动）
-                    tile.FallAnimation(targetPos);
+                        // 根据权重随机颜色
+                        TileColor randomColor = GetWeightedRandomColor();
+                        Vector2Int gridPos = new Vector2Int(x, y);
+                        
+                        // 从右侧生成（动画效果）
+                        Vector3 startPos = GridToWorldPosition(new Vector2Int(boardWidth, y));
+                        Vector3 targetPos = GridToWorldPosition(gridPos);
+                        tileObj.transform.position = startPos;
+                        
+                        tile.Init(randomColor, gridPos);
+                        board[x, y] = tile;
+                        
+                        // 掉落动画（向左移动）
+                        tile.FallAnimation(targetPos);
+                    }
                 }
             }
         }

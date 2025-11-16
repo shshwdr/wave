@@ -374,6 +374,20 @@ public class Wave : MonoBehaviour
     /// </summary>
     private void ApplySkillEffects()
     {
+        // Puzzle模式下禁用所有技能
+        if (boardManager != null)
+        {
+            MainGameManager mainGameManager = FindObjectOfType<MainGameManager>();
+            if (mainGameManager != null)
+            {
+                LevelInfo levelInfo = mainGameManager.GetCurrentLevelInfo();
+                if (levelInfo != null && levelInfo.type != null && levelInfo.type.ToLower() == "puzzle")
+                {
+                    return; // Puzzle模式不应用技能
+                }
+            }
+        }
+        
         if (SkillManager.Instance == null || PlayerManager.Instance == null)
             return;
 

@@ -53,6 +53,7 @@ public class LevelInfo
     public bool hasEvent;
     public int turns;
     public string type;
+    public string typeIdentifier;
 }
 public class CSVLoader : Singleton<CSVLoader>
 {
