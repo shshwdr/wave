@@ -57,10 +57,10 @@ public class ShopSkillItem : MonoBehaviour
         if (skillInfo == null)
             return;
 
-        // 更新技能名称
+        // 更新技能名称（购买界面显示下一个等级）
         if (skillNameText != null)
         {
-            skillNameText.text = skillInfo.name;
+            skillNameText.text = SkillManager.Instance.GetSkillName(skillInfo.identifier, true);
         }
 
         // 更新技能描述

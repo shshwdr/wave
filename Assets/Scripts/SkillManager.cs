@@ -216,6 +216,56 @@ public class SkillManager : Singleton<SkillManager>
     }
 
     /// <summary>
+    /// 获取技能名字（根据等级格式化）
+    /// 1级：正常显示，2级：名字+，3级及以上：名字+2、名字+3等
+    /// </summary>
+    /// <param name="identifier">技能标识符</param>
+    /// <param name="useNextLevel">是否使用下一个等级（用于购买界面）</param>
+    public string GetSkillName(string identifier, bool useNextLevel = false)
+    {
+        if (!CSVLoader.Instance.cardInfoMap.ContainsKey(identifier))
+        {
+            return "";
+        }
+
+        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+        int level = GetSkillLevel(identifier);
+        
+        // 如果使用下一个等级（购买界面）
+        if (useNextLevel)
+        {
+            if (level == 0)
+            {
+                level = 1; // 未拥有，显示1级
+            }
+            else
+            {
+                level = level + 1; // 已拥有，显示下一个等级
+            }
+        }
+        
+        // 如果等级为0（未拥有且不使用下一个等级），显示1级
+        if (level == 0)
+        {
+            level = 1;
+        }
+        
+        // 根据等级格式化名字
+        if (level == 1)
+        {
+            return skillInfo.name; // 1级：正常显示
+        }
+        else if (level == 2)
+        {
+            return skillInfo.name + "+"; // 2级：名字+
+        }
+        else
+        {
+            return skillInfo.name + "+" + (level - 1).ToString(); // 3级及以上：名字+2、名字+3等
+        }
+    }
+
+    /// <summary>
     /// 获取技能描述（替换{0}为当前等级的值）
     /// </summary>
     public string GetSkillDescription(string identifier, bool showNext)
@@ -242,7 +292,7 @@ public class SkillManager : Singleton<SkillManager>
 
         if (string.IsNullOrEmpty(skillInfo.description))
         {
-            return skillInfo.name;
+            return GetSkillName(identifier, false);
         }
 
         // 替换{0}为当前等级的值

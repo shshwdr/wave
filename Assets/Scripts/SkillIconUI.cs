@@ -78,10 +78,10 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
 
         SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[skillIdentifier];
         
-        // 更新标题
+        // 更新标题（显示当前等级）
         if (titleText != null)
         {
-            titleText.text = skillInfo.name;
+            titleText.text = SkillManager.Instance.GetSkillName(skillIdentifier, false);
         }
 
         // TODO: 更新图标图片（如果有）

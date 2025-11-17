@@ -44,6 +44,7 @@ public class SkillSelectMenu : MenuBase
     private Action onConfirm; // 确认按钮的回调
     private Dictionary<string, SkillIconUI> skillIconMap = new Dictionary<string, SkillIconUI>(); // 技能identifier -> UI实例
     private List<GameObject> shopSkillItems = new List<GameObject>(); // 商店技能项列表
+    private int currentRefreshPrice = 1; // 当前刷新价格（每次进入商店重置为1）
 
     // 拖拽相关
     private SkillIconUI draggingIcon = null;
@@ -129,6 +130,10 @@ public class SkillSelectMenu : MenuBase
     public void ShowSkillSelection(Action onConfirmCallback = null)
     {
         onConfirm = onConfirmCallback;
+
+        // 重置刷新价格为1
+        currentRefreshPrice = 1;
+        UpdateRefreshButton();
 
         // 更新商店显示
         UpdateShop();
@@ -378,16 +383,44 @@ public class SkillSelectMenu : MenuBase
         if (PlayerManager.Instance == null)
             return;
 
-        // 消耗1 gold
-        if (!PlayerManager.Instance.ConsumeGold(1))
+        // 消耗当前价格的金币
+        if (!PlayerManager.Instance.ConsumeGold(currentRefreshPrice))
         {
             Debug.LogWarning("金币不足，无法刷新商店");
             return;
         }
 
+        // 增加刷新价格（最高为5）
+        if (currentRefreshPrice < 5)
+        {
+            currentRefreshPrice++;
+        }
+
         // 刷新商店
         UpdateShop();
         UpdateGoldDisplay();
+        UpdateRefreshButton();
+    }
+
+    /// <summary>
+    /// 更新刷新按钮显示
+    /// </summary>
+    private void UpdateRefreshButton()
+    {
+        if (refreshButton != null)
+        {
+            TMP_Text buttonText = refreshButton.GetComponentInChildren<TMP_Text>();
+            if (buttonText != null)
+            {
+                buttonText.text = $"refresh({currentRefreshPrice})";
+            }
+
+            // 更新按钮可交互状态（检查金币是否足够）
+            if (PlayerManager.Instance != null)
+            {
+                refreshButton.interactable = PlayerManager.Instance.Gold >= currentRefreshPrice;
+            }
+        }
     }
     
     /// <summary>
@@ -399,6 +432,9 @@ public class SkillSelectMenu : MenuBase
         {
             goldText.text = $"Gold: {PlayerManager.Instance.Gold}";
         }
+        
+        // 同时更新刷新按钮状态
+        UpdateRefreshButton();
     }
 
     /// <summary>
