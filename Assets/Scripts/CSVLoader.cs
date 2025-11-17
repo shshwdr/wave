@@ -55,12 +55,30 @@ public class LevelInfo
     public string type;
     public string typeIdentifier;
 }
+
+public class EventInfo
+{
+    public string identifier;
+    public string name;
+    public string description;
+    public string option0;
+    public string option1;
+    public string option2;
+    public List<string> result0;
+    public List<string> result1;
+    public List<string> result2;
+    public string desc0;
+    public string desc1;
+    public string desc2;
+    public bool isAvailable;
+}
 public class CSVLoader : Singleton<CSVLoader>
 {
     public TMP_FontAsset font;
     public Dictionary<string, SkillInfo> cardInfoMap = new Dictionary<string, SkillInfo>();
     public Dictionary<string, EnemyInfo> enemyInfoMap = new Dictionary<string, EnemyInfo>();
     public Dictionary<int, LevelInfo> levelInfoMap = new Dictionary<int, LevelInfo>();
+    public Dictionary<string, EventInfo> eventInfoMap = new Dictionary<string, EventInfo>();
     // Start is called before the first frame update
     public void Init()
     {
@@ -81,6 +99,11 @@ public class CSVLoader : Singleton<CSVLoader>
             levelInfo.level = i;
             i++;
             levelInfoMap.Add(levelInfo.level, levelInfo);
+        }
+        var eventInfos = CsvUtil.LoadObjects<EventInfo>("event");
+        foreach (var eventInfo in eventInfos)
+        {
+            eventInfoMap.Add(eventInfo.identifier, eventInfo);
         }
     }
 }

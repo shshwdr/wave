@@ -45,6 +45,7 @@ public class MainGameManager : Singleton<MainGameManager>
     [SerializeField] private TurnBanner turnBanner;
 
     public bool showShopAtBeginning;
+    public bool showEventAtBeginning;
     [SerializeField] public GameObject allyPrefab;
     [SerializeField] public GameObject allyProjectile;
     [SerializeField] public GameObject damagePrefab;
@@ -86,6 +87,9 @@ public class MainGameManager : Singleton<MainGameManager>
     // 玩家等级（起始为0，打一场架升一级）
     private int playerLevel = 0;
     public int PlayerLevel => playerLevel;
+    
+    // 是否是第一次战斗（用于决定是否清除和生成格子）
+    private bool isFirstBattle = true;
     
     // 保存关卡开始时的血量（用于重试关卡）
     private int levelStartHealth = -1;
@@ -201,21 +205,82 @@ public class MainGameManager : Singleton<MainGameManager>
         // 初始化回合横幅UI
         InitTurnBanner();
 
-        StartBattle();
-
-        if (showShopAtBeginning)
+        // 如果需要在开始时显示事件，先显示事件
+        if (showEventAtBeginning)
         {
-            SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+            ShowEventAtStart();
+        }
+        else
+        {
+            // 否则直接开始战斗
+            StartBattle();
+
+            if (showShopAtBeginning)
+            {
+                SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+                if (skillMenu != null)
+                {
+                    skillMenu.ShowSkillSelection(
+                        () =>
+                        {
+                            // 确认按钮点击，进入下一关
+                            Debug.Log("确认配置，进入下一关");
+                        }
+                    );
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 在游戏开始时显示事件
+    /// </summary>
+    private void ShowEventAtStart()
+    {
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("EventMenu");
+            eventMenu = menuObj.AddComponent<EventMenu>();
+        }
+        
+        eventMenu.ShowEvent(() =>
+        {
+            // 事件完成后，如果需要在开始时显示商店，显示商店
+            if (showShopAtBeginning)
+            {
+                ShowShopAtStart();
+            }
+            else
+            {
+                // 否则直接开始战斗
+                StartBattle();
+            }
+        });
+    }
+    
+    /// <summary>
+    /// 在游戏开始时显示商店
+    /// </summary>
+    private void ShowShopAtStart()
+    {
+        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+        if (skillMenu != null)
+        {
             skillMenu.ShowSkillSelection(
                 () =>
                 {
-                    // 确认按钮点击，进入下一关
-                    Debug.Log("确认配置，进入下一关");
+                    // 确认按钮点击，开始战斗
+                    StartBattle();
                 }
             );
         }
-        // 初始打开商店
-        
+        else
+        {
+            // 如果找不到商店菜单，直接开始战斗
+            StartBattle();
+        }
     }
 
     /// <summary>
@@ -387,33 +452,13 @@ public class MainGameManager : Singleton<MainGameManager>
             PlayerManager.Instance.StartBattle();
         }
 
-        // 清空棋盘
-        if (boardManager != null)
+        // 只在第一次战斗时清空棋盘并重新生成
+        if (isFirstBattle && boardManager != null)
         {
             boardManager.ClearBoard();
             boardManager.InitializeBoard();
             boardManager.GenerateRandomColors();
-        }
-
-        // 清空敌人和boss
-        if (enemyManager != null)
-        {
-            enemyManager.ClearAllEnemies();
-        }
-        if (currentBoss != null)
-        {
-            Destroy(currentBoss.gameObject);
-            currentBoss = null;
-        }
-        
-        // 清空随从
-        if (allyManager == null)
-        {
-            allyManager = FindObjectOfType<AllyManager>();
-        }
-        if (allyManager != null)
-        {
-            allyManager.ClearAllAllies();
+            isFirstBattle = false;
         }
 
         // 从关卡管理器获取关卡信息并生成敌人
@@ -555,6 +600,13 @@ public class MainGameManager : Singleton<MainGameManager>
             // 处理中时清除高亮
             ClearHighlights();
         }
+        
+        // 如果事件菜单打开，清除高亮
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu != null && eventMenu.IsActive)
+        {
+            ClearHighlights();
+        }
     }
 
     /// <summary>
@@ -569,6 +621,13 @@ public class MainGameManager : Singleton<MainGameManager>
         // 如果统计菜单打开，不响应输入
         StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
         if (statisticsMenu != null && statisticsMenu.IsActive)
+        {
+            return;
+        }
+        
+        // 如果事件菜单打开，不响应输入
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu != null && eventMenu.IsActive)
         {
             return;
         }
@@ -812,6 +871,13 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             return;
         }
+        
+        // 如果事件菜单打开，不响应hover
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu != null && eventMenu.IsActive)
+        {
+            return;
+        }
 
         // 首先检查是否悬停在敌人上
         Enemy hoveredEnemy = GetEnemyUnderMouse();
@@ -867,6 +933,13 @@ public class MainGameManager : Singleton<MainGameManager>
         // 如果技能选择界面打开，不响应touch
         SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
         if (skillMenu != null && skillMenu.IsActive)
+        {
+            return;
+        }
+        
+        // 如果事件菜单打开，不响应touch
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu != null && eventMenu.IsActive)
         {
             return;
         }
@@ -2542,28 +2615,14 @@ public class MainGameManager : Singleton<MainGameManager>
             isProcessing = false;
             currentState = GameState.PlayerTurn;
             
-            // 清空棋盘、敌人、boss、随从
+            // 清空棋盘（重试时需要重新开始）
             if (boardManager != null)
             {
                 boardManager.ClearBoard();
             }
-            if (enemyManager != null)
-            {
-                enemyManager.ClearAllEnemies();
-            }
-            if (currentBoss != null)
-            {
-                Destroy(currentBoss.gameObject);
-                currentBoss = null;
-            }
-            if (allyManager == null)
-            {
-                allyManager = FindObjectOfType<AllyManager>();
-            }
-            if (allyManager != null)
-            {
-                allyManager.ClearAllAllies();
-            }
+            
+            // 清除战斗场景上的所有内容
+            ClearBattleScene();
             
             // 关闭技能显示和敌人描述显示
             if (skillDisplayPanel != null)
@@ -2585,16 +2644,6 @@ public class MainGameManager : Singleton<MainGameManager>
                 {
                     PlayerManager.Instance.SetGold(levelStartGold);
                 }
-            }
-            
-            // 清空所有随从
-            if (allyManager == null)
-            {
-                allyManager = FindObjectOfType<AllyManager>();
-            }
-            if (allyManager != null)
-            {
-                allyManager.ClearAllAllies();
             }
             // 显示商店页面
             SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
@@ -2629,15 +2678,8 @@ public class MainGameManager : Singleton<MainGameManager>
                 }
             }
             
-            // 清空所有随从
-            if (allyManager == null)
-            {
-                allyManager = FindObjectOfType<AllyManager>();
-            }
-            if (allyManager != null)
-            {
-                allyManager.ClearAllAllies();
-            }
+            // 清除战斗场景上的所有内容
+            ClearBattleScene();
             
             // 重新开始当前关卡
             StartBattle();
@@ -2693,15 +2735,8 @@ public class MainGameManager : Singleton<MainGameManager>
             enemyDescriptionPanel.SetActive(false);
         }
         
-        // 清除所有随从
-        if (allyManager == null)
-        {
-            allyManager = FindObjectOfType<AllyManager>();
-        }
-        if (allyManager != null)
-        {
-            allyManager.ClearAllAllies();
-        }
+        // 清除战斗场景上的所有内容
+        ClearBattleScene();
 
         // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
         bool isGameWin = false;
@@ -2738,22 +2773,103 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         else
         {
-            // 显示技能选择界面
-            SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
-            if (skillMenu == null)
-            {
-                // 如果没有找到，创建一个新的
-                GameObject menuObj = new GameObject("SkillSelectMenu");
-                skillMenu = menuObj.AddComponent<SkillSelectMenu>();
-            }
+            // 战斗-商店-事件-战斗的循环
+            // 先显示商店，然后显示事件
+            ShowShopMenu();
+        }
+    }
+    
+    /// <summary>
+    /// 显示商店菜单
+    /// </summary>
+    private void ShowShopMenu()
+    {
+        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
+        if (skillMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("SkillSelectMenu");
+            skillMenu = menuObj.AddComponent<SkillSelectMenu>();
+        }
 
-            skillMenu.ShowSkillSelection(
-                () =>
+        skillMenu.ShowSkillSelection(
+            () =>
+            {
+                // 商店完成后，显示事件菜单
+                ShowEventMenu();
+            }
+        );
+    }
+    
+    /// <summary>
+    /// 显示事件菜单
+    /// </summary>
+    private void ShowEventMenu()
+    {
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("EventMenu");
+            eventMenu = menuObj.AddComponent<EventMenu>();
+        }
+        
+        eventMenu.ShowEvent(() =>
+        {
+            // 事件完成后，进入下一关战斗
+            PlayerLevelUp();
+        });
+    }
+    
+    /// <summary>
+    /// 清除战斗场景上的所有内容（敌人、ally、boss、fog、dirt等）
+    /// </summary>
+    private void ClearBattleScene()
+    {
+        // 清除所有敌人
+        if (enemyManager != null)
+        {
+            enemyManager.ClearAllEnemies();
+        }
+        
+        // 清除boss
+        if (currentBoss != null)
+        {
+            Destroy(currentBoss.gameObject);
+            currentBoss = null;
+        }
+        
+        // 清除所有随从
+        if (allyManager == null)
+        {
+            allyManager = FindObjectOfType<AllyManager>();
+        }
+        if (allyManager != null)
+        {
+            allyManager.ClearAllAllies();
+        }
+        
+        // 清除所有fog和dirt
+        if (boardManager != null)
+        {
+            for (int x = 0; x < boardManager.Width; x++)
+            {
+                for (int y = 0; y < boardManager.Height; y++)
                 {
-                    // 确认按钮点击，进入下一关
-                    Debug.Log("确认配置，进入下一关");
+                    TileCell tile = boardManager.GetTile(new Vector2Int(x, y));
+                    if (tile != null)
+                    {
+                        if (tile.HasFog)
+                        {
+                            tile.SetFog(false);
+                        }
+                        if (tile.IsDirty)
+                        {
+                            tile.SetDirty(false);
+                        }
+                    }
                 }
-            );
+            }
         }
     }
 
