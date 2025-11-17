@@ -629,6 +629,21 @@ public class Wave : MonoBehaviour
     }
 
     /// <summary>
+    /// 将TileColor转换为索引
+    /// </summary>
+    private int GetColorIndex(TileColor color)
+    {
+        switch (color)
+        {
+            case TileColor.Red: return 0;
+            case TileColor.Yellow: return 1;
+            case TileColor.Blue: return 2;
+            case TileColor.Green: return 3;
+            default: return -1;
+        }
+    }
+
+    /// <summary>
     /// 将TileColor转换为字符串
     /// </summary>
     private string GetColorString(TileColor color)
@@ -733,6 +748,36 @@ public class Wave : MonoBehaviour
                 // 应用击退和回血效果
                 bool shouldKnockback = hasHitEnemyBack;
                 int knockbackTiles = hasHitEnemyBack ? this.knockbackTiles : 0;
+                
+                // 如果怪物正好站在生成的格子上，且同时有frontAndBack技能，则不进行击退
+                if (shouldKnockback && enemy != null && enemy.GridPosition == spawnGridPos)
+                {
+                    // 检查是否有frontAndBack技能
+                    bool hasFrontAndBack = false;
+                    if (PlayerManager.Instance != null && SkillManager.Instance != null)
+                    {
+                        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(GetColorIndex(waveColor));
+                        foreach (var identifier in skillIdentifiers)
+                        {
+                            if (SkillManager.Instance.HasSkill(identifier))
+                            {
+                                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                                if (skillInfo != null && skillInfo.effect == "frontAndBack")
+                                {
+                                    hasFrontAndBack = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 如果有frontAndBack技能，怪物在生成格子上时不被击退
+                    if (hasFrontAndBack)
+                    {
+                        shouldKnockback = false;
+                        knockbackTiles = 0;
+                    }
+                }
                 
                 // 获取红色wave的基础伤害（用于hitTakeDamage）
                 float redWaveBaseDamage = 20f; // 默认基础伤害

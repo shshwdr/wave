@@ -354,6 +354,9 @@ public class Enemy : MonoBehaviour
 
         direction.Normalize();
         
+        // 确定击退方向（根据direction的x分量）
+        bool knockbackRight = direction.x > 0;
+        
         // 逐步检查每个格子，如果遇到敌人或边界则停止
         Vector2Int currentPos = gridPosition;
         Vector2Int finalPos = currentPos;
@@ -362,12 +365,29 @@ public class Enemy : MonoBehaviour
         for (int i = 1; i <= tiles; i++)
         {
             Vector2Int checkPos = gridPosition;
-            checkPos.x += i; // 向右击退
+            if (knockbackRight)
+            {
+                checkPos.x += i; // 向右击退
+            }
+            else
+            {
+                checkPos.x -= i; // 向左击退
+            }
             
             // 检查是否超出边界
-            if (checkPos.x >= boardManager.Width)
+            if (knockbackRight)
             {
-                break; // 到达边界，停止
+                if (checkPos.x >= boardManager.Width)
+                {
+                    break; // 到达右边界，停止
+                }
+            }
+            else
+            {
+                if (checkPos.x < 0)
+                {
+                    break; // 到达左边界，停止
+                }
             }
             
             // 检查该位置是否有其他敌人
