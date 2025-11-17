@@ -361,7 +361,7 @@ public class Enemy : MonoBehaviour
         Vector2Int currentPos = gridPosition;
         Vector2Int finalPos = currentPos;
         Enemy collidedEnemy = null;
-        
+        bool hasCollision = false;
         for (int i = 1; i <= tiles; i++)
         {
             Vector2Int checkPos = gridPosition;
@@ -379,6 +379,7 @@ public class Enemy : MonoBehaviour
             {
                 if (checkPos.x >= boardManager.Width)
                 {
+                    hasCollision = true;
                     break; // 到达右边界，停止
                 }
             }
@@ -386,6 +387,7 @@ public class Enemy : MonoBehaviour
             {
                 if (checkPos.x < 0)
                 {
+                    hasCollision = true;
                     break; // 到达左边界，停止
                 }
             }
@@ -402,6 +404,7 @@ public class Enemy : MonoBehaviour
                     {
                         collidedEnemy = enemy;
                         hasEnemy = true;
+                        hasCollision = true;
                         break;
                     }
                 }
@@ -469,7 +472,7 @@ public class Enemy : MonoBehaviour
                 }
             }
             
-            if (hasHitTakeDamage && hitTakeDamageValue > 0 && redWaveDamage > 0)
+            if (hasHitTakeDamage && hitTakeDamageValue > 0 && redWaveDamage > 0 && hasCollision)
             {
                 // 计算伤害：红色wave伤害 * value%
                 float collisionDamage = redWaveDamage * (hitTakeDamageValue / 100f);

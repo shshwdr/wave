@@ -749,64 +749,13 @@ public class Wave : MonoBehaviour
                 bool shouldKnockback = hasHitEnemyBack;
                 int knockbackTiles = hasHitEnemyBack ? this.knockbackTiles : 0;
                 
-                // 如果怪物正好站在生成的格子上，且同时有frontAndBack技能，则不进行击退
-                if (shouldKnockback && enemy != null && enemy.GridPosition == spawnGridPos)
-                {
-                    // 检查是否有frontAndBack技能
-                    bool hasFrontAndBack = false;
-                    if (PlayerManager.Instance != null && SkillManager.Instance != null)
-                    {
-                        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(GetColorIndex(waveColor));
-                        foreach (var identifier in skillIdentifiers)
-                        {
-                            if (SkillManager.Instance.HasSkill(identifier))
-                            {
-                                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
-                                if (skillInfo != null && skillInfo.effect == "frontAndBack")
-                                {
-                                    hasFrontAndBack = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    
-                    // 如果有frontAndBack技能，怪物在生成格子上时不被击退
-                    if (hasFrontAndBack)
-                    {
-                        shouldKnockback = false;
-                        knockbackTiles = 0;
-                    }
-                }
                 
                 // 获取红色wave的基础伤害（用于hitTakeDamage）
                 float redWaveBaseDamage = 20f; // 默认基础伤害
-                if (waveColor == TileColor.Red)
+                //if (waveColor == TileColor.Red)
                 {
                     // 如果是红色wave，使用当前伤害（已应用所有加成）
                     redWaveBaseDamage = finalDamage;
-                }
-                else
-                {
-                    // 如果不是红色wave，需要获取红色wave的基础伤害
-                    if (SkillManager.Instance != null && PlayerManager.Instance != null)
-                    {
-                        List<string> redSkillIdentifiers = PlayerManager.Instance.GetWaveSkills(0); // 0=红色
-                        float redDamage = 20f; // 基础伤害
-                        foreach (var identifier in redSkillIdentifiers)
-                        {
-                            if (SkillManager.Instance.HasSkill(identifier))
-                            {
-                                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
-                                if (skillInfo != null && skillInfo.effect == "damageIncrease")
-                                {
-                                    int value = SkillManager.Instance.GetSkillValue(identifier);
-                                    redDamage = redDamage * (1f + value / 100f);
-                                }
-                            }
-                        }
-                        redWaveBaseDamage = redDamage;
-                    }
                 }
                 
                 bool wasAlive = !enemy.IsDead;
