@@ -1,4 +1,6 @@
 using UnityEngine;
+using FMODUnity;
+using FMOD.Studio;
 
 /// <summary>
 /// 游戏主管理器 - 控制游戏主逻辑，调用MainGameManager和其他manager
@@ -10,9 +12,17 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private BoardManager boardManager;
     [SerializeField] private EnemyManager enemyManager;
 
+    private FMOD.Studio.EventInstance levelMusic;
+
     private void Awake()
     {
         InitializeManagers();
+    }
+
+    private void Start()
+    {
+        levelMusic = FMODUnity.RuntimeManager.CreateInstance("event:/Music/mus_gameplay_basic_level");
+        levelMusic.start();
     }
 
     /// <summary>
@@ -74,6 +84,9 @@ public class GameManager : Singleton<GameManager>
     /// </summary>
     public void RestartGame()
     {
+        levelMusic.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
+        levelMusic.start();
+
         StartNewGame();
     }
 
@@ -84,6 +97,12 @@ public class GameManager : Singleton<GameManager>
     {
         Debug.Log("Game Over triggered from GameManager");
         // 可以在这里显示游戏结束UI等
+    }
+
+    private void OnDestroy()
+    {
+        levelMusic.stop(FMOD.Studio.STOP_MODE.IMMEDIATE);
+        levelMusic.release();
     }
 }
 

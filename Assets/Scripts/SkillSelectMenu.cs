@@ -56,6 +56,8 @@ public class SkillSelectMenu : MenuBase
     [Header("拖拽设置")]
     [SerializeField] private int dragDropLayer = 0; // 拖拽目标检测的Layer
 
+    private FMOD.Studio.EventInstance shopFilter;
+
     protected override void Awake()
     {
         base.Awake();
@@ -137,6 +139,8 @@ public class SkillSelectMenu : MenuBase
 
         // 显示界面
         Show();
+        shopFilter = FMODUnity.RuntimeManager.CreateInstance("snapshot:/Shop");
+        shopFilter.start();
     }
     
     /// <summary>
@@ -407,6 +411,8 @@ public class SkillSelectMenu : MenuBase
         if (mainGameManager != null)
         {
             mainGameManager.PlayerLevelUp();
+            shopFilter.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
+            shopFilter.release();
         }
 
         // 隐藏界面
