@@ -447,12 +447,231 @@ public class EnemyManager : MonoBehaviour
     }
     
     /// <summary>
+    /// 按批次执行敌人行动：先生成新敌人，然后所有移动的敌人移动，然后所有攻击的敌人攻击，然后所有使用特殊技能的敌人按技能顺序执行
+    /// </summary>
+    /// <param name="onComplete">所有行动完成后的回调</param>
+    public void ExecuteEnemyTurnBatch(System.Action onComplete = null)
+    {
+        // 1. 先生成新敌人（如果需要）
+        // 注意：生成新敌人应该在外部调用，这里只处理已存在的敌人行动
+        
+        // 2. 分类敌人
+        List<Enemy> moveEnemies = new List<Enemy>();
+        List<Enemy> attackEnemies = new List<Enemy>();
+        List<Enemy> healEnemies = new List<Enemy>();
+        List<Enemy> createFogEnemies = new List<Enemy>();
+        List<Enemy> dirtyWaterEnemies = new List<Enemy>();
+        List<Enemy> summonEnemies = new List<Enemy>();
+        
+        foreach (var enemy in activeEnemies.ToList())
+        {
+            if (enemy == null || enemy.IsDead)
+                continue;
+            
+            // 先减少冷却时间（模拟TakeAction中的冷却减少逻辑）
+            enemy.ReduceCooldown();
+            
+            // 检查敌人是否有主动技能且冷却完成
+            bool hasActiveSkill = enemy.HasActiveSkillReady();
+            string skillName = enemy.GetCurrentSkill();
+            
+            if (hasActiveSkill)
+            {
+                if (skillName == "heal")
+                {
+                    // 检查是否有血量不满的敌人可以治疗
+                    bool hasInjuredEnemy = HasInjuredEnemy();
+                    if (hasInjuredEnemy)
+                    {
+                        healEnemies.Add(enemy);
+                    }
+                    else
+                    {
+                        // 如果所有敌人都是满血，执行移动
+                        if (enemy.IsInAttackRange())
+                        {
+                            attackEnemies.Add(enemy);
+                        }
+                        else
+                        {
+                            moveEnemies.Add(enemy);
+                        }
+                    }
+                }
+                else if (skillName == "createFog")
+                {
+                    createFogEnemies.Add(enemy);
+                }
+                else if (skillName == "dirtyWater")
+                {
+                    dirtyWaterEnemies.Add(enemy);
+                }
+                else if (skillName != null && skillName.StartsWith("summon"))
+                {
+                    summonEnemies.Add(enemy);
+                }
+                else
+                {
+                    // 其他技能，按攻击处理
+                    if (enemy.IsInAttackRange())
+                    {
+                        attackEnemies.Add(enemy);
+                    }
+                    else
+                    {
+                        moveEnemies.Add(enemy);
+                    }
+                }
+            }
+            else
+            {
+                // 没有主动技能或冷却未完成，检查攻击范围
+                if (enemy.IsInAttackRange())
+                {
+                    attackEnemies.Add(enemy);
+                }
+                else
+                {
+                    moveEnemies.Add(enemy);
+                }
+            }
+        }
+        
+        // 3. 按顺序执行
+        float actionDelay = 0.5f; // 每个批次之间的延迟
+        float currentDelay = 0f;
+        
+        // 3.1 所有移动的敌人移动
+        if (moveEnemies.Count > 0)
+        {
+            DOVirtual.DelayedCall(currentDelay, () =>
+            {
+                foreach (var enemy in moveEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead)
+                    {
+                        enemy.MoveLeft();
+                    }
+                }
+            });
+            currentDelay += 0.5f + actionDelay; // 移动持续时间 + 延迟
+        }
+        
+        // 3.2 所有攻击的敌人攻击
+        if (attackEnemies.Count > 0)
+        {
+            DOVirtual.DelayedCall(currentDelay, () =>
+            {
+                foreach (var enemy in attackEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead)
+                    {
+                        enemy.AttackPlayer();
+                    }
+                }
+            });
+            currentDelay += 0.5f + actionDelay; // 攻击持续时间 + 延迟
+        }
+        
+        // 3.3 所有使用特殊技能的敌人，按技能顺序执行
+        // 3.3.1 先治疗
+        if (healEnemies.Count > 0)
+        {
+            DOVirtual.DelayedCall(currentDelay, () =>
+            {
+                foreach (var enemy in healEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead)
+                    {
+                        // 如果heal技能没有可治疗的敌人，UseSkillDirectly会返回false
+                        // 但这种情况不应该发生，因为我们在分类时已经检查过了
+                        enemy.UseSkillDirectly();
+                    }
+                }
+            });
+            currentDelay += 0.5f + actionDelay;
+        }
+        
+        // 3.3.2 再生成云朵
+        if (createFogEnemies.Count > 0)
+        {
+            DOVirtual.DelayedCall(currentDelay, () =>
+            {
+                foreach (var enemy in createFogEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead)
+                    {
+                        enemy.UseSkillDirectly();
+                    }
+                }
+            });
+            currentDelay += 0.5f + actionDelay;
+        }
+        
+        // 3.3.3 其他技能（dirtyWater, summon等）
+        if (dirtyWaterEnemies.Count > 0)
+        {
+            DOVirtual.DelayedCall(currentDelay, () =>
+            {
+                foreach (var enemy in dirtyWaterEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead)
+                    {
+                        enemy.UseSkillDirectly();
+                    }
+                }
+            });
+            currentDelay += 0.5f + actionDelay;
+        }
+        
+        if (summonEnemies.Count > 0)
+        {
+            DOVirtual.DelayedCall(currentDelay, () =>
+            {
+                foreach (var enemy in summonEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead)
+                    {
+                        enemy.UseSkillDirectly();
+                    }
+                }
+            });
+            currentDelay += 0.5f + actionDelay;
+        }
+        
+        // 4. 所有行动完成后调用回调
+        DOVirtual.DelayedCall(currentDelay, () =>
+        {
+            onComplete?.Invoke();
+        });
+    }
+    
+    /// <summary>
     /// 所有敌人向左移动（保留旧方法以兼容）
     /// </summary>
     public void MoveAllEnemiesLeft(float distance = 1f, float duration = 0.5f)
     {
         // 使用新的行动系统
         AllEnemiesTakeAction(duration);
+    }
+    
+    /// <summary>
+    /// 检查是否有血量不满的敌人（用于heal技能判断）
+    /// </summary>
+    private bool HasInjuredEnemy()
+    {
+        foreach (var enemy in activeEnemies)
+        {
+            if (enemy != null && !enemy.IsDead)
+            {
+                float healthPercent = (float)enemy.CurrentHealth / enemy.MaxHealth;
+                if (healthPercent < 1f)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /// <summary>

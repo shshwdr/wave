@@ -382,5 +382,13 @@ public class PlayerManager : Singleton<PlayerManager>
     {
         currentHealth = Mathf.Clamp(health, 0, maxHealth);
     }
+    
+    /// <summary>
+    /// 设置金币（用于重试关卡）
+    /// </summary>
+    public void SetGold(int amount)
+    {
+        gold = Mathf.Max(0, amount);
+    }
 }
 

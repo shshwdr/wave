@@ -943,47 +943,164 @@ public class Enemy : MonoBehaviour
     }
     
     /// <summary>
-    /// 使用heal技能：随机恢复血量最少的敌人skillValue点血量
+    /// 直接使用技能（不检查冷却，用于批次执行）
     /// </summary>
-    private void UseHealSkill()
+    /// <returns>是否成功使用了技能（heal技能如果没有可治疗的敌人会返回false）</returns>
+    public bool UseSkillDirectly()
     {
-        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
-        if (enemyManager == null)
-            return;
-            
-        // 找到血量最少的敌人
-        Enemy targetEnemy = null;
-        int minHealth = int.MaxValue;
+        if (string.IsNullOrEmpty(currentSkill))
+            return false;
         
-        foreach (var enemy in enemyManager.ActiveEnemies)
+        bool skillUsed = false;
+        
+        // 对于summon技能，currentSkill可能是"summon|identifier"格式
+        if (currentSkill.StartsWith("summon"))
         {
-            if (enemy != null && !enemy.IsDead && enemy.CurrentHealth < minHealth)
+            UseSummonSkill();
+            skillUsed = true;
+        }
+        else if (currentSkill == "heal")
+        {
+            skillUsed = UseHealSkill();
+            // 如果heal技能没有可治疗的敌人，不播放动画，也不重置冷却
+            if (!skillUsed)
             {
-                minHealth = enemy.CurrentHealth;
-                targetEnemy = enemy;
+                return false;
+            }
+        }
+        else if (currentSkill == "createFog")
+        {
+            UseCreateFogSkill();
+            skillUsed = true;
+        }
+        else if (currentSkill == "dirtyWater")
+        {
+            UseDirtyWaterSkill();
+            skillUsed = true;
+        }
+        
+        // 如果技能成功使用，播放动画并重置冷却
+        if (skillUsed)
+        {
+            // 播放特殊技能动画
+            TryPlaySpecialAnimation();
+            
+            // 如果技能有冷却，重置冷却时间
+            if (skillCooldown > 0)
+            {
+                currentCooldown = skillCooldown;
             }
         }
         
-        // 如果有多个敌人血量相同，随机选择一个
-        if (targetEnemy != null)
+        return skillUsed;
+    }
+    
+    /// <summary>
+    /// 检查是否有主动技能且冷却完成
+    /// </summary>
+    public bool HasActiveSkillReady()
+    {
+        if (string.IsNullOrEmpty(currentSkill))
+            return false;
+        
+        // 如果技能有冷却时间
+        if (skillCooldown > 0)
         {
-            List<Enemy> candidates = new List<Enemy>();
-            foreach (var enemy in enemyManager.ActiveEnemies)
+            // 检查冷却是否完成（currentCooldown <= 0表示冷却完成）
+            return currentCooldown <= 0;
+        }
+        
+        // 没有冷却时间的技能（被动技能）不算主动技能
+        return false;
+    }
+    
+    /// <summary>
+    /// 获取当前技能名称
+    /// </summary>
+    public string GetCurrentSkill()
+    {
+        if (string.IsNullOrEmpty(currentSkill))
+            return null;
+        
+        // 对于summon技能，返回完整格式
+        if (currentSkill.StartsWith("summon"))
+        {
+            return currentSkill;
+        }
+        
+        // 对于其他技能，返回技能名称
+        return currentSkill;
+    }
+    
+    /// <summary>
+    /// 减少冷却时间（用于批次执行）
+    /// </summary>
+    public void ReduceCooldown()
+    {
+        if (skillCooldown > 0 && currentCooldown > 0)
+        {
+            currentCooldown--;
+        }
+    }
+    
+    /// <summary>
+    /// 使用heal技能：治疗血量不满，且血量百分比最少的敌人
+    /// </summary>
+    /// <returns>是否成功使用了技能（如果有可治疗的敌人返回true，否则返回false）</returns>
+    private bool UseHealSkill()
+    {
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (enemyManager == null)
+            return false;
+            
+        // 找到血量不满，且血量百分比最少的敌人
+        Enemy targetEnemy = null;
+        float minHealthPercent = 1f; // 初始化为1（满血）
+        
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead)
             {
-                if (enemy != null && !enemy.IsDead && enemy.CurrentHealth == minHealth)
+                float healthPercent = (float)enemy.CurrentHealth / enemy.MaxHealth;
+                // 只考虑血量不满的敌人
+                if (healthPercent < 1f && healthPercent < minHealthPercent)
+                {
+                    minHealthPercent = healthPercent;
+                    targetEnemy = enemy;
+                }
+            }
+        }
+        
+        // 如果没有血量不满的敌人，返回false
+        if (targetEnemy == null)
+        {
+            return false;
+        }
+        
+        // 如果有多个敌人血量百分比相同，随机选择一个
+        List<Enemy> candidates = new List<Enemy>();
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead)
+            {
+                float healthPercent = (float)enemy.CurrentHealth / enemy.MaxHealth;
+                if (healthPercent < 1f && Mathf.Approximately(healthPercent, minHealthPercent))
                 {
                     candidates.Add(enemy);
                 }
             }
-            
-            if (candidates.Count > 0)
-            {
-                targetEnemy = candidates[Random.Range(0, candidates.Count)];
-                // 恢复量 = 攻击力 * skillValue
-                int healAmount = GetAttack() * skillValue;
-                targetEnemy.Heal(healAmount);
-            }
         }
+        
+        if (candidates.Count > 0)
+        {
+            targetEnemy = candidates[Random.Range(0, candidates.Count)];
+            // 恢复量 = 攻击力 * skillValue
+            int healAmount = GetAttack() * skillValue;
+            targetEnemy.Heal(healAmount);
+            return true;
+        }
+        
+        return false;
     }
     
     /// <summary>

@@ -40,6 +40,9 @@ public class MainGameManager : Singleton<MainGameManager>
     [Header("敌人描述显示UI")]
     [SerializeField] private GameObject enemyDescriptionPanel;
     [SerializeField] private TMP_Text enemyDescriptionText;
+    
+    [Header("回合横幅UI")]
+    [SerializeField] private TurnBanner turnBanner;
 
     public bool showShopAtBeginning;
     [SerializeField] public GameObject allyPrefab;
@@ -86,6 +89,9 @@ public class MainGameManager : Singleton<MainGameManager>
     
     // 保存关卡开始时的血量（用于重试关卡）
     private int levelStartHealth = -1;
+    
+    // 保存关卡开始时的金币（用于重试关卡）
+    private int levelStartGold = -1;
     
     // 回合计数（用于奖励关卡）
     private int currentTurn = 0;
@@ -191,6 +197,9 @@ public class MainGameManager : Singleton<MainGameManager>
         
         // 初始化敌人描述显示UI
         InitEnemyDescriptionUI();
+        
+        // 初始化回合横幅UI
+        InitTurnBanner();
 
         StartBattle();
 
@@ -327,6 +336,30 @@ public class MainGameManager : Singleton<MainGameManager>
             enemyDescriptionPanel.SetActive(false);
         }
     }
+    
+    /// <summary>
+    /// 初始化回合横幅UI
+    /// </summary>
+    private void InitTurnBanner()
+    {
+        if (turnBanner == null)
+        {
+            // 创建TurnBanner
+            GameObject canvasObj = GameObject.Find("Canvas");
+            if (canvasObj == null)
+            {
+                canvasObj = new GameObject("Canvas");
+                Canvas canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObj.AddComponent<CanvasScaler>();
+                canvasObj.AddComponent<GraphicRaycaster>();
+            }
+            
+            GameObject bannerObj = new GameObject("TurnBanner");
+            bannerObj.transform.SetParent(canvasObj.transform);
+            turnBanner = bannerObj.AddComponent<TurnBanner>();
+        }
+    }
 
     /// <summary>
     /// 开始战斗
@@ -348,8 +381,9 @@ public class MainGameManager : Singleton<MainGameManager>
         // 初始化PlayerManager并恢复交换次数
         if (PlayerManager.Instance != null)
         {
-            // 保存关卡开始时的血量（用于重试关卡）
+            // 保存关卡开始时的血量和金币（用于重试关卡）
             levelStartHealth = PlayerManager.Instance.CurrentHealth;
+            levelStartGold = PlayerManager.Instance.Gold;
             PlayerManager.Instance.StartBattle();
         }
 
@@ -2140,15 +2174,45 @@ public class MainGameManager : Singleton<MainGameManager>
             }
         }
         
+        // 检查是否已经赢了（在显示banner之前）
+        // 如果是boss战，检查boss是否已死亡
+        if (currentBoss != null && currentBoss.IsDead)
+        {
+            CompleteLevel();
+            return;
+        }
+        
+        // 如果是普通战斗，检查是否所有敌人已死亡且没有剩余敌人可生成
+        if (currentBoss == null && enemyManager != null && enemyManager.CanCompleteLevel())
+        {
+            CompleteLevel();
+            return;
+        }
+        
         currentState = GameState.EnemyTurn;
         isProcessing = true; // 敌人移动时也禁止操作
 
-        // 敌人向左移动（boss战和普通战斗都需要）
-        if (enemyManager != null)
+        // 显示"Enemy Turn" banner，等banner离开后再开始敌人行动
+        if (turnBanner != null)
         {
-            enemyManager.MoveAllEnemiesLeft(enemyMoveDistance, enemyMoveDuration);
+            turnBanner.ShowBanner("Enemy Turn", () =>
+            {
+                // Banner离开后开始敌人行动
+                ExecuteEnemyTurn();
+            });
         }
-        
+        else
+        {
+            // 如果没有banner，直接执行敌人行动
+            ExecuteEnemyTurn();
+        }
+    }
+    
+    /// <summary>
+    /// 执行敌人回合
+    /// </summary>
+    private void ExecuteEnemyTurn()
+    {
         // 如果是boss战，处理boss移动和召唤小怪
         if (currentBoss != null && !currentBoss.IsDead)
         {
@@ -2161,82 +2225,111 @@ public class MainGameManager : Singleton<MainGameManager>
             // Boss移动
             currentBoss.StartMove();
             
-            // Boss战中每回合召唤小怪（在敌人移动后）
-            DOVirtual.DelayedCall(enemyMoveDuration + 0.1f, () =>
+            // 先生成新敌人（如果需要）
+            bool normalSpawnSucceeded = false;
+            if (enemyManager != null)
             {
-                // 先尝试正常生成敌人
-                bool normalSpawnSucceeded = false;
+                // 检查是否还有敌人可以生成
+                if (enemyManager.currentSpawnIndex < enemyManager.remainingEnemies.Count)
+                {
+                    enemyManager.SpawnEnemyEachTurn();
+                    normalSpawnSucceeded = true;
+                }
+            }
+            
+            // 如果正常生成失败（所有敌人已生成完），则从boss战敌人列表循环生成
+            if (!normalSpawnSucceeded)
+            {
+                SpawnBossBattleEnemy();
+            }
+            
+            // 等待一小段时间让新敌人生成完成，然后执行敌人批次行动
+            DOVirtual.DelayedCall(0.2f, () =>
+            {
                 if (enemyManager != null)
                 {
-                    // 检查是否还有敌人可以生成
-                    if (enemyManager.currentSpawnIndex < enemyManager.remainingEnemies.Count)
+                    enemyManager.ExecuteEnemyTurnBatch(() =>
                     {
-                        enemyManager.SpawnEnemyEachTurn();
-                        normalSpawnSucceeded = true;
-                    }
+                        // 敌人行动完成后，检查胜利条件
+                        DOVirtual.DelayedCall(0.1f, () =>
+                        {
+                            // 检查boss是否死亡
+                            if (currentBoss != null && currentBoss.IsDead)
+                            {
+                                CompleteLevel();
+                                return;
+                            }
+                            
+                            // 否则显示"Player Turn" banner，然后进入玩家回合
+                            ShowPlayerTurnBanner();
+                        });
+                    });
                 }
-                
-                // 如果正常生成失败（所有敌人已生成完），则从boss战敌人列表循环生成
-                if (!normalSpawnSucceeded)
+                else
                 {
-                    SpawnBossBattleEnemy();
+                    ShowPlayerTurnBanner();
                 }
-                
-                // Boss回合结束后，检查胜利条件
-                DOVirtual.DelayedCall(0.1f, () =>
-                {
-                    // 检查boss是否死亡
-                    if (currentBoss != null && currentBoss.IsDead)
-                    {
-                        CompleteLevel();
-                        return;
-                    }
-                    
-                    // 否则进入玩家回合
-                    isProcessing = false;
-                    currentState = GameState.PlayerTurn;
-                    
-                    // 每回合开始时恢复所有shield敌人的盾牌
-                    ResetAllEnemyShields();
-                });
             });
         }
         else
         {
-            // 普通战斗：每回合生成一个新敌人
+            // 普通战斗：先生成新敌人，然后执行敌人批次行动
             if (enemyManager != null)
             {
-                DOVirtual.DelayedCall(enemyMoveDuration + 0.1f, () =>
+                // 先生成新敌人
+                enemyManager.SpawnEnemyEachTurn();
+                
+                // 等待一小段时间让新敌人生成完成，然后执行敌人批次行动
+                DOVirtual.DelayedCall(0.2f, () =>
                 {
-                    enemyManager.SpawnEnemyEachTurn();
-                    
-                    // 敌人回合结束后，检查胜利条件
-                    DOVirtual.DelayedCall(0.1f, () =>
+                    enemyManager.ExecuteEnemyTurnBatch(() =>
                     {
-                        // 检查是否可以完成关卡（所有敌人死亡且没有剩余敌人可生成）
-                        if (enemyManager != null && enemyManager.CanCompleteLevel())
+                        // 敌人行动完成后，检查胜利条件
+                        DOVirtual.DelayedCall(0.1f, () =>
                         {
-                            CompleteLevel();
-                            return;
-                        }
-                        
-                        // 否则进入玩家回合
-                        isProcessing = false;
-                        currentState = GameState.PlayerTurn;
-                        
-                        // 每回合开始时恢复所有shield敌人的盾牌
-                        ResetAllEnemyShields();
+                            // 检查是否可以完成关卡（所有敌人死亡且没有剩余敌人可生成）
+                            if (enemyManager != null && enemyManager.CanCompleteLevel())
+                            {
+                                CompleteLevel();
+                                return;
+                            }
+                            
+                            // 否则显示"Player Turn" banner，然后进入玩家回合
+                            ShowPlayerTurnBanner();
+                        });
                     });
                 });
             }
             else
             {
-                isProcessing = false;
-                currentState = GameState.PlayerTurn;
-                
-                // 每回合开始时恢复所有shield敌人的盾牌
-                ResetAllEnemyShields();
+                ShowPlayerTurnBanner();
             }
+        }
+    }
+    
+    /// <summary>
+    /// 显示"Player Turn" banner，然后进入玩家回合
+    /// </summary>
+    private void ShowPlayerTurnBanner()
+    {
+        // 每回合开始时恢复所有shield敌人的盾牌
+        ResetAllEnemyShields();
+        
+        // 显示"Player Turn" banner
+        // if (turnBanner != null)
+        // {
+        //     turnBanner.ShowBanner("Player Turn", () =>
+        //     {
+        //         // Banner离开后，允许玩家操作
+        //         isProcessing = false;
+        //         currentState = GameState.PlayerTurn;
+        //     });
+        // }
+        // else
+        {
+            // 如果没有banner，直接进入玩家回合
+            isProcessing = false;
+            currentState = GameState.PlayerTurn;
         }
     }
     
@@ -2482,9 +2575,16 @@ public class MainGameManager : Singleton<MainGameManager>
                 enemyDescriptionPanel.SetActive(false);
             }
 
-            if (PlayerManager.Instance != null && levelStartHealth >= 0)
+            if (PlayerManager.Instance != null)
             {
-                PlayerManager.Instance.SetHealth(levelStartHealth);
+                if (levelStartHealth >= 0)
+                {
+                    PlayerManager.Instance.SetHealth(levelStartHealth);
+                }
+                if (levelStartGold >= 0)
+                {
+                    PlayerManager.Instance.SetGold(levelStartGold);
+                }
             }
             
             // 清空所有随从
@@ -2516,10 +2616,17 @@ public class MainGameManager : Singleton<MainGameManager>
         else
         {
             // 第一关死亡，重新开始战斗
-            // 恢复血量到关卡开始前
-            if (PlayerManager.Instance != null && levelStartHealth >= 0)
+            // 恢复血量和金币到关卡开始前
+            if (PlayerManager.Instance != null)
             {
-                PlayerManager.Instance.SetHealth(levelStartHealth);
+                if (levelStartHealth >= 0)
+                {
+                    PlayerManager.Instance.SetHealth(levelStartHealth);
+                }
+                if (levelStartGold >= 0)
+                {
+                    PlayerManager.Instance.SetGold(levelStartGold);
+                }
             }
             
             // 清空所有随从
