@@ -324,6 +324,9 @@ public class BoardManager : MonoBehaviour
         TileCell tile = board[gridPos.x, gridPos.y];
         if (tile != null)
         {
+            // 不清除高亮状态，让高亮一直保持直到tile被销毁
+            // tile.SetHighlight(false);
+            
             tile.DestroyAnimation().OnComplete(() =>
             {
                 Destroy(tile.gameObject);

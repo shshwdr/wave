@@ -28,6 +28,7 @@ public class TileCell : MonoBehaviour
     private bool hasFog = false; // 是否有fog
     private bool isDirty = false; // 是否有dirt
     private bool isDisabled = false; // 是否被禁用
+    private bool isBeingDestroyed = false; // 是否正在被消除
     private Tween bounceTween; // 当前的弹动动画
     private Vector3 originalWorldPosition; // 原始世界位置
 
@@ -41,6 +42,7 @@ public class TileCell : MonoBehaviour
     public bool HasFog => hasFog;
     public bool IsDirty => isDirty;
     public bool IsDisabled => isDisabled;
+    public bool IsBeingDestroyed => isBeingDestroyed;
 
     /// <summary>
     /// 初始化格子
@@ -100,6 +102,10 @@ public class TileCell : MonoBehaviour
     /// </summary>
     public void SetHighlight(bool highlight)
     {
+        // 如果正在被消除，不允许清除高亮
+        if (!highlight && isBeingDestroyed)
+            return;
+            
         isHighlighted = highlight;
         if (spriteRenderer != null)
         {
@@ -115,6 +121,19 @@ public class TileCell : MonoBehaviour
                 selectHighlight.SetActive(false);
                 //spriteRenderer.color = originalColor;
             }
+        }
+    }
+    
+    /// <summary>
+    /// 标记tile正在被消除
+    /// </summary>
+    public void MarkAsBeingDestroyed()
+    {
+        isBeingDestroyed = true;
+        // 确保高亮是开启的
+        if (!isHighlighted)
+        {
+            SetHighlight(true);
         }
     }
 
@@ -189,8 +208,8 @@ public class TileCell : MonoBehaviour
         // 创建动画序列：先放大 -> 旋转 -> 缩小消失
         Sequence destroySequence = DOTween.Sequence();
         
-        // 第一步：快速放大到1.5倍（0.1秒）
-        destroySequence.Append(transform.DOScale(Vector3.one * 1.5f, 0.2f)
+        // 第一步：快速放大到1.2倍（减小放大比例）
+        destroySequence.Append(transform.DOScale(Vector3.one * 1.2f, 0.2f)
             .SetEase(Ease.OutQuad));
         
         // 第二步：同时旋转360度并缩小到0（0.2秒）

@@ -33,6 +33,14 @@ public class EventMenu : MenuBase
     private Action onEventComplete; // 事件完成后的回调（进入商店）
     private static HashSet<string> usedEventIdentifiers = new HashSet<string>(); // 已使用的事件标识符
 
+    /// <summary>
+    /// 检查事件是否已被使用
+    /// </summary>
+    public static bool IsEventUsed(string identifier)
+    {
+        return usedEventIdentifiers.Contains(identifier);
+    }
+
     protected override void Awake()
     {
         base.Awake();

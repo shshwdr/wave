@@ -150,7 +150,7 @@ public class Wave : MonoBehaviour
 
         transform.position = spawnPosition;
         gameObject.SetActive(true);
-        spriteRenderer.sprite = MainGameManager.Instance.tileSprites.RandomItem();
+        spriteRenderer.sprite = MainGameManager.Instance.tileSprites[(int)waveColor]    ;
         // 设置spriteRenderer的颜色为对应的tile颜色
         // if (spriteRenderer != null)
         // {

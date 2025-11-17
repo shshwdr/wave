@@ -847,7 +847,7 @@ public class MainGameManager : Singleton<MainGameManager>
             Vector2Int gridPos = GetMouseGridPosition();
             if (boardManager != null && boardManager.IsValidPosition(gridPos))
             {
-                ClearHighlights();
+                // 不调用ClearHighlights()，让高亮保持显示
                 EliminateConnectedTiles(gridPos);
             }
         }
@@ -1313,6 +1313,7 @@ public class MainGameManager : Singleton<MainGameManager>
             TileCell tile = boardManager.GetTile(pos);
             if (tile != null)
             {
+                // SetHighlight方法内部会检查是否正在被消除，如果是则不会清除高亮
                 tile.SetHighlight(false);
             }
         }
@@ -1361,6 +1362,16 @@ public class MainGameManager : Singleton<MainGameManager>
 
         if (connectedTiles.Count == 0) // 如果没有连通格子，不执行消除
             return;
+
+        // 标记正在被消除的tile，这样它们的高亮就不会被清除
+        foreach (var pos in connectedTiles)
+        {
+            TileCell tile = boardManager.GetTile(pos);
+            if (tile != null)
+            {
+                tile.MarkAsBeingDestroyed();
+            }
+        }
 
         // 标记为处理中
         isProcessing = true;
@@ -2795,10 +2806,41 @@ public class MainGameManager : Singleton<MainGameManager>
         skillMenu.ShowSkillSelection(
             () =>
             {
-                // 商店完成后，显示事件菜单
-                ShowEventMenu();
+                // 商店完成后，检查是否有event，有的话显示，没有的话直接进入下一关
+                if (HasAvailableEvent())
+                {
+                    ShowEventMenu();
+                }
+                else
+                {
+                    // 没有event，直接进入下一关战斗
+                    PlayerLevelUp();
+                }
             }
         );
+    }
+    
+    /// <summary>
+    /// 检查是否有可用的事件
+    /// </summary>
+    private bool HasAvailableEvent()
+    {
+        if (CSVLoader.Instance == null || CSVLoader.Instance.eventInfoMap == null)
+        {
+            return false;
+        }
+        
+        // 获取所有可用且未使用的事件
+        List<EventInfo> availableEvents = new List<EventInfo>();
+        foreach (var eventInfo in CSVLoader.Instance.eventInfoMap.Values)
+        {
+            if (eventInfo.isAvailable && !EventMenu.IsEventUsed(eventInfo.identifier))
+            {
+                availableEvents.Add(eventInfo);
+            }
+        }
+        
+        return availableEvents.Count > 0;
     }
     
     /// <summary>

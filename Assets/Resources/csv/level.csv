@@ -2,7 +2,7 @@
 normal|3,2,3,0,,,normal
 speed|2|normal|3,3,4,0,,,normal
 archer|1|normal|3|speed|1|archer|1,3,4,0,,,normal
-chest|20,5,0,0,,6,gold
+chest|20,5,0,0,,2,gold
 healer|1|normal|3|speed|1|archer|1|healer|1,3,5,0,,,normal
 normal|2|speed|1|archer|1|normal|1|healer|1,3,6,0,elite,,boss
 fog|1|normal|3|archer|1|fog|1|healer|1,4,5,1,,,normal

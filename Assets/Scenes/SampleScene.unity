@@ -3646,8 +3646,10 @@ MonoBehaviour:
   damagePrefab: {fileID: 0}
   isPublish: 0
   tileSprites:
-  - {fileID: 21300000, guid: 80d8adccd3219944eac29caf277bffd9, type: 3}
-  - {fileID: 21300000, guid: e084b4a4237900b47af4629a5cbcb6fd, type: 3}
+  - {fileID: 21300000, guid: 956ba75e074958a49ae2c6c3b4dfb15f, type: 3}
+  - {fileID: 21300000, guid: cdfb6af1ea9d9fd47b31ed702866e125, type: 3}
+  - {fileID: 21300000, guid: 02c72fb11c0d4ec43b032fe74ca9f9ad, type: 3}
+  - {fileID: 21300000, guid: f706924c0adc73840bb1d33b22c1ff25, type: 3}
 --- !u!114 &1045576069 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8085438801624922090, guid: af1f96d4855c7cc48b62b682f177b41f, type: 3}
