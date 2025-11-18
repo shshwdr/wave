@@ -144,7 +144,6 @@ public class MainGameManager : Singleton<MainGameManager>
     public void PlayerLevelUp()
     {
         playerLevel++;
-        LevelManager.Instance.NextLevel();
         StartBattle();
     }
 
@@ -461,6 +460,7 @@ public class MainGameManager : Singleton<MainGameManager>
             isFirstBattle = false;
         }
 
+        // 进入战斗模式时载入敌人
         // 从关卡管理器获取关卡信息并生成敌人
         currentLevelInfo = LevelManager.Instance.GetNextLevel(playerLevel);
         if (currentLevelInfo != null && enemyManager != null)
@@ -2746,8 +2746,14 @@ public class MainGameManager : Singleton<MainGameManager>
             enemyDescriptionPanel.SetActive(false);
         }
         
-        // 清除战斗场景上的所有内容
+        // 离开战斗模式时清除战场
         ClearBattleScene();
+        
+        // 战斗结束后清除临时伤害加成并恢复exchange
+        if (PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.EndBattle();
+        }
 
         // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
         bool isGameWin = false;
@@ -2784,10 +2790,30 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         else
         {
-            // 战斗-商店-事件-战斗的循环
-            // 先显示商店，然后显示事件
-            ShowShopMenu();
+            // 战斗-事件-商店-战斗的循环
+            // 先显示事件，然后显示商店
+            ShowEventMenu();
         }
+    }
+    
+    /// <summary>
+    /// 显示事件菜单
+    /// </summary>
+    private void ShowEventMenu()
+    {
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("EventMenu");
+            eventMenu = menuObj.AddComponent<EventMenu>();
+        }
+        
+        eventMenu.ShowEvent(() =>
+        {
+            // 事件完成后，显示商店
+            ShowShopMenu();
+        });
     }
     
     /// <summary>
@@ -2806,61 +2832,10 @@ public class MainGameManager : Singleton<MainGameManager>
         skillMenu.ShowSkillSelection(
             () =>
             {
-                // 商店完成后，检查是否有event，有的话显示，没有的话直接进入下一关
-                if (HasAvailableEvent())
-                {
-                    ShowEventMenu();
-                }
-                else
-                {
-                    // 没有event，直接进入下一关战斗
-                    PlayerLevelUp();
-                }
+                // 商店完成后，进入下一关战斗
+                PlayerLevelUp();
             }
         );
-    }
-    
-    /// <summary>
-    /// 检查是否有可用的事件
-    /// </summary>
-    private bool HasAvailableEvent()
-    {
-        if (CSVLoader.Instance == null || CSVLoader.Instance.eventInfoMap == null)
-        {
-            return false;
-        }
-        
-        // 获取所有可用且未使用的事件
-        List<EventInfo> availableEvents = new List<EventInfo>();
-        foreach (var eventInfo in CSVLoader.Instance.eventInfoMap.Values)
-        {
-            if (eventInfo.isAvailable && !EventMenu.IsEventUsed(eventInfo.identifier))
-            {
-                availableEvents.Add(eventInfo);
-            }
-        }
-        
-        return availableEvents.Count > 0;
-    }
-    
-    /// <summary>
-    /// 显示事件菜单
-    /// </summary>
-    private void ShowEventMenu()
-    {
-        EventMenu eventMenu = FindObjectOfType<EventMenu>();
-        if (eventMenu == null)
-        {
-            // 如果没有找到，创建一个新的
-            GameObject menuObj = new GameObject("EventMenu");
-            eventMenu = menuObj.AddComponent<EventMenu>();
-        }
-        
-        eventMenu.ShowEvent(() =>
-        {
-            // 事件完成后，进入下一关战斗
-            PlayerLevelUp();
-        });
     }
     
     /// <summary>

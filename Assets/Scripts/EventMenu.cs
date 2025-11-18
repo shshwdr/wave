@@ -346,6 +346,103 @@ public class EventMenu : MenuBase
                     }
                     break;
                     
+                case "addtempdamage":
+                    if (!string.IsNullOrEmpty(value) && float.TryParse(value, out float tempDamagePercent))
+                    {
+                        if (PlayerManager.Instance != null)
+                        {
+                            PlayerManager.Instance.AddTempWaveDamageBonus(tempDamagePercent);
+                            resultMessages.Add($"Next battle wave damage increased by {tempDamagePercent}%.");
+                        }
+                    }
+                    break;
+                    
+                case "adddamage":
+                    if (!string.IsNullOrEmpty(value) && float.TryParse(value, out float damagePercent))
+                    {
+                        if (PlayerManager.Instance != null)
+                        {
+                            PlayerManager.Instance.AddPermanentWaveDamageBonus(damagePercent);
+                            resultMessages.Add($"Wave damage permanently increased by {damagePercent}%.");
+                        }
+                    }
+                    break;
+                    
+                case "addexchange":
+                    if (!string.IsNullOrEmpty(value) && int.TryParse(value, out int exchangeAmount))
+                    {
+                        if (PlayerManager.Instance != null)
+                        {
+                            PlayerManager.Instance.AddTempSwapCount(exchangeAmount);
+                            if (exchangeAmount > 0)
+                            {
+                                resultMessages.Add($"You gained {exchangeAmount} exchange count.");
+                            }
+                            else
+                            {
+                                resultMessages.Add($"You lost {Mathf.Abs(exchangeAmount)} exchange count.");
+                            }
+                        }
+                    }
+                    break;
+                    
+                case "fillcolor":
+                    if (!string.IsNullOrEmpty(value) && int.TryParse(value, out int columnCount))
+                    {
+                        FillColorColumns(columnCount);
+                        resultMessages.Add($"Leftmost {columnCount} columns filled with first color.");
+                    }
+                    break;
+                    
+                case "addmaxhp":
+                    if (!string.IsNullOrEmpty(value) && int.TryParse(value, out int maxHpAmount))
+                    {
+                        if (PlayerManager.Instance != null)
+                        {
+                            PlayerManager.Instance.AddMaxHealth(maxHpAmount);
+                            if (maxHpAmount > 0)
+                            {
+                                resultMessages.Add($"Max HP increased by {maxHpAmount}.");
+                            }
+                            else
+                            {
+                                resultMessages.Add($"Max HP decreased by {Mathf.Abs(maxHpAmount)}.");
+                            }
+                        }
+                    }
+                    break;
+                    
+                case "damage":
+                    if (!string.IsNullOrEmpty(value) && int.TryParse(value, out int damagePercent2))
+                    {
+                        if (PlayerManager.Instance != null)
+                        {
+                            int maxHealth2 = PlayerManager.Instance.MaxHealth;
+                            int damageAmount = (int)(maxHealth2 * damagePercent2 / 100f);
+                            PlayerManager.Instance.TakeDamage(damageAmount);
+                            resultMessages.Add($"You took {damagePercent2}% damage.");
+                        }
+                    }
+                    break;
+                    
+                case "addskill":
+                    if (!string.IsNullOrEmpty(value) && int.TryParse(value, out int skillCount))
+                    {
+                        for (int j = 0; j < skillCount; j++)
+                        {
+                            string skillId = GetRandomUnownedSkill();
+                            if (!string.IsNullOrEmpty(skillId))
+                            {
+                                if (SkillManager.Instance != null)
+                                {
+                                    SkillManager.Instance.UpgradeSkill(skillId);
+                                    resultMessages.Add($"You gained a random skill.");
+                                }
+                            }
+                        }
+                    }
+                    break;
+                    
                 default:
                     Debug.LogWarning($"未知的结果类型: {action}");
                     break;
@@ -370,6 +467,65 @@ public class EventMenu : MenuBase
     public static void ResetUsedEvents()
     {
         usedEventIdentifiers.Clear();
+    }
+    
+    /// <summary>
+    /// 填充指定数量的列（从最左开始）为第一个颜色
+    /// </summary>
+    private void FillColorColumns(int columnCount)
+    {
+        BoardManager boardManager = FindObjectOfType<BoardManager>();
+        if (boardManager == null)
+            return;
+            
+        // 获取第一列第一个格子的颜色
+        TileColor firstColor = TileColor.Red; // 默认红色
+        for (int y = 0; y < boardManager.Height; y++)
+        {
+            TileCell tile = boardManager.GetTile(new Vector2Int(0, y));
+            if (tile != null)
+            {
+                firstColor = tile.Color;
+                break;
+            }
+        }
+        
+        // 填充指定数量的列
+        for (int x = 0; x < columnCount && x < boardManager.Width; x++)
+        {
+            for (int y = 0; y < boardManager.Height; y++)
+            {
+                TileCell tile = boardManager.GetTile(new Vector2Int(x, y));
+                if (tile != null)
+                {
+                    tile.SetColor(firstColor);
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 获取一个随机未拥有的技能
+    /// </summary>
+    private string GetRandomUnownedSkill()
+    {
+        if (CSVLoader.Instance == null || CSVLoader.Instance.cardInfoMap == null || SkillManager.Instance == null)
+            return null;
+            
+        List<string> unownedSkills = new List<string>();
+        foreach (var skillInfo in CSVLoader.Instance.cardInfoMap.Values)
+        {
+            if (skillInfo.available && !SkillManager.Instance.HasSkill(skillInfo.identifier))
+            {
+                unownedSkills.Add(skillInfo.identifier);
+            }
+        }
+        
+        if (unownedSkills.Count == 0)
+            return null;
+            
+        int randomIndex = Random.Range(0, unownedSkills.Count);
+        return unownedSkills[randomIndex];
     }
 }
 

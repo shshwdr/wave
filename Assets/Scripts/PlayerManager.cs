@@ -17,6 +17,10 @@ public class PlayerManager : Singleton<PlayerManager>
     private int gold = 0; // 金币
     public int startGold = 3;
     private int tempSwapCount = 0; // 临时交换次数（可以突破上限）
+    
+    // Wave基础伤害（默认20）
+    private float baseWaveDamage = 20f; // 永久基础伤害
+    private float tempWaveDamageBonus = 0f; // 临时伤害加成（下次战斗）
 
     // Wave技能配置：List<List<string>>，索引0,1,2,3对应红、黄、蓝、绿
     // 每个内层List存储该颜色wave的技能identifier列表
@@ -28,6 +32,8 @@ public class PlayerManager : Singleton<PlayerManager>
     public int MaxSwapCount => maxSwapCount + tempSwapCount; // 临时交换次数可以突破上限
     public int Gold => gold;
     public bool IsDead => currentHealth <= 0;
+    public float BaseWaveDamage => baseWaveDamage;
+    public float TempWaveDamageBonus => tempWaveDamageBonus;
     
     /// <summary>
     /// 获取wave技能配置字典
@@ -160,8 +166,43 @@ public class PlayerManager : Singleton<PlayerManager>
     /// </summary>
     public void StartBattle()
     {
-        currentSwapCount = maxSwapCount;
+        // 注意：不重置currentSwapCount，exchange在战斗结束时恢复
         tempSwapCount = 0; // 重置临时交换次数
+        // 注意：不重置tempWaveDamageBonus，它会在战斗结束后清除
+    }
+    
+    /// <summary>
+    /// 战斗结束后清除临时伤害加成并恢复exchange
+    /// </summary>
+    public void EndBattle()
+    {
+        tempWaveDamageBonus = 0f;
+        // 战斗结束时恢复exchange到最大值
+        currentSwapCount = maxSwapCount;
+    }
+    
+    /// <summary>
+    /// 添加临时伤害加成（下次战斗）
+    /// </summary>
+    public void AddTempWaveDamageBonus(float percent)
+    {
+        tempWaveDamageBonus += percent;
+    }
+    
+    /// <summary>
+    /// 添加永久伤害加成
+    /// </summary>
+    public void AddPermanentWaveDamageBonus(float percent)
+    {
+        baseWaveDamage = baseWaveDamage * (1f + percent / 100f);
+    }
+    
+    /// <summary>
+    /// 获取当前战斗的基础伤害（包含临时加成）
+    /// </summary>
+    public float GetCurrentBattleBaseDamage()
+    {
+        return baseWaveDamage * (1f + tempWaveDamageBonus / 100f);
     }
     
     /// <summary>
@@ -374,6 +415,23 @@ public class PlayerManager : Singleton<PlayerManager>
     {
         maxHealth = health;
         currentHealth = Mathf.Min(currentHealth, maxHealth);
+    }
+    
+    /// <summary>
+    /// 增加最大血量（保持当前血量比例）
+    /// </summary>
+    public void AddMaxHealth(int amount)
+    {
+        if (maxHealth <= 0)
+            return;
+            
+        float healthPercent = (float)currentHealth / maxHealth;
+        maxHealth += amount;
+        maxHealth = Mathf.Max(1, maxHealth); // 确保至少为1
+        
+        // 按比例更新当前血量
+        currentHealth = Mathf.RoundToInt(maxHealth * healthPercent);
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
     }
     
     /// <summary>

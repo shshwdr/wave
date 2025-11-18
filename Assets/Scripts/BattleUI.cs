@@ -87,7 +87,12 @@ public class BattleUI : MonoBehaviour
             levelText.text = $"Level: {mainGameManager.PlayerLevel+1}";
         }
         
-        damageText.text = $"Wave Damage: 20";
+        // 更新wave伤害显示
+        if (damageText != null && playerManager != null)
+        {
+            float baseDamage = playerManager.GetCurrentBattleBaseDamage();
+            damageText.text = $"Wave Damage: {baseDamage:F0}";
+        }
 
         // 更新剩余敌人显示（只在normal模式下显示）
         if (enemyCountText != null && enemyManager != null && mainGameManager != null)

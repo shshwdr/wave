@@ -778,5 +778,71 @@ public class EnemyManager : MonoBehaviour
         // 随机选择一个可用位置
         return availableY[Random.Range(0, availableY.Count)];
     }
+    
+    /// <summary>
+    /// 更新方法：检测作弊按键
+    /// </summary>
+    private void Update()
+    {
+        // 按P键杀死所有敌人（作弊功能）
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            KillAllEnemies();
+        }
+    }
+    
+    /// <summary>
+    /// 杀死所有敌人（作弊功能）
+    /// </summary>
+    private void KillAllEnemies()
+    {
+        Debug.Log("作弊：杀死所有敌人");
+        
+        // 1. 杀死所有场上的敌人
+        int killedCount = 0;
+        foreach (var enemy in activeEnemies.ToList())
+        {
+            if (enemy != null && !enemy.IsDead)
+            {
+                enemy.Die();
+                killedCount++;
+            }
+        }
+        
+        // 2. 处理未上场的敌人：将它们也标记为死亡
+        if (currentLevelInfo != null && remainingEnemies != null)
+        {
+            // 计算未上场的敌人数量
+            int remainingCount = remainingEnemies.Count - currentSpawnIndex;
+            if (remainingCount > 0)
+            {
+                // 将未上场的敌人也计入死亡
+                deadEnemyCount += remainingCount;
+                Debug.Log($"作弊：标记 {remainingCount} 个未上场的敌人为死亡");
+            }
+            
+            // 清空剩余敌人列表，使 HasRemainingEnemiesToSpawn() 返回 false
+            remainingEnemies.Clear();
+            currentSpawnIndex = 0;
+        }
+        
+        Debug.Log($"作弊完成：杀死了 {killedCount} 个场上敌人，剩余敌人数量：{GetRemainingEnemyCount()}");
+        
+        // 3. 延迟检查是否可以完成关卡（等待敌人死亡动画完成）
+        DOVirtual.DelayedCall(0.5f, () =>
+        {
+            // 检查是否可以完成关卡
+            if (CanCompleteLevel())
+            {
+                Debug.Log("作弊：所有敌人已死亡，触发战斗结束");
+                // 通过MainGameManager触发战斗结束
+                MainGameManager mainGameManager = FindObjectOfType<MainGameManager>();
+                if (mainGameManager != null)
+                {
+                    mainGameManager.CompleteLevel();
+                }
+            }
+        });
+    }
 }
 

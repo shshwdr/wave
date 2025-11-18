@@ -7,19 +7,17 @@ using UnityEngine;
 /// </summary>
 public class LevelManager : Singleton<LevelManager>
 {
-    private int currentLevel = 1;
 
     /// <summary>
     /// 获取当前关卡
     /// </summary>
-    public int CurrentLevel => currentLevel;
+    public int CurrentLevel => MainGameManager.Instance.PlayerLevel+1;
 
     /// <summary>
     /// 初始化关卡管理器
     /// </summary>
     public void Init()
     {
-        currentLevel = 1;
     }
 
     /// <summary>
@@ -33,9 +31,9 @@ public class LevelManager : Singleton<LevelManager>
         }
 
         // 查找当前关卡
-        if (CSVLoader.Instance.levelInfoMap.ContainsKey(currentLevel))
+        if (CSVLoader.Instance.levelInfoMap.ContainsKey(CurrentLevel))
         {
-            return CSVLoader.Instance.levelInfoMap[currentLevel];
+            return CSVLoader.Instance.levelInfoMap[CurrentLevel];
         }
 
         return null;
@@ -121,21 +119,6 @@ public class LevelManager : Singleton<LevelManager>
         return result;
     }
 
-    /// <summary>
-    /// 进入下一关
-    /// </summary>
-    public void NextLevel()
-    {
-        currentLevel++;
-    }
-
-    /// <summary>
-    /// 重置关卡
-    /// </summary>
-    public void ResetLevel()
-    {
-        currentLevel = 1;
-    }
 }
 
 /// <summary>

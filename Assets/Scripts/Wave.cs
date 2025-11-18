@@ -415,8 +415,20 @@ public class Wave : MonoBehaviour
         if (hasMoreTileMoreDamage)
         {
             // 基础伤害变成 value% base damage × tiles used
-            float baseDamage = 20f; // 基础伤害
+            float baseDamage = 20f; // 默认基础伤害
+            if (PlayerManager.Instance != null)
+            {
+                baseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+            }
             damage = baseDamage * (moreTileMoreDamageValue / 100f) * tilesUsed;
+        }
+        else
+        {
+            // 如果没有moreTileMoreDamage技能，使用PlayerManager的基础伤害
+            if (PlayerManager.Instance != null)
+            {
+                damage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+            }
         }
         
         // 应用buffNextDamage的伤害加成
@@ -752,6 +764,10 @@ public class Wave : MonoBehaviour
                 
                 // 获取红色wave的基础伤害（用于hitTakeDamage）
                 float redWaveBaseDamage = 20f; // 默认基础伤害
+                if (PlayerManager.Instance != null)
+                {
+                    redWaveBaseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+                }
                 //if (waveColor == TileColor.Red)
                 {
                     // 如果是红色wave，使用当前伤害（已应用所有加成）
@@ -910,6 +926,10 @@ public class Wave : MonoBehaviour
                     float aoeDamage = baseDamage * (aoeAttackValue / 100f);
                     // 获取红色wave的基础伤害（用于hitTakeDamage）
                     float redWaveBaseDamage = 20f;
+                    if (PlayerManager.Instance != null)
+                    {
+                        redWaveBaseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+                    }
                     if (waveColor == TileColor.Red)
                     {
                         redWaveBaseDamage = baseDamage;
@@ -920,6 +940,10 @@ public class Wave : MonoBehaviour
                         {
                             List<SkillInfo> redSkills = SkillManager.Instance.GetOwnedSkillsByColor("red");
                             float redDamage = 20f;
+                            if (PlayerManager.Instance != null)
+                            {
+                                redDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+                            }
                             foreach (var skill in redSkills)
                             {
                                 int value = SkillManager.Instance.GetSkillValue(skill.identifier);
@@ -982,6 +1006,10 @@ public class Wave : MonoBehaviour
             
             // 对boss造成伤害
             float redWaveBaseDamage = 20f;
+            if (PlayerManager.Instance != null)
+            {
+                redWaveBaseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+            }
             if (waveColor == TileColor.Red)
             {
                 redWaveBaseDamage = finalDamage;
