@@ -151,7 +151,6 @@ public class MainGameManager : Singleton<MainGameManager>
     public void PlayerLevelUp()
     {
         playerLevel++;
-        LevelManager.Instance.NextLevel();
         StartBattle();
     }
 
@@ -468,6 +467,7 @@ public class MainGameManager : Singleton<MainGameManager>
             isFirstBattle = false;
         }
 
+        // 进入战斗模式时载入敌人
         // 从关卡管理器获取关卡信息并生成敌人
         currentLevelInfo = LevelManager.Instance.GetNextLevel(playerLevel);
         if (currentLevelInfo != null && enemyManager != null)
@@ -1167,7 +1167,24 @@ public class MainGameManager : Singleton<MainGameManager>
         sb.AppendLine();
         
         // 攻击力和血量
-        sb.AppendLine($"Attack: {enemy.GetAttack()}");
+        int baseAttack = enemy.GetAttack();
+        int displayAttack = baseAttack;
+        
+        // 应用敌人伤害加成（如果有）
+        if (PlayerManager.Instance != null && PlayerManager.Instance.EnemyDamageBonus > 0)
+        {
+            float bonusPercent = PlayerManager.Instance.EnemyDamageBonus;
+            displayAttack = Mathf.RoundToInt(baseAttack * (1f + bonusPercent / 100f));
+        }
+        
+        if (displayAttack != baseAttack)
+        {
+            sb.AppendLine($"Attack: {baseAttack} → <color=red>{displayAttack}</color> (+{PlayerManager.Instance.EnemyDamageBonus:F0}%)");
+        }
+        else
+        {
+            sb.AppendLine($"Attack: {displayAttack}");
+        }
         sb.AppendLine($"HP: {enemy.CurrentHealth}/{enemy.MaxHealth}");
         sb.AppendLine();
         
@@ -1178,6 +1195,13 @@ public class MainGameManager : Singleton<MainGameManager>
             float damageIncrease = vulnerableStacks * 0.05f * 100f;
             sb.AppendLine($"<color=yellow>Vulnerable: {vulnerableStacks}层</color>");
             sb.AppendLine($"伤害提升: +{damageIncrease:F0}%");
+            sb.AppendLine();
+        }
+        
+        // 显示敌人伤害加成（如果有）
+        if (PlayerManager.Instance != null && PlayerManager.Instance.EnemyDamageBonus > 0)
+        {
+            sb.AppendLine($"<color=red>Enemy Damage Bonus: +{PlayerManager.Instance.EnemyDamageBonus:F0}%</color>");
             sb.AppendLine();
         }
         
@@ -2511,6 +2535,14 @@ public class MainGameManager : Singleton<MainGameManager>
         int difficulty = currentLevelInfo != null ? currentLevelInfo.difficulty : 0;
         int calculatedHP = bossInfo.hp + difficulty * bossInfo.hpIncrease;
         
+        // 应用boss初始血量减少（如果有）
+        if (PlayerManager.Instance != null && PlayerManager.Instance.BossDamageReduction > 0)
+        {
+            float reductionPercent = PlayerManager.Instance.BossDamageReduction;
+            calculatedHP = Mathf.RoundToInt(calculatedHP * (1f - reductionPercent / 100f));
+            calculatedHP = Mathf.Max(1, calculatedHP); // 确保至少为1
+        }
+        
         // 初始化boss
         boss.InitBoss(bossGridPos, calculatedHP, bossInfo, boardManager);
         
@@ -2798,8 +2830,14 @@ public class MainGameManager : Singleton<MainGameManager>
             enemyDescriptionPanel.SetActive(false);
         }
         
-        // 清除战斗场景上的所有内容
+        // 离开战斗模式时清除战场
         ClearBattleScene();
+        
+        // 战斗结束后清除临时伤害加成并恢复exchange
+        if (PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.EndBattle();
+        }
 
         // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
         bool isGameWin = false;
@@ -2836,10 +2874,39 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         else
         {
-            // 战斗-商店-事件-战斗的循环
-            // 先显示商店，然后显示事件
-            ShowShopMenu();
+            // 战斗-事件-商店-战斗的循环
+            // 先显示事件，然后显示商店
+            ShowEventMenu();
         }
+    }
+    
+    /// <summary>
+    /// 显示事件菜单
+    /// </summary>
+    private void ShowEventMenu()
+    {
+        // 检查是否有eventType，如果没有则直接进入商店
+        if (currentLevelInfo == null || string.IsNullOrEmpty(currentLevelInfo.eventType))
+        {
+            // eventType为空，不显示事件，直接进入商店
+            ShowShopMenu();
+            return;
+        }
+        
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("EventMenu");
+            eventMenu = menuObj.AddComponent<EventMenu>();
+        }
+        
+        // 显示对应类型的事件
+        eventMenu.ShowEventByType(currentLevelInfo.eventType, () =>
+        {
+            // 事件完成后，显示商店
+            ShowShopMenu();
+        });
     }
     
     /// <summary>
@@ -2858,61 +2925,10 @@ public class MainGameManager : Singleton<MainGameManager>
         skillMenu.ShowSkillSelection(
             () =>
             {
-                // 商店完成后，检查是否有event，有的话显示，没有的话直接进入下一关
-                if (HasAvailableEvent())
-                {
-                    ShowEventMenu();
-                }
-                else
-                {
-                    // 没有event，直接进入下一关战斗
-                    PlayerLevelUp();
-                }
+                // 商店完成后，进入下一关战斗
+                PlayerLevelUp();
             }
         );
-    }
-    
-    /// <summary>
-    /// 检查是否有可用的事件
-    /// </summary>
-    private bool HasAvailableEvent()
-    {
-        if (CSVLoader.Instance == null || CSVLoader.Instance.eventInfoMap == null)
-        {
-            return false;
-        }
-        
-        // 获取所有可用且未使用的事件
-        List<EventInfo> availableEvents = new List<EventInfo>();
-        foreach (var eventInfo in CSVLoader.Instance.eventInfoMap.Values)
-        {
-            if (eventInfo.isAvailable && !EventMenu.IsEventUsed(eventInfo.identifier))
-            {
-                availableEvents.Add(eventInfo);
-            }
-        }
-        
-        return availableEvents.Count > 0;
-    }
-    
-    /// <summary>
-    /// 显示事件菜单
-    /// </summary>
-    private void ShowEventMenu()
-    {
-        EventMenu eventMenu = FindObjectOfType<EventMenu>();
-        if (eventMenu == null)
-        {
-            // 如果没有找到，创建一个新的
-            GameObject menuObj = new GameObject("EventMenu");
-            eventMenu = menuObj.AddComponent<EventMenu>();
-        }
-        
-        eventMenu.ShowEvent(() =>
-        {
-            // 事件完成后，进入下一关战斗
-            PlayerLevelUp();
-        });
     }
     
     /// <summary>

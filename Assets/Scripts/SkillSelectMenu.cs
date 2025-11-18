@@ -442,9 +442,14 @@ public class SkillSelectMenu : MenuBase
     /// </summary>
     private void OnConfirmClicked()
     {
-        // 不再在这里调用PlayerLevelUp，由MainGameManager统一处理
-        shopFilter.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
-        shopFilter.release();
+        // 玩家等级+1，进入下一关
+        MainGameManager mainGameManager = FindObjectOfType<MainGameManager>();
+        if (mainGameManager != null)
+        {
+            //mainGameManager.PlayerLevelUp();
+            shopFilter.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
+            shopFilter.release();
+        }
 
         // 隐藏界面
         Hide();

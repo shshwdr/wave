@@ -688,6 +688,13 @@ public class Enemy : MonoBehaviour
         int damage = enemyInfo.attack;
         if (damage <= 0)
             damage = 10; // 默认伤害
+        
+        // 应用敌人伤害加成（如果有）
+        if (PlayerManager.Instance != null && PlayerManager.Instance.EnemyDamageBonus > 0)
+        {
+            float bonusPercent = PlayerManager.Instance.EnemyDamageBonus;
+            damage = Mathf.RoundToInt(damage * (1f + bonusPercent / 100f));
+        }
             
         int range = enemyInfo.range;
         
