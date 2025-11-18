@@ -21,6 +21,10 @@ public class PlayerManager : Singleton<PlayerManager>
     // Wave基础伤害（默认20）
     private float baseWaveDamage = 20f; // 永久基础伤害
     private float tempWaveDamageBonus = 0f; // 临时伤害加成（下次战斗）
+    
+    // Boss和敌人临时效果
+    private float bossDamageReduction = 0f; // Boss初始血量减少百分比（下次战斗）
+    private float enemyDamageBonus = 0f; // 敌人伤害加成百分比（下次战斗）
 
     // Wave技能配置：List<List<string>>，索引0,1,2,3对应红、黄、蓝、绿
     // 每个内层List存储该颜色wave的技能identifier列表
@@ -34,6 +38,8 @@ public class PlayerManager : Singleton<PlayerManager>
     public bool IsDead => currentHealth <= 0;
     public float BaseWaveDamage => baseWaveDamage;
     public float TempWaveDamageBonus => tempWaveDamageBonus;
+    public float BossDamageReduction => bossDamageReduction;
+    public float EnemyDamageBonus => enemyDamageBonus;
     
     /// <summary>
     /// 获取wave技能配置字典
@@ -177,6 +183,8 @@ public class PlayerManager : Singleton<PlayerManager>
     public void EndBattle()
     {
         tempWaveDamageBonus = 0f;
+        bossDamageReduction = 0f;
+        enemyDamageBonus = 0f;
         // 战斗结束时恢复exchange到最大值
         currentSwapCount = maxSwapCount;
     }
@@ -195,6 +203,22 @@ public class PlayerManager : Singleton<PlayerManager>
     public void AddPermanentWaveDamageBonus(float percent)
     {
         baseWaveDamage = baseWaveDamage * (1f + percent / 100f);
+    }
+    
+    /// <summary>
+    /// 设置Boss初始血量减少百分比（下次战斗）
+    /// </summary>
+    public void SetBossDamageReduction(float percent)
+    {
+        bossDamageReduction = percent;
+    }
+    
+    /// <summary>
+    /// 添加敌人伤害加成百分比（下次战斗）
+    /// </summary>
+    public void AddEnemyDamageBonus(float percent)
+    {
+        enemyDamageBonus += percent;
     }
     
     /// <summary>

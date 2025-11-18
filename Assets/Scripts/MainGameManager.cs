@@ -1160,7 +1160,24 @@ public class MainGameManager : Singleton<MainGameManager>
         sb.AppendLine();
         
         // 攻击力和血量
-        sb.AppendLine($"Attack: {enemy.GetAttack()}");
+        int baseAttack = enemy.GetAttack();
+        int displayAttack = baseAttack;
+        
+        // 应用敌人伤害加成（如果有）
+        if (PlayerManager.Instance != null && PlayerManager.Instance.EnemyDamageBonus > 0)
+        {
+            float bonusPercent = PlayerManager.Instance.EnemyDamageBonus;
+            displayAttack = Mathf.RoundToInt(baseAttack * (1f + bonusPercent / 100f));
+        }
+        
+        if (displayAttack != baseAttack)
+        {
+            sb.AppendLine($"Attack: {baseAttack} → <color=red>{displayAttack}</color> (+{PlayerManager.Instance.EnemyDamageBonus:F0}%)");
+        }
+        else
+        {
+            sb.AppendLine($"Attack: {displayAttack}");
+        }
         sb.AppendLine($"HP: {enemy.CurrentHealth}/{enemy.MaxHealth}");
         sb.AppendLine();
         
@@ -1171,6 +1188,13 @@ public class MainGameManager : Singleton<MainGameManager>
             float damageIncrease = vulnerableStacks * 0.05f * 100f;
             sb.AppendLine($"<color=yellow>Vulnerable: {vulnerableStacks}层</color>");
             sb.AppendLine($"伤害提升: +{damageIncrease:F0}%");
+            sb.AppendLine();
+        }
+        
+        // 显示敌人伤害加成（如果有）
+        if (PlayerManager.Instance != null && PlayerManager.Instance.EnemyDamageBonus > 0)
+        {
+            sb.AppendLine($"<color=red>Enemy Damage Bonus: +{PlayerManager.Instance.EnemyDamageBonus:F0}%</color>");
             sb.AppendLine();
         }
         
@@ -2459,6 +2483,14 @@ public class MainGameManager : Singleton<MainGameManager>
         int difficulty = currentLevelInfo != null ? currentLevelInfo.difficulty : 0;
         int calculatedHP = bossInfo.hp + difficulty * bossInfo.hpIncrease;
         
+        // 应用boss初始血量减少（如果有）
+        if (PlayerManager.Instance != null && PlayerManager.Instance.BossDamageReduction > 0)
+        {
+            float reductionPercent = PlayerManager.Instance.BossDamageReduction;
+            calculatedHP = Mathf.RoundToInt(calculatedHP * (1f - reductionPercent / 100f));
+            calculatedHP = Mathf.Max(1, calculatedHP); // 确保至少为1
+        }
+        
         // 初始化boss
         boss.InitBoss(bossGridPos, calculatedHP, bossInfo, boardManager);
         
@@ -2801,6 +2833,14 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void ShowEventMenu()
     {
+        // 检查是否有eventType，如果没有则直接进入商店
+        if (currentLevelInfo == null || string.IsNullOrEmpty(currentLevelInfo.eventType))
+        {
+            // eventType为空，不显示事件，直接进入商店
+            ShowShopMenu();
+            return;
+        }
+        
         EventMenu eventMenu = FindObjectOfType<EventMenu>();
         if (eventMenu == null)
         {
@@ -2809,7 +2849,8 @@ public class MainGameManager : Singleton<MainGameManager>
             eventMenu = menuObj.AddComponent<EventMenu>();
         }
         
-        eventMenu.ShowEvent(() =>
+        // 显示对应类型的事件
+        eventMenu.ShowEventByType(currentLevelInfo.eventType, () =>
         {
             // 事件完成后，显示商店
             ShowShopMenu();

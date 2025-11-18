@@ -54,6 +54,7 @@ public class LevelInfo
     public int turns;
     public string type;
     public string typeIdentifier;
+    public string eventType;
 }
 
 public class EventInfo
@@ -71,6 +72,7 @@ public class EventInfo
     public string desc1;
     public string desc2;
     public bool isAvailable;
+    public string type;
 }
 public class CSVLoader : Singleton<CSVLoader>
 {

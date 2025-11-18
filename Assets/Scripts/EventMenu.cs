@@ -114,6 +114,33 @@ public class EventMenu : MenuBase
     }
     
     /// <summary>
+    /// 根据eventType显示事件菜单
+    /// </summary>
+    public void ShowEventByType(string eventType, Action onComplete = null)
+    {
+        onEventComplete = onComplete;
+        
+        // 根据eventType查找匹配的事件
+        currentEvent = GetEventByType(eventType);
+        if (currentEvent == null)
+        {
+            Debug.LogWarning($"没有找到eventType为{eventType}的事件，直接进入商店");
+            // 如果没有找到匹配的事件，直接进入商店
+            onEventComplete?.Invoke();
+            return;
+        }
+        
+        // 标记为已使用
+        usedEventIdentifiers.Add(currentEvent.identifier);
+        
+        // 显示事件信息
+        DisplayEvent();
+        
+        // 显示菜单
+        Show();
+    }
+    
+    /// <summary>
     /// 获取随机可用事件
     /// </summary>
     private EventInfo GetRandomAvailableEvent()
@@ -143,6 +170,39 @@ public class EventMenu : MenuBase
         // 随机选择一个
         int randomIndex = Random.Range(0, availableEvents.Count);
         return availableEvents[randomIndex];
+    }
+    
+    /// <summary>
+    /// 根据eventType获取匹配的事件
+    /// </summary>
+    private EventInfo GetEventByType(string eventType)
+    {
+        if (CSVLoader.Instance == null || CSVLoader.Instance.eventInfoMap == null || string.IsNullOrEmpty(eventType))
+        {
+            return null;
+        }
+        
+        // 获取所有type和eventType相同且未使用的事件
+        List<EventInfo> matchingEvents = new List<EventInfo>();
+        foreach (var eventInfo in CSVLoader.Instance.eventInfoMap.Values)
+        {
+            if (eventInfo.isAvailable && 
+                !string.IsNullOrEmpty(eventInfo.type) && 
+                eventInfo.type == eventType &&
+                !usedEventIdentifiers.Contains(eventInfo.identifier))
+            {
+                matchingEvents.Add(eventInfo);
+            }
+        }
+        
+        // 随机选择一个
+        if (matchingEvents.Count > 0)
+        {
+            int randomIndex = Random.Range(0, matchingEvents.Count);
+            return matchingEvents[randomIndex];
+        }
+        
+        return null;
     }
     
     /// <summary>
@@ -439,6 +499,28 @@ public class EventMenu : MenuBase
                                     resultMessages.Add($"You gained a random skill.");
                                 }
                             }
+                        }
+                    }
+                    break;
+                    
+                case "damageboss":
+                    if (!string.IsNullOrEmpty(value) && float.TryParse(value, out float bossDamagePercent))
+                    {
+                        if (PlayerManager.Instance != null)
+                        {
+                            PlayerManager.Instance.SetBossDamageReduction(bossDamagePercent);
+                            resultMessages.Add($"Next boss battle initial HP reduced by {bossDamagePercent}%.");
+                        }
+                    }
+                    break;
+                    
+                case "addenemydamage":
+                    if (!string.IsNullOrEmpty(value) && float.TryParse(value, out float enemyDamagePercent))
+                    {
+                        if (PlayerManager.Instance != null)
+                        {
+                            PlayerManager.Instance.AddEnemyDamageBonus(enemyDamagePercent);
+                            resultMessages.Add($"Next battle all enemy damage increased by {enemyDamagePercent}%.");
                         }
                     }
                     break;
