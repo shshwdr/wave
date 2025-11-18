@@ -236,6 +236,7 @@ public class TileCell : MonoBehaviour
         if (frameObject != null)
         {
             frameObject.SetActive(show);
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Waves/sfx__select_tile");
         }
     }
     

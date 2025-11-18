@@ -192,6 +192,7 @@ public class BoardManager : MonoBehaviour
         {
             board[gridPos.x, gridPos.y] = tile;
         }
+
     }
     
     /// <summary>
@@ -210,7 +211,7 @@ public class BoardManager : MonoBehaviour
     public bool IsValidPosition(Vector2Int gridPos)
     {
         return gridPos.x >= 0 && gridPos.x < boardWidth && 
-               gridPos.y >= 0 && gridPos.y < boardHeight;
+               gridPos.y >= 0 && gridPos.y < boardHeight; 
     }
 
     /// <summary>
@@ -252,6 +253,8 @@ public class BoardManager : MonoBehaviour
 
         tile1.SwapAnimation(pos2World);
         tile2.SwapAnimation(pos1World);
+
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Waves/sfx_change_select_tile");
     }
 
     /// <summary>

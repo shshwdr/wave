@@ -221,7 +221,8 @@ public class PlayerManager : Singleton<PlayerManager>
     {
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);
-        
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/PlayerStatus/sfx_player_hurt");
+
         Debug.Log($"玩家受到 {damage} 伤害，当前血量: {currentHealth}/{maxHealth}");
     }
 
