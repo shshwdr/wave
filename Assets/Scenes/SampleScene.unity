@@ -3650,6 +3650,34 @@ MonoBehaviour:
   - {fileID: 21300000, guid: cdfb6af1ea9d9fd47b31ed702866e125, type: 3}
   - {fileID: 21300000, guid: 02c72fb11c0d4ec43b032fe74ca9f9ad, type: 3}
   - {fileID: 21300000, guid: f706924c0adc73840bb1d33b22c1ff25, type: 3}
+  waveBlue:
+    Guid:
+      Data1: 815719254
+      Data2: 1253732284
+      Data3: 941694361
+      Data4: 625552216
+    Path: event:/SFX/Waves/sfx_blue_tile_wave
+  waveCyan:
+    Guid:
+      Data1: -353816048
+      Data2: 1178261412
+      Data3: -1580703055
+      Data4: -1529646467
+    Path: event:/SFX/Waves/sfx_cyan_tile_wave
+  wavePurple:
+    Guid:
+      Data1: -1525637984
+      Data2: 1213259495
+      Data3: 488616077
+      Data4: -429964662
+    Path: event:/SFX/Waves/sfx_purple_tile_wave
+  waveRed:
+    Guid:
+      Data1: -130981351
+      Data2: 1331100515
+      Data3: -252522332
+      Data4: -2131846873
+    Path: event:/SFX/Waves/sfx_red_tile_wave
 --- !u!114 &1045576069 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8085438801624922090, guid: af1f96d4855c7cc48b62b682f177b41f, type: 3}

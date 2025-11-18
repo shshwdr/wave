@@ -5,6 +5,8 @@ using DG.Tweening;
 using UnityEngine.SceneManagement;
 using TMPro;
 using UnityEngine.UI;
+using FMODUnity;
+using FMOD.Studio;
 
 /// <summary>
 /// 一场战斗的游戏控制 - 回合制战斗系统
@@ -106,7 +108,12 @@ public class MainGameManager : Singleton<MainGameManager>
     // Puzzle编辑模式相关
     private bool isPuzzleEditMode = false;
     private int[,] currentPuzzleData = null; // 当前编辑的puzzle数据（8x6）
-    
+
+    [SerializeField] private EventReference waveBlue;
+    [SerializeField] private EventReference waveCyan;
+    [SerializeField] private EventReference wavePurple;
+    [SerializeField] private EventReference waveRed;
+
     /// <summary>
     /// 获取当前关卡信息
     /// </summary>
@@ -1381,6 +1388,51 @@ public class MainGameManager : Singleton<MainGameManager>
         TileCell startTile = boardManager.GetTile(startPos);
         TileColor waveColor = startTile != null ? startTile.Color : TileColor.Red;
         int colorIndex = (int)waveColor; // TileColor枚举值：Red=0, Yellow=1, Blue=2, Green=3
+
+        EventReference waveEvent;
+
+        switch (colorIndex)
+        {
+            case 0: // red
+                waveEvent = waveRed;
+                break;
+
+            case 1: // cyan
+                waveEvent = waveCyan;
+                break;
+
+            case 2: // blue
+                waveEvent = waveBlue;
+                break;
+
+            case 3: // purple
+                waveEvent = wavePurple;
+                break;
+
+            default:
+                waveEvent = waveRed;
+                break;
+        }
+
+        FMOD.Studio.EventInstance waveInstance = RuntimeManager.CreateInstance(waveEvent);
+
+        // Calculate parameter value based on tile count
+        int tileCount = connectedTiles.Count;
+        float tileNumberParam;
+
+        if (tileCount == 1)
+            tileNumberParam = 0f;  // weak
+        else if (tileCount <= 5)
+            tileNumberParam = 1f;  // normal
+        else
+            tileNumberParam = 2f;  // strong
+
+        // Set parameter (all events use the same parameter name: "Tile Number")
+        waveInstance.setParameterByName("Tile Number", tileNumberParam);
+
+        // Play sound
+        waveInstance.start();
+        waveInstance.release();
 
         // 从PlayerManager获取该颜色wave配置的技能列表，检查是否有damageBottom技能
         bool hasDamageBottom = false;
