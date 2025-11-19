@@ -1,0 +1,7 @@
+﻿identifier,text,actions,wait,highlight,isEnding
+1,"Long ago, this world was perfectly harmonious.",showGroup_bk1,,,
+,Every creature… was a living melody.,showObjects_Puff,,,
+,"The Hoppits kept time like metronomes,",showObjects_Hoppit,,,
+,"the Tallhorn held long notes as smooth as strings,",showObjects_Tallhorn,,,
+,and even the Swamp Heralds’ low frequencies could shake a concert hall.,showObjects_Swamp,,,
+,,hideGroup_bk1|hideGroup_all,,,1

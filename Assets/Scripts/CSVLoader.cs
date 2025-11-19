@@ -87,6 +87,16 @@ public class TutorialInfo
     public bool isBlocking;
     public TutorialInfo nextInfo; // 下一个教程的引用（从CSV顺序推断，只有不是isEnding的才有next）
 }
+
+public class StartAnimInfo
+{
+    public string identifier;
+    public string text;
+    public List<string> actions;
+    public bool isEnding;
+    public StartAnimInfo nextInfo; // 下一个动画的引用（从CSV顺序推断，只有不是isEnding的才有next）
+}
+
 public class CSVLoader : Singleton<CSVLoader>
 {
     public TMP_FontAsset font;
@@ -96,6 +106,8 @@ public class CSVLoader : Singleton<CSVLoader>
     public Dictionary<string, EventInfo> eventInfoMap = new Dictionary<string, EventInfo>();
     public Dictionary<string, TutorialInfo> tutorialInfoMap = new Dictionary<string, TutorialInfo>();
     public List<TutorialInfo> tutorialInfoList = new List<TutorialInfo>(); // 保持CSV顺序的列表
+    public Dictionary<string, StartAnimInfo> startAnimInfoMap = new Dictionary<string, StartAnimInfo>();
+    public List<StartAnimInfo> startAnimInfoList = new List<StartAnimInfo>(); // 保持CSV顺序的列表
     // Start is called before the first frame update
     public void Init()
     {
@@ -151,6 +163,39 @@ public class CSVLoader : Singleton<CSVLoader>
             if (!string.IsNullOrEmpty(tutorialInfo.identifier))
             {
                 tutorialInfoMap.Add(tutorialInfo.identifier, tutorialInfo);
+            }
+        }
+        
+        // 加载开场动画数据
+        var startAnimInfos = CsvUtil.LoadObjects<StartAnimInfo>("startAnim");
+        startAnimInfoList = new List<StartAnimInfo>(startAnimInfos);
+        
+        // 设置nextInfo链接，并添加到字典（只有有identifier的才添加到字典）
+        for (i = 0; i < startAnimInfoList.Count; i++)
+        {
+            var startAnimInfo = startAnimInfoList[i];
+            
+            // 解析actions字段（CSV中用|分隔，CsvUtil应该能自动解析为List<string>）
+            // 如果actions为null，初始化为空列表
+            if (startAnimInfo.actions == null)
+            {
+                startAnimInfo.actions = new List<string>();
+            }
+            
+            // 设置下一个动画的引用（只有不是isEnding的才有next）
+            if (!startAnimInfo.isEnding && i < startAnimInfoList.Count - 1)
+            {
+                startAnimInfo.nextInfo = startAnimInfoList[i + 1];
+            }
+            else
+            {
+                startAnimInfo.nextInfo = null;
+            }
+            
+            // 只有有identifier的才添加到字典
+            if (!string.IsNullOrEmpty(startAnimInfo.identifier))
+            {
+                startAnimInfoMap.Add(startAnimInfo.identifier, startAnimInfo);
             }
         }
     }
