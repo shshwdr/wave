@@ -146,6 +146,12 @@ public class SkillSelectMenu : MenuBase
         Show();
         shopFilter = FMODUnity.RuntimeManager.CreateInstance("snapshot:/Shop");
         shopFilter.start();
+        
+        // 开始shop教程
+        if (TutorialManager.Instance != null)
+        {
+            TutorialManager.Instance.StartTutorial("shop");
+        }
     }
     
     /// <summary>
@@ -327,6 +333,12 @@ public class SkillSelectMenu : MenuBase
         UpdateColorAreas();
         UpdateBackpack();
         UpdateGoldDisplay();
+        
+        // 触发教程信号：第一次购买
+        if (!isUpgrade && TutorialManager.Instance != null)
+        {
+            TutorialManager.Instance.SendSignal("purchase");
+        }
     }
     
     /// <summary>
@@ -828,6 +840,7 @@ public class SkillSelectMenu : MenuBase
         // 如果原位置是背包（originalColorIndex == -1），不需要从PlayerManager移除，只需要更新UI即可
 
         // 添加到目标位置
+        bool draggedToColor = false;
         if (targetColorIndex >= 0 && targetColorIndex < 4)
         {
             // 添加到颜色区域
@@ -845,6 +858,7 @@ public class SkillSelectMenu : MenuBase
                         skills.Add(identifier);
                     }
                     PlayerManager.Instance.SetWaveSkills(targetColorIndex, skills);
+                    draggedToColor = true; // 标记为拖动到颜色区域
                 }
             }
         }
@@ -856,6 +870,12 @@ public class SkillSelectMenu : MenuBase
         // 更新UI
         UpdateColorAreas();
         UpdateBackpack();
+
+        // 触发教程信号：第一次拖动到颜色区域（从背包拖动到颜色区域）
+        if (draggedToColor && originalColorIndex == -1 && TutorialManager.Instance != null)
+        {
+            TutorialManager.Instance.SendSignal("dragToColor");
+        }
 
         // 重置拖拽状态
         draggingIcon = null;
@@ -1060,6 +1080,28 @@ public class SkillSelectMenu : MenuBase
         if (skillDetailPanel != null)
         {
             skillDetailPanel.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// 设置关闭按钮的启用状态（用于教程）
+    /// </summary>
+    public void SetCloseButtonEnabled(bool enabled)
+    {
+        if (closeButton != null)
+        {
+            closeButton.gameObject.SetActive(enabled);
+        }
+    }
+    
+    /// <summary>
+    /// 设置刷新按钮的启用状态（用于教程）
+    /// </summary>
+    public void SetRefreshButtonEnabled(bool enabled)
+    {
+        if (refreshButton != null)
+        {
+            refreshButton.gameObject.SetActive(enabled);
         }
     }
 }

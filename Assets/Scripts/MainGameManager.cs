@@ -547,10 +547,10 @@ public class MainGameManager : Singleton<MainGameManager>
                 break;
         }
         
-        if (!string.IsNullOrEmpty(message))
-        {
-            ToastManager.Instance.ShowToast(message);
-        }
+        // if (!string.IsNullOrEmpty(message))
+        // {
+        //     ToastManager.Instance.ShowToast(message);
+        // }
     }
 
     private void Update()
@@ -626,6 +626,12 @@ public class MainGameManager : Singleton<MainGameManager>
         // 处理中时不允许操作
         if (isProcessing)
             return;
+        
+        // 如果教程正在拦截输入，不响应输入
+        if (TutorialManager.Instance != null && TutorialManager.Instance.IsBlockingInput)
+        {
+            return;
+        }
         
         // 如果统计菜单打开，不响应输入
         StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
@@ -708,7 +714,12 @@ public class MainGameManager : Singleton<MainGameManager>
             }
 
             // 鼠标左键 - 拖动交换（任意位置）
-            if (Input.GetMouseButtonDown(0))
+            // 检查教程是否禁用拖动
+            if (TutorialManager.Instance != null && !TutorialManager.Instance.IsDragEnabled)
+            {
+                // 教程禁用拖动，不处理
+            }
+            else if (Input.GetMouseButtonDown(0))
             {
                 Vector2Int gridPos = GetMouseGridPosition();
                 if (boardManager != null && boardManager.IsValidPosition(gridPos))
@@ -836,6 +847,12 @@ public class MainGameManager : Singleton<MainGameManager>
                     // 交换格子
                     boardManager.SwapTiles(dragStartPos, gridPos);
                     
+                    // 触发教程信号：拖动交换方块
+                    if (TutorialManager.Instance != null)
+                    {
+                        TutorialManager.Instance.SendSignal("dragTile");
+                    }
+                    
                     // 交换不进入敌人回合，直接完成
                     DOVirtual.DelayedCall(0.5f, () =>
                     {
@@ -851,7 +868,12 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         // 鼠标右键 - 消除同色格子
-        if (Input.GetMouseButtonDown(1))
+        // 检查教程是否禁用右键点击
+        if (TutorialManager.Instance != null && !TutorialManager.Instance.IsRightClickEnabled)
+        {
+            // 教程禁用右键点击，不处理
+        }
+        else if (Input.GetMouseButtonDown(1))
         {
             Vector2Int gridPos = GetMouseGridPosition();
             if (boardManager != null && boardManager.IsValidPosition(gridPos))
@@ -867,6 +889,12 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void HandleMouseHover()
     {
+        // 如果教程正在拦截输入，不响应hover
+        if (TutorialManager.Instance != null && TutorialManager.Instance.IsBlockingInput)
+        {
+            return;
+        }
+        
         // 如果技能选择界面打开，不响应hover
         SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
         if (skillMenu != null && skillMenu.IsActive)
@@ -2355,15 +2383,15 @@ public class MainGameManager : Singleton<MainGameManager>
         isProcessing = true; // 敌人移动时也禁止操作
 
         // 显示"Enemy Turn" banner，等banner离开后再开始敌人行动
-        if (turnBanner != null)
-        {
-            turnBanner.ShowBanner("Enemy Turn", () =>
-            {
-                // Banner离开后开始敌人行动
-                ExecuteEnemyTurn();
-            });
-        }
-        else
+        // if (turnBanner != null)
+        // {
+        //     turnBanner.ShowBanner("Enemy Turn", () =>
+        //     {
+        //         // Banner离开后开始敌人行动
+        //         ExecuteEnemyTurn();
+        //     });
+        // }
+        // else
         {
             // 如果没有banner，直接执行敌人行动
             ExecuteEnemyTurn();
@@ -2474,6 +2502,11 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void ShowPlayerTurnBanner()
     {
+        // 触发教程信号：敌人回合结束
+        if (TutorialManager.Instance != null)
+        {
+            TutorialManager.Instance.SendSignal("endTurn");
+        }
         // 每回合开始时恢复所有shield敌人的盾牌
         ResetAllEnemyShields();
         

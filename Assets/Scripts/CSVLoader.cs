@@ -74,6 +74,19 @@ public class EventInfo
     public bool isAvailable;
     public string type;
 }
+
+public class TutorialInfo
+{
+    public string identifier;
+    public string text;
+    public string dialoguePosition;
+    public List<string> actions;
+    public string wait;
+    public string highlight;
+    public bool isEnding;
+    public bool isBlocking;
+    public TutorialInfo nextInfo; // 下一个教程的引用（从CSV顺序推断，只有不是isEnding的才有next）
+}
 public class CSVLoader : Singleton<CSVLoader>
 {
     public TMP_FontAsset font;
@@ -81,6 +94,8 @@ public class CSVLoader : Singleton<CSVLoader>
     public Dictionary<string, EnemyInfo> enemyInfoMap = new Dictionary<string, EnemyInfo>();
     public Dictionary<int, LevelInfo> levelInfoMap = new Dictionary<int, LevelInfo>();
     public Dictionary<string, EventInfo> eventInfoMap = new Dictionary<string, EventInfo>();
+    public Dictionary<string, TutorialInfo> tutorialInfoMap = new Dictionary<string, TutorialInfo>();
+    public List<TutorialInfo> tutorialInfoList = new List<TutorialInfo>(); // 保持CSV顺序的列表
     // Start is called before the first frame update
     public void Init()
     {
@@ -106,6 +121,37 @@ public class CSVLoader : Singleton<CSVLoader>
         foreach (var eventInfo in eventInfos)
         {
             eventInfoMap.Add(eventInfo.identifier, eventInfo);
+        }
+        var tutorialInfos = CsvUtil.LoadObjects<TutorialInfo>("tutorial");
+        tutorialInfoList = new List<TutorialInfo>(tutorialInfos);
+        
+        // 设置nextInfo链接，并添加到字典（只有有identifier的才添加到字典）
+        for (i = 0; i < tutorialInfoList.Count; i++)
+        {
+            var tutorialInfo = tutorialInfoList[i];
+            
+            // 解析actions字段（CSV中用|分隔，CsvUtil应该能自动解析为List<string>）
+            // 如果actions为null，初始化为空列表
+            if (tutorialInfo.actions == null)
+            {
+                tutorialInfo.actions = new List<string>();
+            }
+            
+            // 设置下一个教程的引用（只有不是isEnding的才有next）
+            if (!tutorialInfo.isEnding && i < tutorialInfoList.Count - 1)
+            {
+                tutorialInfo.nextInfo = tutorialInfoList[i + 1];
+            }
+            else
+            {
+                tutorialInfo.nextInfo = null;
+            }
+            
+            // 只有有identifier的才添加到字典
+            if (!string.IsNullOrEmpty(tutorialInfo.identifier))
+            {
+                tutorialInfoMap.Add(tutorialInfo.identifier, tutorialInfo);
+            }
         }
     }
 }

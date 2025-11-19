@@ -1,0 +1,16 @@
+﻿identifier,text,dialoguePosition,actions,wait,highlight,isEnding
+start,You notice a few crumpled instruction notes stuck onto the DJ Deck:,,disableDrag,,,
+,Rule 1:,,,,,
+,"Right-click a Note Tile, and all adjacent tiles of the same color will go “pop” and disappear, forming a sound wave that blasts to the right.",,,endTurn,board,
+,"The wave will fly, crash, bounce, and smack those off-key monsters until they start questioning their life choices.",,,,,
+,"After you act, it’s the monsters’ turn. They will run toward you—drive them away before they reach you!",,,,,
+,Rule 2:,,,,,
+,Left-drag two Note Tiles to swap their positions.,,enableDrag|disableRightClick,dragTile,board,
+,"This tuning action does not end your turn, but you only have a limited number of swaps each battle, so plan wisely!",,enableRightClick,,exchangeLeft,
+,"Once you blast every enemy off the stage with your sound waves, you win.",,,,enemiesLeft,1
+shop,The DJ Deck suddenly pops out a new sticky note:,,disableShopClose|disableRefresh,,,
+,Rule 3:,,,,,
+,Use gold to buy Effect Modules—make your waves extra shiny!,,,,,
+,Choose one of the three modules shown in the top-left corner!,,,purchase,pickThree,
+,You can drag any purchased module onto any color.,,,dragToColor,colors,
+,You can unplug and swap them anytime—mix and match freely and create your perfect combo!,,enableRefresh|enableShopClose,,,1
