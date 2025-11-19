@@ -71,12 +71,13 @@ public class ShopSkillItem : MonoBehaviour
         }
 
         // 更新价格
-        if (priceText != null)
-        {
-            bool isUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier);
-            int price = isUpgrade ? skillInfo.upgradePrice : skillInfo.buyPrice;
-            priceText.text = $"Price: {price}";
-        }
+        // if (priceText != null)
+        // {
+        //     bool isUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier);
+        //     int price = isUpgrade ? skillInfo.upgradePrice : skillInfo.buyPrice;
+        //     //priceText.text = $"Price: {price}";
+        //     priceText.text = $"{price}";
+        // }
 
         // 更新购买按钮状态
         if (buyButton != null)
@@ -92,7 +93,7 @@ public class ShopSkillItem : MonoBehaviour
             TMP_Text buttonText = buyButton.GetComponentInChildren<TMP_Text>();
             if (buttonText != null)
             {
-                buttonText.text = isUpgrade ? "Upgrade" : "Buy";
+                buttonText.text = isUpgrade ? "Upgrade" : "Buy" +$"({price})";
             }
         }
     }

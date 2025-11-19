@@ -114,6 +114,8 @@ public class MainGameManager : Singleton<MainGameManager>
     [SerializeField] private EventReference wavePurple;
     [SerializeField] private EventReference waveRed;
 
+    public List<Color> waveColorOutline;
+
     /// <summary>
     /// 获取当前关卡信息
     /// </summary>
