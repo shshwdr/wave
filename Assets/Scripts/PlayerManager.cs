@@ -313,6 +313,7 @@ public class PlayerManager : Singleton<PlayerManager>
         if (actualHeal > 0 && transform != null)
         {
             HealEffect.CreateHealEffect(transform);
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/PlayerStatus/sfx_cure_effect");
         }
         
         // 检查是否有summonHeal技能，如果有则给所有ally也回血

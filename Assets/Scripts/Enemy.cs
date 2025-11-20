@@ -969,6 +969,7 @@ public class Enemy : MonoBehaviour
         else if (currentSkill == "heal")
         {
             skillUsed = UseHealSkill();
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_healer_cure");
             // 如果heal技能没有可治疗的敌人，不播放动画，也不重置冷却
             if (!skillUsed)
             {
@@ -979,11 +980,13 @@ public class Enemy : MonoBehaviour
         {
             UseCreateFogSkill();
             skillUsed = true;
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_puffmo_attack");
         }
         else if (currentSkill == "dirtyWater")
         {
             UseDirtyWaterSkill();
             skillUsed = true;
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_dirt_attack");
         }
         
         // 如果技能成功使用，播放动画并重置冷却
@@ -1539,6 +1542,7 @@ public class Enemy : MonoBehaviour
         {
             spriteRenderAnim.SetIdentifier(folderIdentifier);
             spriteRenderAnim.PlayHurt();
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_huge_enemy_damaged");
         }
     }
     

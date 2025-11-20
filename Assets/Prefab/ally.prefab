@@ -80,6 +80,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 9209408494864702295, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1298605653786855515}
+    - targetCorrespondingSourceObject: {fileID: 9209408494864702295, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5129629786856447704}
   m_SourcePrefab: {fileID: 100100000, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
 --- !u!114 &129616154678476666 stripped
 MonoBehaviour:
@@ -119,6 +122,37 @@ MonoBehaviour:
   spriteRenderer: {fileID: 6552842040611288382}
   allyCollider: {fileID: 1243472014778377813}
   healthBar: {fileID: 129616154678476666}
+--- !u!114 &5129629786856447704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1301853740920789355}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a6610d2e704f1648819acc8d7460285, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CollisionTag: 
+  EventReference:
+    Guid:
+      Data1: 778743966
+      Data2: 1166733536
+      Data3: -636557942
+      Data4: 600137067
+    Path: event:/SFX/PlayerStatus/sfx_create_ally
+  Event: 
+  EventPlayTrigger: 1
+  EventStopTrigger: 0
+  AllowFadeout: 1
+  TriggerOnce: 0
+  Preload: 0
+  NonRigidbodyVelocity: 0
+  Params: []
+  OverrideAttenuation: 0
+  OverrideMinDistance: 1
+  OverrideMaxDistance: 20
 --- !u!212 &6552842040611288382 stripped
 SpriteRenderer:
   m_CorrespondingSourceObject: {fileID: 3976438991730341634, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}

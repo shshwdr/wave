@@ -81,6 +81,33 @@ MonoBehaviour:
   - Regular
   - Strong
   Exists: 1
+--- !u!114 &-6180693535696210631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_drifter_attack
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_drifter_attack
+  Guid:
+    Data1: 603876759
+    Data2: 1301690898
+    Data3: 1178058671
+    Data4: -1068063689
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
 --- !u!114 &-5819161052025160160
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -136,6 +163,60 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 0
+--- !u!114 &-3856893092899384927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/PlayerStatus/sfx_cure_effect
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/PlayerStatus/sfx_cure_effect
+  Guid:
+    Data1: -182420649
+    Data2: 1088666121
+    Data3: -1303450232
+    Data4: 1438283153
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
+--- !u!114 &-3495848580693773066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_dirt_attack
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_dirt_attack
+  Guid:
+    Data1: 951393288
+    Data2: 1255060592
+    Data3: -856384107
+    Data4: 1611117292
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
 --- !u!114 &-1462474434900724909
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -217,13 +298,22 @@ MonoBehaviour:
   - {fileID: 2641179246819464818}
   - {fileID: 4176130181649943182}
   - {fileID: 5409404684057197353}
+  - {fileID: -3495848580693773066}
+  - {fileID: 7714655126000225888}
+  - {fileID: 922903219010961267}
+  - {fileID: 6084610480498297965}
+  - {fileID: 4411094551343605665}
+  - {fileID: -3856893092899384927}
+  - {fileID: 1387335209622574546}
+  - {fileID: -6180693535696210631}
+  - {fileID: 850255016788284874}
   EditorParameters: []
   MasterBanks:
   - {fileID: 660754851785372748}
   StringsBanks:
   - {fileID: 640263147909748573}
   cacheVersion: 131848
-  cacheTime: 638991423912254158
+  cacheTime: 638992602974026616
   SerializableEventsDict:
   - key: event:/Music/mus_gameplay_basic_level
     index: 0
@@ -245,6 +335,24 @@ MonoBehaviour:
     index: 8
   - key: event:/SFX/Waves/sfx_change_select_tile
     index: 9
+  - key: event:/SFX/Enemies/sfx_dirt_attack
+    index: 10
+  - key: event:/SFX/Enemies/sfx_hoppit_attack
+    index: 11
+  - key: event:/SFX/Enemies/sfx_puffmo_attack
+    index: 12
+  - key: event:/SFX/Enemies/sfx_small_enemy_damaged
+    index: 13
+  - key: event:/SFX/Enemies/sfx_huge_enemy_damaged
+    index: 14
+  - key: event:/SFX/PlayerStatus/sfx_cure_effect
+    index: 15
+  - key: event:/SFX/Enemies/sfx_healer_cure
+    index: 16
+  - key: event:/SFX/Enemies/sfx_drifter_attack
+    index: 17
+  - key: event:/SFX/PlayerStatus/sfx_create_ally
+    index: 18
 --- !u!114 &232697132362315831
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -286,10 +394,10 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 638990562456840223
+  lastModified: 638992602974026616
   FileSizes:
   - Name: 
-    Value: 1420
+    Value: 1888
   Exists: 1
 --- !u!114 &660754851785372748
 MonoBehaviour:
@@ -306,9 +414,90 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 638991423912254158
+  lastModified: 638992602973981533
   FileSizes: []
   Exists: 1
+--- !u!114 &850255016788284874
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/PlayerStatus/sfx_create_ally
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/PlayerStatus/sfx_create_ally
+  Guid:
+    Data1: 778743966
+    Data2: 1166733536
+    Data3: -636557942
+    Data4: 600137067
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2000
+--- !u!114 &922903219010961267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_puffmo_attack
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_puffmo_attack
+  Guid:
+    Data1: -411230914
+    Data2: 1310978197
+    Data3: -10974795
+    Data4: -1017244606
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2000
+--- !u!114 &1387335209622574546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_healer_cure
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_healer_cure
+  Guid:
+    Data1: -232861857
+    Data2: 1195386625
+    Data3: -874263882
+    Data4: 1755708634
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2500
 --- !u!114 &2470142769465394043
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -419,6 +608,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 0
+--- !u!114 &4411094551343605665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_huge_enemy_damaged
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_huge_enemy_damaged
+  Guid:
+    Data1: 842475095
+    Data2: 1141197731
+    Data3: -1936359800
+    Data4: 812351980
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
 --- !u!114 &5409404684057197353
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -437,6 +653,33 @@ MonoBehaviour:
     Data2: 1095210228
     Data3: 249983650
     Data4: 1800604172
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
+--- !u!114 &6084610480498297965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_small_enemy_damaged
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_small_enemy_damaged
+  Guid:
+    Data1: 1738150483
+    Data2: 1299549979
+    Data3: -1405844802
+    Data4: 1270710727
   Banks:
   - {fileID: 660754851785372748}
   IsStream: 0
@@ -473,6 +716,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 1000
+--- !u!114 &7714655126000225888
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_hoppit_attack
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_hoppit_attack
+  Guid:
+    Data1: 148493594
+    Data2: 1101076238
+    Data3: -1586005067
+    Data4: 1634636506
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2500
 --- !u!114 &8249070153311253544
 MonoBehaviour:
   m_ObjectHideFlags: 0
