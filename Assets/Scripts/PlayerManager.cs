@@ -12,6 +12,9 @@ public class PlayerManager : Singleton<PlayerManager>
     [SerializeField] private int maxHealth = 100;
     [SerializeField] private int maxSwapCount = 2; // 每次战斗的交换次数
 
+    [Header("动画")]
+    public SpriteRenderAnim anim; // 玩家动画组件
+
     private int currentHealth;
     private int currentSwapCount;
     private int gold = 0; // 金币
@@ -109,6 +112,33 @@ public class PlayerManager : Singleton<PlayerManager>
         InitializeWaveSkillsDict();
         
         AddGold(startGold);
+        
+        // 初始化动画
+        InitAnimation();
+    }
+    
+    /// <summary>
+    /// 初始化玩家动画
+    /// </summary>
+    private void InitAnimation()
+    {
+        if (anim == null)
+        {
+            // 尝试从子对象或自身获取 SpriteRenderAnim 组件
+            anim = GetComponentInChildren<SpriteRenderAnim>();
+            if (anim == null)
+            {
+                anim = GetComponent<SpriteRenderAnim>();
+            }
+        }
+        
+        // 检查是否有 Player 动画文件夹
+        if (SpriteRenderAnim.HasAnimationFolder("player") && anim != null)
+        {
+            // 设置 identifier 为 "Player"（首字母大写）
+            anim.SetIdentifier("Player");
+            anim.PlayIdle();
+        }
     }
     
     /// <summary>
@@ -288,7 +318,22 @@ public class PlayerManager : Singleton<PlayerManager>
         currentHealth = Mathf.Max(0, currentHealth);
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/PlayerStatus/sfx_player_hurt");
 
+        // 播放受伤动画
+        TryPlayHurtAnimation();
+
         Debug.Log($"玩家受到 {damage} 伤害，当前血量: {currentHealth}/{maxHealth}");
+    }
+    
+    /// <summary>
+    /// 尝试播放受伤动画
+    /// </summary>
+    private void TryPlayHurtAnimation()
+    {
+        if (SpriteRenderAnim.HasAnimationFolder("player") && anim != null)
+        {
+            anim.SetIdentifier("Player");
+            anim.PlayHurt();
+        }
     }
 
     private void Update()

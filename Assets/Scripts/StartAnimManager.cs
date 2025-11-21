@@ -11,6 +11,9 @@ using DG.Tweening;
 /// </summary>
 public class StartAnimManager : Singleton<StartAnimManager>
 {
+    [Header("设置")]
+    [SerializeField] private bool enable = true; // 是否启用开场动画
+    
     [Header("UI组件")]
     [SerializeField] private Transform parent; // 父对象，所有搜索都在此对象下进行
     [SerializeField] private TMP_Text textComponent; // 文本组件
@@ -93,6 +96,20 @@ public class StartAnimManager : Singleton<StartAnimManager>
 
     private void Start()
     {
+        // 如果不启用，直接隐藏
+        if (!enable)
+        {
+            if (parent != null)
+            {
+                parent.gameObject.SetActive(false);
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
+            return;
+        }
+        
         StartAnimation("1");
     }
 

@@ -878,6 +878,9 @@ public class MainGameManager : Singleton<MainGameManager>
             Vector2Int gridPos = GetMouseGridPosition();
             if (boardManager != null && boardManager.IsValidPosition(gridPos))
             {
+                // 播放玩家攻击动画
+                TryPlayPlayerAttackAnimation();
+                
                 // 不调用ClearHighlights()，让高亮保持显示
                 EliminateConnectedTiles(gridPos);
             }
@@ -1645,6 +1648,22 @@ public class MainGameManager : Singleton<MainGameManager>
         // EndPlayerTurn会在所有wave group都完成结算后，在CheckSpawnAlly中调用
     }
 
+    /// <summary>
+    /// 尝试播放玩家攻击动画
+    /// </summary>
+    private void TryPlayPlayerAttackAnimation()
+    {
+        if (PlayerManager.Instance != null && PlayerManager.Instance.anim != null)
+        {
+            // 检查是否有 Player 动画文件夹
+            if (SpriteRenderAnim.HasAnimationFolder("player"))
+            {
+                PlayerManager.Instance.anim.SetIdentifier("Player");
+                PlayerManager.Instance.anim.PlayAtk();
+            }
+        }
+    }
+    
     /// <summary>
     /// 创建波浪攻击
     /// </summary>
