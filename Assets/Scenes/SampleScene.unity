@@ -2932,7 +2932,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8fc86b94e57f11a4488a8b51ef454072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enable: 0
+  enable: 1
   parent: {fileID: 1146564739}
   textComponent: {fileID: 892084911}
   textCanvasGroup: {fileID: 421403735}
@@ -3008,8 +3008,8 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: -1278816799
+  m_SortingLayer: 2
   m_SortingOrder: 0
   m_Sprite: {fileID: -764308080, guid: 3de100483d642924e88a531c90cd71c8, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -3912,7 +3912,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23bdc4accfebd054388d31297203fd89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  showTutorial: 0
+  showTutorial: 1
 --- !u!4 &794148596
 Transform:
   m_ObjectHideFlags: 0

@@ -342,6 +342,13 @@ public class PlayerManager : Singleton<PlayerManager>
         {
             TakeDamage(40);
         }
+        
+        // Cheat: 按 O 键杀死玩家
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            currentHealth = 0;
+            Debug.Log("Cheat: 玩家已死亡");
+        }
     }
 
     /// <summary>
