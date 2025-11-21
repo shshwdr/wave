@@ -25,6 +25,10 @@ public class SpriteSplitter
         {
             string folderName = Path.GetFileName(folder);
             Debug.Log($"处理文件夹: {folderName}");
+            if (folderName == "Player")
+            {
+                continue;
+            }
             
             // 获取文件夹中的所有png文件
             string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { folder });
