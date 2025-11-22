@@ -11,21 +11,34 @@ public class SpriteRenderAnim : MonoBehaviour
     [SerializeField] private string identifier = ""; // 敌人标识符
     [SerializeField] private float switchTime = 0.1f; // 切换sprite的时间间隔
 
-    private SpriteRenderer spriteRenderer;
+    [Header("Renderer引用")]
+    [SerializeField] private SpriteRenderer mainRender; // 主渲染器
+    [SerializeField] private SpriteRenderer flashRender; // 闪烁渲染器
+    [SerializeField] private SpriteRenderer backColorRender; // 背景颜色渲染器
+
+    private SpriteRenderer spriteRenderer; // 保留向后兼容
     private Coroutine currentAnimCoroutine;
     private bool isPlaying = false;
+    
 
     private void Awake()
     {
-        // 自动获取SpriteRenderer组件
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        if (spriteRenderer == null)
+        // 如果没有手动设置mainRender，尝试自动获取（向后兼容）
+        if (mainRender == null)
         {
-            spriteRenderer = GetComponentInParent<SpriteRenderer>();
+            mainRender = GetComponent<SpriteRenderer>();
+            if (mainRender == null)
+            {
+                mainRender = GetComponentInParent<SpriteRenderer>();
+            }
         }
-        if (spriteRenderer == null)
+        
+        // 保留spriteRenderer引用用于向后兼容
+        spriteRenderer = mainRender;
+        
+        if (mainRender == null)
         {
-            Debug.LogError($"SpriteRenderAnim: 无法找到SpriteRenderer组件在 {gameObject.name}");
+            Debug.LogError($"SpriteRenderAnim: 无法找到mainRender组件在 {gameObject.name}");
         }
     }
 
@@ -44,9 +57,9 @@ public class SpriteRenderAnim : MonoBehaviour
     /// <param name="loop">是否循环</param>
     public void PlayAnim(Sprite[] sprites, bool loop)
     {
-        if (spriteRenderer == null || sprites == null || sprites.Length == 0)
+        if (mainRender == null || sprites == null || sprites.Length == 0)
         {
-            Debug.LogWarning($"SpriteRenderAnim: 无法播放动画 - spriteRenderer或sprites为空");
+            Debug.LogWarning($"SpriteRenderAnim: 无法播放动画 - mainRender或sprites为空");
             return;
         }
 
@@ -257,9 +270,18 @@ public class SpriteRenderAnim : MonoBehaviour
         {
             foreach (Sprite sprite in sprites)
             {
-                if (spriteRenderer != null)
+                // 同时设置三个render的sprite
+                if (mainRender != null)
                 {
-                    spriteRenderer.sprite = sprite;
+                    mainRender.sprite = sprite;
+                }
+                if (flashRender != null)
+                {
+                    flashRender.sprite = sprite;
+                }
+                if (backColorRender != null)
+                {
+                    backColorRender.sprite = sprite;
                 }
                 yield return new WaitForSeconds(switchTime);
             }
@@ -279,9 +301,18 @@ public class SpriteRenderAnim : MonoBehaviour
         // 播放第一个动画（不循环）
         foreach (Sprite sprite in firstSprites)
         {
-            if (spriteRenderer != null)
+            // 同时设置三个render的sprite
+            if (mainRender != null)
             {
-                spriteRenderer.sprite = sprite;
+                mainRender.sprite = sprite;
+            }
+            if (flashRender != null)
+            {
+                flashRender.sprite = sprite;
+            }
+            if (backColorRender != null)
+            {
+                backColorRender.sprite = sprite;
             }
             yield return new WaitForSeconds(switchTime);
         }
@@ -291,9 +322,18 @@ public class SpriteRenderAnim : MonoBehaviour
         {
             foreach (Sprite sprite in loopSprites)
             {
-                if (spriteRenderer != null)
+                // 同时设置三个render的sprite
+                if (mainRender != null)
                 {
-                    spriteRenderer.sprite = sprite;
+                    mainRender.sprite = sprite;
+                }
+                if (flashRender != null)
+                {
+                    flashRender.sprite = sprite;
+                }
+                if (backColorRender != null)
+                {
+                    backColorRender.sprite = sprite;
                 }
                 yield return new WaitForSeconds(switchTime);
             }

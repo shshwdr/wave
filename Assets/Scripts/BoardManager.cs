@@ -15,6 +15,7 @@ public class BoardManager : MonoBehaviour
 
     [Header("预制体")]
     [SerializeField] private GameObject tileCellPrefab;
+    [SerializeField] private GameObject bossDisplayTilePrefab; // Boss脚下显示的tile prefab
 
     [Header("颜色设置")]
     [SerializeField] private List<TileColor> availableColors = new List<TileColor> 
@@ -578,48 +579,19 @@ public class BoardManager : MonoBehaviour
         // 先清除之前的图片
         ClearBossDisplayImage();
         
-        if (tileCellPrefab == null)
+        if (bossDisplayTilePrefab == null)
         {
-            Debug.LogError("tileCellPrefab is null, cannot create boss display image!");
+            Debug.LogError("bossDisplayTilePrefab is null, cannot create boss display image!");
             return;
         }
-        
-        // 从tileCellPrefab获取sprite
-        SpriteRenderer tileSpriteRenderer = tileCellPrefab.GetComponent<SpriteRenderer>();
-        if (tileSpriteRenderer == null)
-        {
-            tileSpriteRenderer = tileCellPrefab.GetComponentInChildren<SpriteRenderer>();
-        }
-        
-        if (tileSpriteRenderer == null || tileSpriteRenderer.sprite == null)
-        {
-            Debug.LogError("Cannot get sprite from tileCellPrefab!");
-            return;
-        }
-        
-        // 创建GameObject（直接放在BoardManager下，不在boardParent下）
-        bossDisplayImage = new GameObject("BossDisplayImage");
-        bossDisplayImage.transform.SetParent(transform);
-        
-        // 添加SpriteRenderer组件
-        SpriteRenderer spriteRenderer = bossDisplayImage.AddComponent<SpriteRenderer>();
-        spriteRenderer.sprite = tileSpriteRenderer.sprite;
-        spriteRenderer.color = TileColorUtil.HexToColor("#FCE7D2"); // 设置为黑色
-        
-        // 设置draw mode为Sliced
-        spriteRenderer.drawMode = SpriteDrawMode.Sliced;
-        
-        // 设置sorting layer和order（确保显示在tile上方）
-        spriteRenderer.sortingLayerID = tileSpriteRenderer.sortingLayerID;
-        spriteRenderer.sortingOrder = tileSpriteRenderer.sortingOrder + 1;
         
         // 计算位置：直接使用boss的世界位置（完全一致）
         Vector3 bossWorldPos = GridToWorldPosition(bossCenterGridPos);
         
-        // 设置位置和大小（1x3，高度3）
-        bossDisplayImage.transform.position = bossWorldPos;
-        // 使用size设置大小（drawMode为Sliced时使用size）
-        spriteRenderer.size = new Vector2(tileSize, tileSize * 3f); // 宽度1个tile，高度3个tile
+        // 直接从prefab实例化
+        bossDisplayImage = Instantiate(bossDisplayTilePrefab, bossWorldPos, Quaternion.identity);
+        bossDisplayImage.name = "BossDisplayImage";
+        bossDisplayImage.transform.SetParent(transform);
         
         Debug.Log($"创建boss显示图片，boss网格位置: {bossCenterGridPos}, 世界位置: {bossWorldPos}");
     }

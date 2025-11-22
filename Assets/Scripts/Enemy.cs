@@ -276,6 +276,9 @@ public class Enemy : MonoBehaviour
         // 跳起动画
         //ApplyJumpAnimation();
         
+        // 检查死亡
+        bool willDie = currentHealth <= 0;
+        
         // 播放受伤动画（会自动切换到idle）
         TryPlayHurtAnimation();
 
@@ -289,7 +292,7 @@ public class Enemy : MonoBehaviour
         }
 
         // 检查死亡
-        if (currentHealth <= 0)
+        if (willDie)
         {
             Die();
         }

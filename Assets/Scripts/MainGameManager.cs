@@ -57,6 +57,9 @@ public class MainGameManager : Singleton<MainGameManager>
     
     public List<Sprite> tileSprites;
     
+    
+    public  float[] flashTimings = new float[] { 0.15f, 0.01f, 0.1f, 0.005f, 0.1f };
+    
     private enum GameState
     {
         PlayerTurn,
@@ -2594,11 +2597,14 @@ public class MainGameManager : Singleton<MainGameManager>
         
         EnemyInfo bossInfo = CSVLoader.Instance.enemyInfoMap[bossIdentifier];
         
-        // Boss位置：从上往下数第二行（y = boardHeight - 2），最右列再往右两格（x = boardWidth + 1）
+        // Boss位置：y = boardHeight - 1.5（非整数位置），最右列再往右两格（x = boardWidth + 1）
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
-        Vector2Int bossGridPos = new Vector2Int(boardWidth + 1, boardHeight - 2);
+        Vector2Int bossGridPos = new Vector2Int(boardWidth + 1, boardHeight - 2); // 用于创建显示图片的参考位置
         Vector3 bossWorldPos = boardManager.GridToWorldPosition(bossGridPos);
+        // 调整y坐标到 boardHeight - 1.5 的位置
+        float tileSize = 1f; // 默认tile大小，如果需要可以从BoardManager获取
+        bossWorldPos.x -= tileSize * 0.5f; // 向下移动0.5个tile
         
         // 使用enemyPrefab或bossPrefab（如果设置了）
         GameObject prefabToUse = bossPrefab != null ? bossPrefab : (enemyManager != null ? enemyManager.enemyPrefab : null);
