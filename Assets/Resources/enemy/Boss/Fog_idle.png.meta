@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 0aeb108881304934693f2e9b69b16d27
+guid: e73d87d05ae7ccb4e91071daaafcd05d
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -123,7 +123,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Hurt_0
+      name: Fog_idle_0
       rect:
         serializedVersion: 2
         x: 0
@@ -137,14 +137,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: d9281a8b92cbd6b4db2db9f55e4adbbd
-      internalID: -914972756
+      spriteID: 0d46b0c1361253a4ab449cf6acada06c
+      internalID: 929636035
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Hurt_1
+      name: Fog_idle_1
       rect:
         serializedVersion: 2
         x: 700
@@ -158,8 +158,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: da39977420f15ce428b9860ddd3dad73
-      internalID: 1628909364
+      spriteID: 57924a64564266f4b97e91d2a06350d6
+      internalID: 705435289
       vertices: []
       indices: 
       edges: []
@@ -175,8 +175,8 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Hurt_0: -914972756
-      Hurt_1: 1628909364
+      Fog_idle_0: 929636035
+      Fog_idle_1: 705435289
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

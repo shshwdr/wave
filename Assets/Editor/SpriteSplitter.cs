@@ -25,7 +25,7 @@ public class SpriteSplitter
         {
             string folderName = Path.GetFileName(folder);
             Debug.Log($"处理文件夹: {folderName}");
-            if (folderName == "Player")
+            if (folderName == "Player" || folderName == "Boss")
             {
                 continue;
             }
