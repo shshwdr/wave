@@ -58,7 +58,6 @@ public class MainGameManager : Singleton<MainGameManager>
     public List<Sprite> tileSprites;
     
     
-    public  float[] flashTimings = new float[] { 0.15f, 0.01f, 0.1f, 0.005f, 0.1f };
     
     private enum GameState
     {

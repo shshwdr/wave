@@ -122,8 +122,27 @@ public class SpriteRenderAnim : MonoBehaviour
         }
 
         string folderPath = $"enemy/{identifier}";
-        // 播放受伤动画后切换到idle
-        PlayAnimThenFollow("hurt", "idle");
+        Sprite[] hurtSprites = LoadSpritesBySuffix(folderPath, "hurt");
+        
+        if (hurtSprites == null || hurtSprites.Length == 0)
+        {
+            return;
+        }
+
+        // 停止当前动画，并确保flashRender颜色重置为透明
+        if (currentAnimCoroutine != null)
+        {
+            StopCoroutine(currentAnimCoroutine);
+            // 确保flashRender颜色重置为透明
+            if (flashRender != null)
+            {
+                Color currentColor = flashRender.color;
+                flashRender.color = new Color(currentColor.r, currentColor.g, currentColor.b, 0f);
+            }
+        }
+
+        // 播放hurt动画（只显示第一帧，保持两个switchTime，第二个switchTime期间flashRender显示颜色）
+        currentAnimCoroutine = StartCoroutine(PlayHurtAnimationCoroutine(hurtSprites[0]));
     }
 
     /// <summary>
@@ -338,6 +357,63 @@ public class SpriteRenderAnim : MonoBehaviour
                 yield return new WaitForSeconds(switchTime);
             }
         }
+    }
+
+    /// <summary>
+    /// 播放hurt动画的协程（只显示第一帧，保持两个switchTime，第二个switchTime期间flashRender显示颜色）
+    /// </summary>
+    private IEnumerator PlayHurtAnimationCoroutine(Sprite hurtSprite)
+    {
+        if (mainRender == null)
+        {
+            yield break;
+        }
+
+        isPlaying = true;
+
+        // 同时设置三个render的sprite为hurt第一帧
+        if (mainRender != null)
+        {
+            mainRender.sprite = hurtSprite;
+        }
+        if (flashRender != null)
+        {
+            flashRender.sprite = hurtSprite;
+        }
+        if (backColorRender != null)
+        {
+            backColorRender.sprite = hurtSprite;
+        }
+        
+        // 保存flashRender的原始颜色
+        Color originalFlashColor = flashRender != null ? flashRender.color : Color.white;
+        
+        // Flash颜色：FDB8D7 (RGB: 253, 184, 215)
+        Color flashColor = TileColorUtil.HexToColor("#F6ECE2");
+        
+        // 第一个switchTime：保持第一帧，flashRender保持原样
+        yield return new WaitForSeconds(switchTime);
+        
+        // 第二个switchTime开始：设置flashRender颜色为非透明
+        if (flashRender != null)
+        {
+            flashRender.color = flashColor;
+        }
+        
+        // 第二个switchTime：保持第一帧，flashRender显示颜色
+        yield return new WaitForSeconds(switchTime);
+        
+        // 第二个switchTime结束：设置flashRender颜色为透明
+        if (flashRender != null)
+        {
+            flashRender.color = new Color(flashColor.r, flashColor.g, flashColor.b, 0f);
+        }
+        
+        isPlaying = false;
+        currentAnimCoroutine = null;
+        
+        // 自动切换到idle动画
+        PlayIdle();
     }
 
     /// <summary>

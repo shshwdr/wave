@@ -26,6 +26,7 @@ public class StatisticsMenu : MenuBase
     [Header("按钮")]
     [SerializeField] private Button restartButton; // 胜利时显示
     [SerializeField] private Button closeButtonOverride; // 商店中显示（覆盖MenuBase的closeButton）
+    [SerializeField] private Button totalToggle; // 切换显示当前波次/所有波次统计
     
     [Header("技能详情显示")]
     [SerializeField] private GameObject skillDetailPanel;
@@ -38,6 +39,7 @@ public class StatisticsMenu : MenuBase
     [SerializeField] private Image backgroundImage; // 胜利模式的背景图片
     
     private bool isWinMode = false; // true = 胜利模式, false = 商店模式
+    private bool showTotalStatistics = false; // true = 显示所有波次统计, false = 显示当前波次统计
     private List<ColorStatistic> currentStats = new List<ColorStatistic>(); // 当前显示的统计列表
     
     protected override void Awake()
@@ -72,6 +74,13 @@ public class StatisticsMenu : MenuBase
         {
             closeButtonOverride.onClick.AddListener(() => Hide());
             closeButtonOverride.gameObject.SetActive(false); // 默认隐藏
+        }
+        
+        // 初始化TotalToggle按钮
+        if (totalToggle != null)
+        {
+            totalToggle.onClick.AddListener(OnTotalToggleClicked);
+            UpdateTotalToggleButtonText();
         }
         
         // 初始化技能详情面板
@@ -230,6 +239,7 @@ public class StatisticsMenu : MenuBase
     public void ShowLastRoundStatistics()
     {
         isWinMode = false;
+        showTotalStatistics = false; // 重置为显示当前波次
         UpdateDisplay();
         Show();
     }
@@ -240,6 +250,7 @@ public class StatisticsMenu : MenuBase
     public void ShowWinStatistics()
     {
         isWinMode = true;
+        showTotalStatistics = false; // 重置为显示当前波次
         UpdateDisplay();
         Show();
     }
@@ -253,6 +264,7 @@ public class StatisticsMenu : MenuBase
         UpdateStatistics();
         UpdateButtons();
         UpdateBackground();
+        UpdateTotalToggleButtonText();
     }
     
     /// <summary>
@@ -410,20 +422,32 @@ public class StatisticsMenu : MenuBase
         
         // 获取要显示的统计
         currentStats = null;
-        if (isWinMode)
+        if (showTotalStatistics)
         {
-            // 胜利模式：显示最后一回合的统计
+            // 显示所有波次的统计
             if (StatisticsManager.Instance != null)
             {
-                currentStats = StatisticsManager.Instance.GetLastRoundStatistics();
+                currentStats = StatisticsManager.Instance.GetTotalGameStatistics();
             }
         }
         else
         {
-            // 商店模式：显示上一回合的统计
-            if (StatisticsManager.Instance != null)
+            // 显示当前波次的统计
+            if (isWinMode)
             {
-                currentStats = StatisticsManager.Instance.GetLastRoundStatistics();
+                // 胜利模式：显示最后一回合的统计
+                if (StatisticsManager.Instance != null)
+                {
+                    currentStats = StatisticsManager.Instance.GetLastRoundStatistics();
+                }
+            }
+            else
+            {
+                // 商店模式：显示上一回合的统计
+                if (StatisticsManager.Instance != null)
+                {
+                    currentStats = StatisticsManager.Instance.GetLastRoundStatistics();
+                }
             }
         }
         
@@ -576,6 +600,38 @@ public class StatisticsMenu : MenuBase
             else
             {
                 totalDamageText.color = Color.white;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// TotalToggle按钮点击事件
+    /// </summary>
+    private void OnTotalToggleClicked()
+    {
+        showTotalStatistics = !showTotalStatistics;
+        UpdateTotalToggleButtonText();
+        UpdateStatistics();
+    }
+    
+    /// <summary>
+    /// 更新TotalToggle按钮的文字
+    /// </summary>
+    private void UpdateTotalToggleButtonText()
+    {
+        if (totalToggle == null)
+            return;
+        
+        TMP_Text buttonText = totalToggle.GetComponentInChildren<TMP_Text>();
+        if (buttonText != null)
+        {
+            if (showTotalStatistics)
+            {
+                buttonText.text = "Current";
+            }
+            else
+            {
+                buttonText.text = "Totle";
             }
         }
     }

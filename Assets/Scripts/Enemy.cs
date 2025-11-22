@@ -1397,6 +1397,10 @@ public class Enemy : MonoBehaviour
             spriteRenderer.enabled = false;
         if (enemyCollider != null)
             enemyCollider.enabled = false;
+        if (spriteRenderAnim)
+        {
+            spriteRenderAnim.gameObject.SetActive(false);
+        }
     }
 
     private void OnDestroy()
