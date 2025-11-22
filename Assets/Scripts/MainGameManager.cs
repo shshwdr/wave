@@ -2604,7 +2604,7 @@ public class MainGameManager : Singleton<MainGameManager>
         Vector3 bossWorldPos = boardManager.GridToWorldPosition(bossGridPos);
         // 调整y坐标到 boardHeight - 1.5 的位置
         float tileSize = 1f; // 默认tile大小，如果需要可以从BoardManager获取
-        bossWorldPos.x -= tileSize * 0.5f; // 向下移动0.5个tile
+        bossWorldPos.x -= tileSize * 1f; // 向下移动0.5个tile
         
         // 使用enemyPrefab或bossPrefab（如果设置了）
         GameObject prefabToUse = bossPrefab != null ? bossPrefab : (enemyManager != null ? enemyManager.enemyPrefab : null);

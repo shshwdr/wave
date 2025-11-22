@@ -1,7 +1,14 @@
 ﻿identifier,text,actions,wait,highlight,isEnding
 1,"Long ago, this world was perfectly harmonious.",showGroup_bk1,,,
-,Every creature… was a living melody.,showObjects_Puff,,,
+,Every creature was a living melody.,showObjects_Puff,,,
 ,"The Hoppits kept time like metronomes,",showObjects_Hoppit,,,
 ,"the Tallhorn held long notes as smooth as strings,",showObjects_Tallhorn,,,
 ,and even the Swamp Heralds’ low frequencies could shake a concert hall.,showObjects_Swamp,,,
 ,,hideGroup_bk1|hideGroup_all,,,1
+,…Until she appeared.,,,,
+,The legendary -- Princess Off-Key.,,,,
+,She sang so horribly off-pitch that the entire world went crooked!,,,,1
+,"In this moment of crisis, you were chosen to receive a legendary DJ deck.",,,,
+,"With it, you can tune the world and blast off-key monsters back into harmony.",,,,
+,"You’ll push forward,restore harmony to the land and find the Princess to tell her --",,,,
+,"""Please… you’re really out of tune.""",,,,1
