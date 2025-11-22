@@ -529,6 +529,7 @@ public class EventMenu : MenuBase
                     Debug.LogWarning($"未知的结果类型: {action}");
                     break;
             }
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
         }
         
         return string.Join("\n", resultMessages);
@@ -541,6 +542,7 @@ public class EventMenu : MenuBase
     {
         Hide();
         onEventComplete?.Invoke();
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
     }
     
     /// <summary>

@@ -2968,7 +2968,7 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         else
         {
-            // 战斗-事件-商店-战斗的循环
+            // 战斗-事件-商店-战斗的循环ShowShopMenu
             // 先显示事件，然后显示商店
             ShowEventMenu();
         }

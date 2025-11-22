@@ -339,6 +339,7 @@ public class SkillSelectMenu : MenuBase
         {
             TutorialManager.Instance.SendSignal("purchase");
         }
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
     }
     
     /// <summary>
@@ -412,6 +413,7 @@ public class SkillSelectMenu : MenuBase
         UpdateShop();
         UpdateGoldDisplay();
         UpdateRefreshButton();
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_hold_skill_color");
     }
 
     /// <summary>
@@ -461,6 +463,7 @@ public class SkillSelectMenu : MenuBase
             //mainGameManager.PlayerLevelUp();
             shopFilter.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
             shopFilter.release();
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
         }
 
         // 隐藏界面
@@ -483,6 +486,7 @@ public class SkillSelectMenu : MenuBase
             statisticsMenu = menuObj.AddComponent<StatisticsMenu>();
         }
         statisticsMenu.ShowLastRoundStatistics();
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
     }
 
 
@@ -542,7 +546,7 @@ public class SkillSelectMenu : MenuBase
                 foreach (var identifier in skillIdentifiers)
                 {
                     CreateSkillIcon(identifier, colorArea[i].slotParent, i);
-                }
+                }       
             }
         }
     }
@@ -812,6 +816,7 @@ public class SkillSelectMenu : MenuBase
                     ReturnIconToOriginalPosition(icon);
                     return;
                 }
+                FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_hold_skill_color");
             }
         }
 

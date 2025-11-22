@@ -1,5 +1,32 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8915368868485695815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/UI/sfx_place_skill_color
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/UI/sfx_place_skill_color
+  Guid:
+    Data1: 1634196712
+    Data2: 1335306680
+    Data3: -2109103982
+    Data4: -327906796
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 500
 --- !u!114 &-7921394432801127030
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -189,6 +216,33 @@ MonoBehaviour:
   - Regular
   - Strong
   Exists: 1
+--- !u!114 &-5288822602967495270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/UI/sfx_buy_skill
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/UI/sfx_buy_skill
+  Guid:
+    Data1: -756826010
+    Data2: 1137025859
+    Data3: 917857200
+    Data4: 681075515
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2000
 --- !u!114 &-4548686987976139586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -217,6 +271,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 0
+--- !u!114 &-3960839201601621655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Elite/sfx_elite_block_tiles
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Elite/sfx_elite_block_tiles
+  Guid:
+    Data1: -1823805679
+    Data2: 1288407249
+    Data3: 514751636
+    Data4: -234830934
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1500
 --- !u!114 &-3856893092899384927
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -361,13 +442,17 @@ MonoBehaviour:
   - {fileID: 1827224368412339875}
   - {fileID: 7006409559885015458}
   - {fileID: 7388447397661869570}
+  - {fileID: -3960839201601621655}
+  - {fileID: 6148621611521042238}
+  - {fileID: -5288822602967495270}
+  - {fileID: -8915368868485695815}
   EditorParameters: []
   MasterBanks:
   - {fileID: 660754851785372748}
   StringsBanks:
   - {fileID: 640263147909748573}
   cacheVersion: 131848
-  cacheTime: 638993378656424149
+  cacheTime: 638994320952311736
   SerializableEventsDict:
   - key: event:/Music/mus_gameplay_basic_level
     index: 0
@@ -407,6 +492,14 @@ MonoBehaviour:
     index: 17
   - key: event:/SFX/PlayerStatus/sfx_create_ally
     index: 18
+  - key: event:/SFX/Elite/sfx_elite_block_tiles
+    index: 19
+  - key: event:/SFX/UI/sfx_hold_skill_color
+    index: 20
+  - key: event:/SFX/UI/sfx_buy_skill
+    index: 21
+  - key: event:/SFX/UI/sfx_place_skill_color
+    index: 22
 --- !u!114 &232697132362315831
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -448,10 +541,10 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 638993378656424149
+  lastModified: 638994320952311736
   FileSizes:
   - Name: 
-    Value: 1888
+    Value: 2112
   Exists: 1
 --- !u!114 &660754851785372748
 MonoBehaviour:
@@ -468,7 +561,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 638993378656398508
+  lastModified: 638994320952256302
   FileSizes: []
   Exists: 1
 --- !u!114 &850255016788284874
@@ -770,6 +863,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 1000
+--- !u!114 &6148621611521042238
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/UI/sfx_hold_skill_color
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/UI/sfx_hold_skill_color
+  Guid:
+    Data1: -74710451
+    Data2: 1225968305
+    Data3: -2101499204
+    Data4: -1282395900
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 500
 --- !u!114 &7006409559885015458
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -904,7 +1024,7 @@ MonoBehaviour:
   Parameters: []
   MinDistance: 1
   MaxDistance: 20
-  Length: 2500
+  Length: 1000
 --- !u!114 &7714655126000225888
 MonoBehaviour:
   m_ObjectHideFlags: 0

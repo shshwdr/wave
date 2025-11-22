@@ -162,6 +162,7 @@ public class Boss : Enemy
         if (skillName == "blockColor")
         {
             UseBlockColorSkill(value);
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Elite/sfx_elite_block_tiles");
         }
         else if (skillName == "healAll")
         {

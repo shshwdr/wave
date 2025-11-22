@@ -231,6 +231,7 @@ public class StatisticsMenu : MenuBase
         {
             skillDetailPanel.SetActive(false);
         }
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
     }
     
     /// <summary>
