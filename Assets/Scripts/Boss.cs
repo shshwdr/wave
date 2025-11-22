@@ -156,8 +156,8 @@ public class Boss : Enemy
         if (string.IsNullOrEmpty(skillName))
             return;
             
-        // 播放特殊技能动画
-        TryPlaySpecialAnimation();
+        // 播放攻击动画（使用atk动画）
+        TryPlayBossAtkAnimation();
         
         if (skillName == "blockColor")
         {
@@ -170,6 +170,28 @@ public class Boss : Enemy
         else if (skillName == "loop")
         {
             UseLoopSkill(value);
+        }
+    }
+    
+    /// <summary>
+    /// 尝试播放Boss攻击动画（使用反射调用父类的TryPlayAtkAnimation）
+    /// </summary>
+    private void TryPlayBossAtkAnimation()
+    {
+        // 使用反射获取enemyInfo
+        var enemyInfoField = typeof(Enemy).GetField("enemyInfo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (enemyInfoField == null)
+            return;
+            
+        EnemyInfo info = (EnemyInfo)enemyInfoField.GetValue(this);
+        if (info == null || string.IsNullOrEmpty(info.identifier))
+            return;
+            
+        // 使用反射调用父类的TryPlayAtkAnimation方法
+        var method = typeof(Enemy).GetMethod("TryPlayAtkAnimation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        if (method != null)
+        {
+            method.Invoke(this, null);
         }
     }
     

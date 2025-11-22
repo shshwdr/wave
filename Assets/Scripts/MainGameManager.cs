@@ -1337,11 +1337,11 @@ public class MainGameManager : Singleton<MainGameManager>
         // 高亮所有连通的格子
         foreach (var pos in connectedTiles)
         {
-            TileCell tile = boardManager.GetTile(pos);
-            if (tile != null)
+            TileCell connectedTile = boardManager.GetTile(pos);
+            if (connectedTile != null)
             {
-                tile.SetHighlight(true);
-                //tile.SetHighlightColor(Color.cyan); // 使用青色高亮
+                connectedTile.SetHighlight(true);
+                //connectedTile.SetHighlightColor(Color.cyan); // 使用青色高亮
                 highlightedTiles.Add(pos);
             }
         }
@@ -2422,61 +2422,91 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void ExecuteEnemyTurn()
     {
-        // 如果是boss战，处理boss移动和召唤小怪
+        // 如果是boss战，处理boss移动和行动（单独批次）
         if (currentBoss != null && !currentBoss.IsDead)
         {
             // 更新blockColor的剩余回合数（在玩家回合结束时减少）
             currentBoss.UpdateBlockColorTurns();
             
-            // Boss执行技能（TakeAction）
-            currentBoss.TakeAction();
+            // Boss单独执行两个批次：
+            // Batch 1: Boss移动
+            // Batch 2: Boss行动（使用技能），等待0.5秒
             
-            // Boss移动
+            // 使用反射获取moveSpeed（protected字段）
+            var moveSpeedField = typeof(Enemy).GetField("moveSpeed", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.FlattenHierarchy);
+            float bossMoveSpeed = 2f; // 默认值
+            if (moveSpeedField != null)
+            {
+                bossMoveSpeed = (float)moveSpeedField.GetValue(currentBoss);
+            }
+            float bossMoveDuration = bossMoveSpeed > 0 ? 1f / bossMoveSpeed : 0.5f; // 获取boss移动速度
+            float actionDelay = 0f; // 每个批次之间的延迟
+            
+            // Batch 1: Boss移动
             currentBoss.StartMove();
             
-            // 先生成新敌人（如果需要）
-            bool normalSpawnSucceeded = false;
-            if (enemyManager != null)
+            // Batch 2: Boss行动（使用技能），在移动完成后执行
+            DOVirtual.DelayedCall(bossMoveDuration + actionDelay, () =>
             {
-                // 检查是否还有敌人可以生成
-                if (enemyManager.currentSpawnIndex < enemyManager.remainingEnemies.Count)
+                if (currentBoss != null && !currentBoss.IsDead)
                 {
-                    enemyManager.SpawnEnemyEachTurn();
-                    normalSpawnSucceeded = true;
-                }
-            }
-            
-            // 如果正常生成失败（所有敌人已生成完），则从boss战敌人列表循环生成
-            if (!normalSpawnSucceeded)
-            {
-                SpawnBossBattleEnemy();
-            }
-            
-            // 等待一小段时间让新敌人生成完成，然后执行敌人批次行动
-            DOVirtual.DelayedCall(0.2f, () =>
-            {
-                if (enemyManager != null)
-                {
-                    enemyManager.ExecuteEnemyTurnBatch(() =>
+                    // Boss执行技能（TakeAction）
+                    currentBoss.TakeAction();
+                    
+                    // 使用技能后等待0.5秒
+                    DOVirtual.DelayedCall(1.2f, () =>
                     {
-                        // 敌人行动完成后，检查胜利条件
-                        DOVirtual.DelayedCall(0.1f, () =>
+                        // 然后生成新敌人（如果需要）
+                        bool normalSpawnSucceeded = false;
+                        if (enemyManager != null)
                         {
-                            // 检查boss是否死亡
-                            if (currentBoss != null && currentBoss.IsDead)
+                            // 检查是否还有敌人可以生成
+                            if (enemyManager.currentSpawnIndex < enemyManager.remainingEnemies.Count)
                             {
-                                CompleteLevel();
-                                return;
+                                enemyManager.SpawnEnemyEachTurn();
+                                normalSpawnSucceeded = true;
                             }
-                            
-                            // 否则显示"Player Turn" banner，然后进入玩家回合
-                            ShowPlayerTurnBanner();
+                        }
+                        
+                        // 如果正常生成失败（所有敌人已生成完），则从boss战敌人列表循环生成
+                        if (!normalSpawnSucceeded)
+                        {
+                            SpawnBossBattleEnemy();
+                        }
+                        
+                        // 等待一小段时间让新敌人生成完成，然后执行其他敌人批次行动
+                        DOVirtual.DelayedCall(0.2f, () =>
+                        {
+                            if (enemyManager != null)
+                            {
+                                enemyManager.ExecuteEnemyTurnBatch(() =>
+                                {
+                                    // 敌人行动完成后，检查胜利条件
+                                    DOVirtual.DelayedCall(0.1f, () =>
+                                    {
+                                        // 检查boss是否死亡
+                                        if (currentBoss != null && currentBoss.IsDead)
+                                        {
+                                            CompleteLevel();
+                                            return;
+                                        }
+                                        
+                                        // 否则显示"Player Turn" banner，然后进入玩家回合
+                                        ShowPlayerTurnBanner();
+                                    });
+                                });
+                            }
+                            else
+                            {
+                                ShowPlayerTurnBanner();
+                            }
                         });
                     });
                 }
                 else
                 {
-                    ShowPlayerTurnBanner();
+                    // Boss已死亡，直接完成关卡
+                    CompleteLevel();
                 }
             });
         }
@@ -2604,6 +2634,13 @@ public class MainGameManager : Singleton<MainGameManager>
         if (enemyManager != null)
         {
             enemyManager.CreateHealthBar(boss);
+        }
+        
+        // 创建boss显示图片（1x3，黑色，显示在boss中心位置）
+        if (boardManager != null)
+        {
+            boardManager.CreateBossDisplayImage(bossGridPos);
+            boardManager.SetCurrentBoss(boss); // 设置boss引用，用于实时同步位置
         }
         
         currentBoss = boss;
@@ -3001,6 +3038,12 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             Destroy(currentBoss.gameObject);
             currentBoss = null;
+        }
+        
+        // 清除boss显示图片
+        if (boardManager != null)
+        {
+            boardManager.ClearBossDisplayImage();
         }
         
         // 清除所有随从

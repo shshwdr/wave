@@ -30,6 +30,10 @@ public class BoardManager : MonoBehaviour
     
     // 颜色权重（用于more/less技能），默认都是1.0
     private float[] colorWeights = new float[] { 1.0f, 1.0f, 1.0f, 1.0f };
+    
+    // Boss显示图片（1x3，高度3）
+    private GameObject bossDisplayImage;
+    private Boss currentBoss; // 当前boss引用，用于实时同步位置
 
     public int Width => boardWidth;
     public int Height => boardHeight;
@@ -564,6 +568,95 @@ public class BoardManager : MonoBehaviour
         {
             colorWeights[i] = 1.0f;
         }
+    }
+    
+    /// <summary>
+    /// 创建boss显示图片（1x3，高度3，黑色，显示在boss中心位置）
+    /// </summary>
+    public void CreateBossDisplayImage(Vector2Int bossCenterGridPos)
+    {
+        // 先清除之前的图片
+        ClearBossDisplayImage();
+        
+        if (tileCellPrefab == null)
+        {
+            Debug.LogError("tileCellPrefab is null, cannot create boss display image!");
+            return;
+        }
+        
+        // 从tileCellPrefab获取sprite
+        SpriteRenderer tileSpriteRenderer = tileCellPrefab.GetComponent<SpriteRenderer>();
+        if (tileSpriteRenderer == null)
+        {
+            tileSpriteRenderer = tileCellPrefab.GetComponentInChildren<SpriteRenderer>();
+        }
+        
+        if (tileSpriteRenderer == null || tileSpriteRenderer.sprite == null)
+        {
+            Debug.LogError("Cannot get sprite from tileCellPrefab!");
+            return;
+        }
+        
+        // 创建GameObject（直接放在BoardManager下，不在boardParent下）
+        bossDisplayImage = new GameObject("BossDisplayImage");
+        bossDisplayImage.transform.SetParent(transform);
+        
+        // 添加SpriteRenderer组件
+        SpriteRenderer spriteRenderer = bossDisplayImage.AddComponent<SpriteRenderer>();
+        spriteRenderer.sprite = tileSpriteRenderer.sprite;
+        spriteRenderer.color = TileColorUtil.HexToColor("#FCE7D2"); // 设置为黑色
+        
+        // 设置draw mode为Sliced
+        spriteRenderer.drawMode = SpriteDrawMode.Sliced;
+        
+        // 设置sorting layer和order（确保显示在tile上方）
+        spriteRenderer.sortingLayerID = tileSpriteRenderer.sortingLayerID;
+        spriteRenderer.sortingOrder = tileSpriteRenderer.sortingOrder + 1;
+        
+        // 计算位置：直接使用boss的世界位置（完全一致）
+        Vector3 bossWorldPos = GridToWorldPosition(bossCenterGridPos);
+        
+        // 设置位置和大小（1x3，高度3）
+        bossDisplayImage.transform.position = bossWorldPos;
+        // 使用size设置大小（drawMode为Sliced时使用size）
+        spriteRenderer.size = new Vector2(tileSize, tileSize * 3f); // 宽度1个tile，高度3个tile
+        
+        Debug.Log($"创建boss显示图片，boss网格位置: {bossCenterGridPos}, 世界位置: {bossWorldPos}");
+    }
+    
+    /// <summary>
+    /// 设置当前boss引用（用于实时同步位置）
+    /// </summary>
+    public void SetCurrentBoss(Boss boss)
+    {
+        currentBoss = boss;
+    }
+    
+    private void Update()
+    {
+        // 实时同步boss显示图片的位置（与boss位置完全一致）
+        if (bossDisplayImage != null && currentBoss != null && !currentBoss.IsDead)
+        {
+            // 直接使用boss的世界位置
+            Vector3 bossWorldPos = currentBoss.transform.position;
+            
+            // 更新图片位置（完全一致）
+            bossDisplayImage.transform.position = bossWorldPos;
+        }
+    }
+    
+    
+    /// <summary>
+    /// 清除boss显示图片
+    /// </summary>
+    public void ClearBossDisplayImage()
+    {
+        if (bossDisplayImage != null)
+        {
+            Destroy(bossDisplayImage);
+            bossDisplayImage = null;
+        }
+        currentBoss = null;
     }
 }
 
