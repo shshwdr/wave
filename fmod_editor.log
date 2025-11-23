@@ -20,6 +20,33 @@
 [LOG] BankLoader::serializeBank                : fileversion = 142, compatVersion = 140 (oldest = 44, newest = 146)
 [LOG] BankLoader::serializeBank                : fileversion = 142, compatVersion = 140 (oldest = 44, newest = 146)
 [LOG] PlaybackSystem::acquireMasterBus         : Setting master channel group format to 6
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
 [LOG] Thread::callback                         : FMOD Studio bank load thread finished.
 [LOG] Thread::callback                         : FMOD Studio sample load thread finished.
 [LOG] LiveUpdate::release                      : 
@@ -27,3 +54,26 @@
 [LOG] Thread::callback                         : FMOD stream thread finished.
 [LOG] Thread::callback                         : FMOD mixer thread finished.
 [LOG] SystemI::closeInternal                   : Closed.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
+[WRN] OutputWASAPI::mixerThread                : GetCurrentPadding returned 0x88890004. Device was unplugged.
