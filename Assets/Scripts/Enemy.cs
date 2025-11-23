@@ -968,6 +968,7 @@ public class Enemy : MonoBehaviour
         {
             UseSummonSkill();
             skillUsed = true;
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_swamp_attack");
         }
         else if (currentSkill == "heal")
         {
@@ -1409,8 +1410,8 @@ public class Enemy : MonoBehaviour
         if (jumpTween != null)
         {
             jumpTween.Kill();
-            jumpTween = null;
-        }
+            jumpTween = null;          
+        }  
     }
 
     /// <summary>
@@ -1475,6 +1476,7 @@ public class Enemy : MonoBehaviour
         {
             shieldActive = true;
             UpdateShieldDisplay();
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_shield_attack");
         }
     }
     
@@ -1598,6 +1600,7 @@ public class Enemy : MonoBehaviour
         {
             spriteRenderAnim.SetIdentifier(folderIdentifier);
             spriteRenderAnim.PlayDead();
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_basic_enemy_die");
         }
     }
 }

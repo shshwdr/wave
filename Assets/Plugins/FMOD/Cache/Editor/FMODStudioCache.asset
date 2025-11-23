@@ -243,6 +243,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 2000
+--- !u!114 &-4832485050896971498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/UI/sfx_skip_tutorial_note
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/UI/sfx_skip_tutorial_note
+  Guid:
+    Data1: -130069582
+    Data2: 1282895244
+    Data3: -1218154308
+    Data4: -174512332
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
 --- !u!114 &-4548686987976139586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -446,13 +473,18 @@ MonoBehaviour:
   - {fileID: 6148621611521042238}
   - {fileID: -5288822602967495270}
   - {fileID: -8915368868485695815}
+  - {fileID: 15506562395170768}
+  - {fileID: 4396848971557513334}
+  - {fileID: -4832485050896971498}
+  - {fileID: 8790038525508950480}
+  - {fileID: 2965160326962011818}
   EditorParameters: []
   MasterBanks:
   - {fileID: 660754851785372748}
   StringsBanks:
   - {fileID: 640263147909748573}
   cacheVersion: 131848
-  cacheTime: 638994320952311736
+  cacheTime: 638994469184941309
   SerializableEventsDict:
   - key: event:/Music/mus_gameplay_basic_level
     index: 0
@@ -500,6 +532,43 @@ MonoBehaviour:
     index: 21
   - key: event:/SFX/UI/sfx_place_skill_color
     index: 22
+  - key: event:/SFX/UI/sfx_win_level
+    index: 23
+  - key: event:/SFX/Enemies/sfx_swamp_attack
+    index: 24
+  - key: event:/SFX/UI/sfx_skip_tutorial_note
+    index: 25
+  - key: event:/SFX/Enemies/sfx_shield_attack
+    index: 26
+  - key: event:/SFX/Enemies/sfx_basic_enemy_die
+    index: 27
+--- !u!114 &15506562395170768
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/UI/sfx_win_level
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/UI/sfx_win_level
+  Guid:
+    Data1: -1384317892
+    Data2: 1251675967
+    Data3: 1175611538
+    Data4: 1623033627
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 4000
 --- !u!114 &232697132362315831
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -541,10 +610,10 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 638994320952311736
+  lastModified: 638994469184941309
   FileSizes:
   - Name: 
-    Value: 2112
+    Value: 2344
   Exists: 1
 --- !u!114 &660754851785372748
 MonoBehaviour:
@@ -561,7 +630,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 638994320952256302
+  lastModified: 638994469184860267
   FileSizes: []
   Exists: 1
 --- !u!114 &850255016788284874
@@ -727,6 +796,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 1000
+--- !u!114 &2965160326962011818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_basic_enemy_die
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_basic_enemy_die
+  Guid:
+    Data1: 581873551
+    Data2: 1194344059
+    Data3: -123805547
+    Data4: -175543574
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1500
 --- !u!114 &3254669256938196080
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -782,6 +878,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 0
+--- !u!114 &4396848971557513334
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_swamp_attack
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_swamp_attack
+  Guid:
+    Data1: -329627328
+    Data2: 1209229030
+    Data3: 1973701291
+    Data4: 1211183248
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1500
 --- !u!114 &4411094551343605665
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1134,3 +1257,30 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 940
+--- !u!114 &8790038525508950480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_shield_attack
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_shield_attack
+  Guid:
+    Data1: 1338704586
+    Data2: 1204405811
+    Data3: 751333785
+    Data4: -1318866590
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2000

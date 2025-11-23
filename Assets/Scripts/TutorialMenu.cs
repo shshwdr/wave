@@ -97,7 +97,8 @@ public class TutorialMenu : MenuBase
         {
             return;
         }
-        
+
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_skip_tutorial_note");
         // 触发回调
         onTutorialClicked?.Invoke();
     }

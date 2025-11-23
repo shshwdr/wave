@@ -144,6 +144,7 @@ public class SkillSelectMenu : MenuBase
 
         // 显示界面
         Show();
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_win_level");
         shopFilter = FMODUnity.RuntimeManager.CreateInstance("snapshot:/Shop");
         shopFilter.start();
         
