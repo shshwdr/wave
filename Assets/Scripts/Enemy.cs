@@ -1553,7 +1553,7 @@ public class Enemy : MonoBehaviour
         {
             spriteRenderAnim.SetIdentifier(folderIdentifier);
             spriteRenderAnim.PlayHurt();
-            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_huge_enemy_damaged");
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_small_enemy_damaged");
         }
     }
     

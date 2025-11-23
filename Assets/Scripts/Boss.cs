@@ -90,7 +90,7 @@ public class Boss : Enemy
             {
                 isMoving = false;
                 // 更新网格位置（用于碰撞检测）
-                UpdateGridPosition(targetGridPos);
+                UpdadateGridPosition(targetGridPos);
                 startGridPos = targetGridPos; // 更新起始位置
             });
     }
