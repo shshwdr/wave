@@ -340,6 +340,7 @@ public class SkillSelectMenu : MenuBase
             TutorialManager.Instance.SendSignal("purchase");
         }
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
     }
     
     /// <summary>
