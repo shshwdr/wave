@@ -107,7 +107,7 @@ public class EventMenu : MenuBase
         usedEventIdentifiers.Add(currentEvent.identifier);
         
         // 显示事件信息
-        DisplayEvent();
+        DisplayEvent();      
         
         // 显示菜单
         Show();
@@ -244,6 +244,7 @@ public class EventMenu : MenuBase
         {
             nextButton.gameObject.SetActive(false);
         }
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_show_event");
     }
     
     /// <summary>

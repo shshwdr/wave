@@ -730,6 +730,7 @@ public class Enemy : MonoBehaviour
             {
                 // 远程攻击随从
                 CreateProjectileToAlly(targetAlly, damage);
+                FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_create_enemy_projectile");
             }
             else
             {
@@ -743,6 +744,7 @@ public class Enemy : MonoBehaviour
             if (range > 1)
             {
                 CreateProjectile(damage);
+                FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_create_enemy_projectile");
             }
             else
             {

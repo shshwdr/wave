@@ -27,6 +27,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 500
+--- !u!114 &-8494094110075122034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/UI/sfx_show_event
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/UI/sfx_show_event
+  Guid:
+    Data1: 563722282
+    Data2: 1161550064
+    Data3: -1515432049
+    Data4: 1597854796
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
 --- !u!114 &-7921394432801127030
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -153,6 +180,33 @@ MonoBehaviour:
     Data2: 1141197731
     Data3: -1936359800
     Data4: 812351980
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
+--- !u!114 &-5886921461904193131
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Enemies/sfx_create_enemy_projectile
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Enemies/sfx_create_enemy_projectile
+  Guid:
+    Data1: -500812140
+    Data2: 1189490353
+    Data3: 123721119
+    Data4: -401397628
   Banks:
   - {fileID: 660754851785372748}
   IsStream: 0
@@ -478,13 +532,15 @@ MonoBehaviour:
   - {fileID: -4832485050896971498}
   - {fileID: 8790038525508950480}
   - {fileID: 2965160326962011818}
+  - {fileID: -8494094110075122034}
+  - {fileID: -5886921461904193131}
   EditorParameters: []
   MasterBanks:
   - {fileID: 660754851785372748}
   StringsBanks:
   - {fileID: 640263147909748573}
   cacheVersion: 131848
-  cacheTime: 638994476307133689
+  cacheTime: 638995033754429070
   SerializableEventsDict:
   - key: event:/Music/mus_gameplay_basic_level
     index: 0
@@ -542,6 +598,10 @@ MonoBehaviour:
     index: 26
   - key: event:/SFX/Enemies/sfx_basic_enemy_die
     index: 27
+  - key: event:/SFX/UI/sfx_show_event
+    index: 28
+  - key: event:/SFX/Enemies/sfx_create_enemy_projectile
+    index: 29
 --- !u!114 &15506562395170768
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -610,10 +670,10 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 638994476307133689
+  lastModified: 638995033754429070
   FileSizes:
   - Name: 
-    Value: 2344
+    Value: 2450
   Exists: 1
 --- !u!114 &660754851785372748
 MonoBehaviour:
@@ -630,7 +690,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 638994476307078551
+  lastModified: 638995033754373886
   FileSizes: []
   Exists: 1
 --- !u!114 &850255016788284874
