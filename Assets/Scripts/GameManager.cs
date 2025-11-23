@@ -12,7 +12,7 @@ public class GameManager : Singleton<GameManager>
     [SerializeField] private BoardManager boardManager;
     [SerializeField] private EnemyManager enemyManager;
 
-    private FMOD.Studio.EventInstance levelMusic;
+    public FMOD.Studio.EventInstance levelMusic;
 
     private void Awake()
     {
@@ -84,6 +84,7 @@ public class GameManager : Singleton<GameManager>
     /// </summary>
     public void RestartGame()
     {
+        levelMusic.setParameterByName("Game Over", 0);
         levelMusic.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
         levelMusic.start();
 
@@ -96,13 +97,23 @@ public class GameManager : Singleton<GameManager>
     public void OnGameOver()
     {
         Debug.Log("Game Over triggered from GameManager");
-        // 可以在这里显示游戏结束UI等
+        // 可以在这里显示游戏结束UI等 
     }
 
     private void OnDestroy()
     {
         levelMusic.stop(FMOD.Studio.STOP_MODE.IMMEDIATE);
         levelMusic.release();
+    }
+
+    public void MusicGameOver()
+    {
+        levelMusic.setParameterByName("Game Over", 1);
+    }
+
+    public void MusicGameRestart()
+    {
+        levelMusic.setParameterByName("Game Over", 0);
     }
 }
 

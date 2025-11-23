@@ -270,6 +270,30 @@ MonoBehaviour:
   - Regular
   - Strong
   Exists: 1
+--- !u!114 &-5416912990142169569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fecb8ef7f94ca804a8ab72049b86782e, type: 3}
+  m_Name: parameter:/mus_gameplay_basic_level/Game Over
+  m_EditorClassIdentifier: 
+  Name: Game Over
+  StudioPath: 
+  Min: 0
+  Max: 1
+  Default: 0
+  ID:
+    data1: 1368221958
+    data2: 245188802
+  Type: 0
+  IsGlobal: 0
+  Labels: []
+  Exists: 1
 --- !u!114 &-5288822602967495270
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -540,7 +564,7 @@ MonoBehaviour:
   StringsBanks:
   - {fileID: 640263147909748573}
   cacheVersion: 131848
-  cacheTime: 638995033754429070
+  cacheTime: 638995087154661164
   SerializableEventsDict:
   - key: event:/Music/mus_gameplay_basic_level
     index: 0
@@ -670,10 +694,10 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 638995033754429070
+  lastModified: 638995087154661164
   FileSizes:
   - Name: 
-    Value: 2450
+    Value: 2496
   Exists: 1
 --- !u!114 &660754851785372748
 MonoBehaviour:
@@ -690,7 +714,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 638995033754373886
+  lastModified: 638995087154605493
   FileSizes: []
   Exists: 1
 --- !u!114 &850255016788284874
@@ -906,7 +930,8 @@ MonoBehaviour:
   IsStream: 1
   Is3D: 0
   IsOneShot: 0
-  Parameters: []
+  Parameters:
+  - {fileID: -5416912990142169569}
   MinDistance: 1
   MaxDistance: 20
   Length: 192000

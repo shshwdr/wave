@@ -2761,7 +2761,9 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             enemyDescriptionPanel.SetActive(false);
         }
-        
+
+        GameManager.Instance.MusicGameOver();
+
         // 等待敌人移动动画完成后显示弹窗
         DOVirtual.DelayedCall(0.5f, () =>
         {
@@ -2770,11 +2772,13 @@ public class MainGameManager : Singleton<MainGameManager>
                 {
                     // 重试当前关卡
                     RetryLevel();
+                    GameManager.Instance.MusicGameRestart();
                 },
                 onRestart: () =>
                 {
                     // 重新开始游戏
                     Restart();
+                    GameManager.Instance.MusicGameRestart();
                 },
                 onQuit: () =>
                 {
