@@ -1553,6 +1553,19 @@ public class Enemy : MonoBehaviour
         {
             spriteRenderAnim.SetIdentifier(folderIdentifier);
             spriteRenderAnim.PlayHurt();
+        }
+        
+        if (enemyInfo.identifier == "boss")
+        {
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_huge_enemy_damaged");
+            
+        }else if (enemyInfo.identifier == "elite")
+        {
+            
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_huge_enemy_damaged");
+        }
+        else
+        {
             FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_small_enemy_damaged");
         }
     }

@@ -9,7 +9,7 @@
 [LOG] Thread::initThread                       : Init FMOD stream thread. Affinity: 0x4000000000000003, Priority: 0xFFFF7FFB, Stack Size: 98304, Semaphore: No, Sleep Time: 10, Looping: Yes.
 [LOG] SystemI::DSPCodecPoolRegister            : register codec pool for pool type 0
 [LOG] Thread::initThread                       : Init FMOD mixer thread. Affinity: 0x4000000000000001, Priority: 0xFFFF7FFA, Stack Size: 81920, Semaphore: No, Sleep Time: 0, Looping: Yes.
-[LOG] AsyncManager::init                       : manager 000001931ED9A588 isAsync 0 updatePeriod 0.02
+[LOG] AsyncManager::init                       : manager 000001936DE0BD98 isAsync 0 updatePeriod 0.02
 [LOG] AsyncManager::init                       : done
 [LOG] PlaybackSystem::init                     : 
 [LOG] Thread::initThread                       : Init FMOD Studio sample load thread. Affinity: 0x4000000000000003, Priority: 0xFFFF7FFD, Stack Size: 98304, Semaphore: No, Sleep Time: 1, Looping: No.
@@ -18,8 +18,133 @@
 [LOG] Manager::init                            : done.
 [LOG] BankLoader::serializeBank                : fileversion = 142, compatVersion = 140 (oldest = 44, newest = 146)
 [LOG] BankLoader::serializeBank                : fileversion = 142, compatVersion = 140 (oldest = 44, newest = 146)
-[LOG] BankLoader::serializeBank                : fileversion = 142, compatVersion = 140 (oldest = 44, newest = 146)
 [LOG] PlaybackSystem::acquireMasterBus         : Setting master channel group format to 6
+[LOG] SystemI::createSoundInternal             : Create name='', mode=0x02000202
+[LOG] SystemI::createSoundInternal             : exinfo->cbsize             = 224
+[LOG] SystemI::createSoundInternal             : exinfo->length             = 3723392
+[LOG] SystemI::createSoundInternal             : exinfo->fileoffset         = 46752
+[LOG] SystemI::createSoundInternal             : exinfo->numsubsounds       = 1
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlist      = 00000015A0F4EC98
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlistnum   = 1
+[LOG] SystemI::createSoundInternal             : exinfo->suggestedsoundtype = 5
+[LOG] SystemI::createSoundInternal             : exinfo->useropen           = 00007FFB4FEDD480
+[LOG] SystemI::createSoundInternal             : exinfo->userclose          = 00007FFB4FEDD440
+[LOG] SystemI::createSoundInternal             : exinfo->userread           = 00007FFB4FEDD560
+[LOG] SystemI::createSoundInternal             : exinfo->userseek           = 00007FFB4FEDD620
+[LOG] SystemI::createSoundInternal             : exinfo->fileuserdata       = 000001936B8DC5A8
+[LOG] SystemI::createSoundInternal             : exinfo->initialseekpostype = 1
+[LOG] SystemI::DSPCodecPoolRegister            : register codec pool for pool type 4
+[LOG] SystemI::createSoundInternal             : Sample 0/1: name='sfx_huge_enemy_damaged_var_1', format=5, channels=2, frequency=48000, lengthbytes=12928, lengthpcm=48000, pcmblocksize=0, loopstart=0, loopend=0, mode=0x00000000, channelmask=0x00000000, channelorder=0, peakvolume=0.372837.
+[LOG] SystemI::createSoundInternal             : Create name='', mode=0x02000202
+[LOG] SystemI::createSoundInternal             : exinfo->cbsize             = 224
+[LOG] SystemI::createSoundInternal             : exinfo->length             = 3723392
+[LOG] SystemI::createSoundInternal             : exinfo->fileoffset         = 46752
+[LOG] SystemI::createSoundInternal             : exinfo->numsubsounds       = 1
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlist      = 00000015A0F4EC98
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlistnum   = 1
+[LOG] SystemI::createSoundInternal             : exinfo->suggestedsoundtype = 5
+[LOG] SystemI::createSoundInternal             : exinfo->useropen           = 00007FFB4FEDD480
+[LOG] SystemI::createSoundInternal             : exinfo->userclose          = 00007FFB4FEDD440
+[LOG] SystemI::createSoundInternal             : exinfo->userread           = 00007FFB4FEDD560
+[LOG] SystemI::createSoundInternal             : exinfo->userseek           = 00007FFB4FEDD620
+[LOG] SystemI::createSoundInternal             : exinfo->fileuserdata       = 000001936B8DC5A8
+[LOG] SystemI::createSoundInternal             : exinfo->initialseekpostype = 1
+[LOG] SystemI::DSPCodecPoolRegister            : register codec pool for pool type 4
+[LOG] SystemI::createSoundInternal             : Sample 0/1: name='sfx_huge_enemy_damaged_var_3', format=5, channels=2, frequency=48000, lengthbytes=11520, lengthpcm=48000, pcmblocksize=0, loopstart=0, loopend=0, mode=0x00000000, channelmask=0x00000000, channelorder=0, peakvolume=0.400713.
+[LOG] SystemI::createSoundInternal             : Create name='', mode=0x02000202
+[LOG] SystemI::createSoundInternal             : exinfo->cbsize             = 224
+[LOG] SystemI::createSoundInternal             : exinfo->length             = 3723392
+[LOG] SystemI::createSoundInternal             : exinfo->fileoffset         = 46752
+[LOG] SystemI::createSoundInternal             : exinfo->numsubsounds       = 1
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlist      = 00000015A0F4EC98
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlistnum   = 1
+[LOG] SystemI::createSoundInternal             : exinfo->suggestedsoundtype = 5
+[LOG] SystemI::createSoundInternal             : exinfo->useropen           = 00007FFB4FEDD480
+[LOG] SystemI::createSoundInternal             : exinfo->userclose          = 00007FFB4FEDD440
+[LOG] SystemI::createSoundInternal             : exinfo->userread           = 00007FFB4FEDD560
+[LOG] SystemI::createSoundInternal             : exinfo->userseek           = 00007FFB4FEDD620
+[LOG] SystemI::createSoundInternal             : exinfo->fileuserdata       = 000001936B8DC5A8
+[LOG] SystemI::createSoundInternal             : exinfo->initialseekpostype = 1
+[LOG] SystemI::DSPCodecPoolRegister            : register codec pool for pool type 4
+[LOG] SystemI::createSoundInternal             : Sample 0/1: name='sfx_huge_enemy_damaged_var_2', format=5, channels=2, frequency=48000, lengthbytes=13536, lengthpcm=48000, pcmblocksize=0, loopstart=0, loopend=0, mode=0x00000000, channelmask=0x00000000, channelorder=0, peakvolume=0.420438.
+[LOG] SystemI::createSoundInternal             : Create name='', mode=0x02000202
+[LOG] SystemI::createSoundInternal             : exinfo->cbsize             = 224
+[LOG] SystemI::createSoundInternal             : exinfo->length             = 3723392
+[LOG] SystemI::createSoundInternal             : exinfo->fileoffset         = 46752
+[LOG] SystemI::createSoundInternal             : exinfo->numsubsounds       = 1
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlist      = 00000015A0F4EC98
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlistnum   = 1
+[LOG] SystemI::createSoundInternal             : exinfo->suggestedsoundtype = 5
+[LOG] SystemI::createSoundInternal             : exinfo->useropen           = 00007FFB4FEDD480
+[LOG] SystemI::createSoundInternal             : exinfo->userclose          = 00007FFB4FEDD440
+[LOG] SystemI::createSoundInternal             : exinfo->userread           = 00007FFB4FEDD560
+[LOG] SystemI::createSoundInternal             : exinfo->userseek           = 00007FFB4FEDD620
+[LOG] SystemI::createSoundInternal             : exinfo->fileuserdata       = 000001936B8DAEF8
+[LOG] SystemI::createSoundInternal             : exinfo->initialseekpostype = 1
+[LOG] SystemI::DSPCodecPoolRegister            : register codec pool for pool type 4
+[LOG] SystemI::createSoundInternal             : Sample 0/1: name='sfx_small_enemy_damaged_var_3', format=5, channels=2, frequency=48000, lengthbytes=11712, lengthpcm=48000, pcmblocksize=0, loopstart=0, loopend=0, mode=0x00000000, channelmask=0x00000000, channelorder=0, peakvolume=0.448711.
+[LOG] SystemI::createSoundInternal             : Create name='', mode=0x02000202
+[LOG] SystemI::createSoundInternal             : exinfo->cbsize             = 224
+[LOG] SystemI::createSoundInternal             : exinfo->length             = 3723392
+[LOG] SystemI::createSoundInternal             : exinfo->fileoffset         = 46752
+[LOG] SystemI::createSoundInternal             : exinfo->numsubsounds       = 1
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlist      = 00000015A0F4EC98
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlistnum   = 1
+[LOG] SystemI::createSoundInternal             : exinfo->suggestedsoundtype = 5
+[LOG] SystemI::createSoundInternal             : exinfo->useropen           = 00007FFB4FEDD480
+[LOG] SystemI::createSoundInternal             : exinfo->userclose          = 00007FFB4FEDD440
+[LOG] SystemI::createSoundInternal             : exinfo->userread           = 00007FFB4FEDD560
+[LOG] SystemI::createSoundInternal             : exinfo->userseek           = 00007FFB4FEDD620
+[LOG] SystemI::createSoundInternal             : exinfo->fileuserdata       = 000001936B8DAEF8
+[LOG] SystemI::createSoundInternal             : exinfo->initialseekpostype = 1
+[LOG] SystemI::DSPCodecPoolRegister            : register codec pool for pool type 4
+[LOG] SystemI::createSoundInternal             : Sample 0/1: name='sfx_small_enemy_damaged_var_2', format=5, channels=2, frequency=48000, lengthbytes=11840, lengthpcm=48000, pcmblocksize=0, loopstart=0, loopend=0, mode=0x00000000, channelmask=0x00000000, channelorder=0, peakvolume=0.427799.
+[LOG] SystemI::createSoundInternal             : Create name='', mode=0x02000202
+[LOG] SystemI::createSoundInternal             : exinfo->cbsize             = 224
+[LOG] SystemI::createSoundInternal             : exinfo->length             = 3723392
+[LOG] SystemI::createSoundInternal             : exinfo->fileoffset         = 46752
+[LOG] SystemI::createSoundInternal             : exinfo->numsubsounds       = 1
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlist      = 00000015A0F4EC98
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlistnum   = 1
+[LOG] SystemI::createSoundInternal             : exinfo->suggestedsoundtype = 5
+[LOG] SystemI::createSoundInternal             : exinfo->useropen           = 00007FFB4FEDD480
+[LOG] SystemI::createSoundInternal             : exinfo->userclose          = 00007FFB4FEDD440
+[LOG] SystemI::createSoundInternal             : exinfo->userread           = 00007FFB4FEDD560
+[LOG] SystemI::createSoundInternal             : exinfo->userseek           = 00007FFB4FEDD620
+[LOG] SystemI::createSoundInternal             : exinfo->fileuserdata       = 000001936B8DAEF8
+[LOG] SystemI::createSoundInternal             : exinfo->initialseekpostype = 1
+[LOG] SystemI::DSPCodecPoolRegister            : register codec pool for pool type 4
+[LOG] SystemI::createSoundInternal             : Sample 0/1: name='sfx_small_enemy_damaged_var_1', format=5, channels=2, frequency=48000, lengthbytes=11712, lengthpcm=48000, pcmblocksize=0, loopstart=0, loopend=0, mode=0x00000000, channelmask=0x00000000, channelorder=0, peakvolume=0.387647.
+[LOG] SystemI::createSoundInternal             : Create name='', mode=0x02000202
+[LOG] SystemI::createSoundInternal             : exinfo->cbsize             = 224
+[LOG] SystemI::createSoundInternal             : exinfo->length             = 3723392
+[LOG] SystemI::createSoundInternal             : exinfo->fileoffset         = 46752
+[LOG] SystemI::createSoundInternal             : exinfo->numsubsounds       = 1
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlist      = 00000015A0F4EC98
+[LOG] SystemI::createSoundInternal             : exinfo->inclusionlistnum   = 1
+[LOG] SystemI::createSoundInternal             : exinfo->suggestedsoundtype = 5
+[LOG] SystemI::createSoundInternal             : exinfo->useropen           = 00007FFB4FEDD480
+[LOG] SystemI::createSoundInternal             : exinfo->userclose          = 00007FFB4FEDD440
+[LOG] SystemI::createSoundInternal             : exinfo->userread           = 00007FFB4FEDD560
+[LOG] SystemI::createSoundInternal             : exinfo->userseek           = 00007FFB4FEDD620
+[LOG] SystemI::createSoundInternal             : exinfo->fileuserdata       = 00000192CC5BDB98
+[LOG] SystemI::createSoundInternal             : exinfo->initialseekpostype = 1
+[LOG] SystemI::DSPCodecPoolRegister            : register codec pool for pool type 4
+[LOG] SystemI::createSoundInternal             : Sample 0/1: name='sfx_elite_block_tiles', format=5, channels=2, frequency=48000, lengthbytes=25760, lengthpcm=72000, pcmblocksize=0, loopstart=0, loopend=0, mode=0x00000000, channelmask=0x00000000, channelorder=0, peakvolume=0.612460.
+[LOG] SoundI::release                          :  (000001919679CCE8)
+[LOG] SoundI::release                          :     sfx_small_enemy_damaged_var_1 (000001929E437238)
+[LOG] SoundI::release                          :  (000001919679CB88)
+[LOG] SoundI::release                          :     sfx_small_enemy_damaged_var_2 (000001929E436DB8)
+[LOG] SoundI::release                          :  (00000192A83DC8C8)
+[LOG] SoundI::release                          :     sfx_small_enemy_damaged_var_3 (000001929E4367B8)
+[LOG] SoundI::release                          :  (000001921C351358)
+[LOG] SoundI::release                          :     sfx_huge_enemy_damaged_var_1 (000001929E436638)
+[LOG] SoundI::release                          :  (00000192A83DC4A8)
+[LOG] SoundI::release                          :     sfx_huge_enemy_damaged_var_2 (000001929E436AB8)
+[LOG] SoundI::release                          :  (000001921C3514B8)
+[LOG] SoundI::release                          :     sfx_huge_enemy_damaged_var_3 (000001929E4364B8)
+[LOG] SoundI::release                          :  (00000192B0FC8758)
+[LOG] SoundI::release                          :     sfx_elite_block_tiles (000001931DB5D208)
 [LOG] Thread::callback                         : FMOD Studio bank load thread finished.
 [LOG] Thread::callback                         : FMOD Studio sample load thread finished.
 [LOG] LiveUpdate::release                      : 

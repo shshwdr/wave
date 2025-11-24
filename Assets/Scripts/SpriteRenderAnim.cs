@@ -66,10 +66,8 @@ public class SpriteRenderAnim : MonoBehaviour
         }
 
         // 停止当前动画
-        if (currentAnimCoroutine != null)
-        {
-            StopCoroutine(currentAnimCoroutine);
-        }
+        
+        StopCoroutine();
 
         currentAnimCoroutine = StartCoroutine(PlayAnimationCoroutine(sprites, loop));
     }
@@ -131,6 +129,14 @@ public class SpriteRenderAnim : MonoBehaviour
             return;
         }
 
+        StopCoroutine();
+        // 播放hurt动画（只显示第一帧，保持两个switchTime，第二个switchTime期间flashRender显示颜色）
+        currentAnimCoroutine = StartCoroutine(PlayHurtAnimationCoroutine(hurtSprites[0]));
+    }
+
+    void StopCoroutine()
+    {
+        
         // 停止当前动画，并确保flashRender颜色重置为透明
         if (currentAnimCoroutine != null)
         {
@@ -142,9 +148,6 @@ public class SpriteRenderAnim : MonoBehaviour
                 flashRender.color = new Color(currentColor.r, currentColor.g, currentColor.b, 0f);
             }
         }
-
-        // 播放hurt动画（只显示第一帧，保持两个switchTime，第二个switchTime期间flashRender显示颜色）
-        currentAnimCoroutine = StartCoroutine(PlayHurtAnimationCoroutine(hurtSprites[0]));
     }
 
     /// <summary>
@@ -243,13 +246,13 @@ public class SpriteRenderAnim : MonoBehaviour
         }
 
         // 停止当前动画
-        if (currentAnimCoroutine != null)
-        {
-            StopCoroutine(currentAnimCoroutine);
-        }
+        
+        StopCoroutine();
 
         currentAnimCoroutine = StartCoroutine(PlayAnimThenFollowCoroutine(firstSprites, loopSprites));
     }
+    
+    
 
     /// <summary>
     /// 根据后缀加载sprites
