@@ -4,11 +4,11 @@
 ,"The Hoppits kept time like metronomes,",showObjects_Hoppit,,,
 ,"the Tallhorn held long notes as smooth as strings,",showObjects_Tallhorn,,,
 ,and even the Swamp Heralds’ low frequencies could shake a concert hall.,showObjects_Swamp,,,
-,,hideGroup_bk1|hideGroup_all,,,1
-,…Until she appeared.,,,,
-,The legendary -- Princess Off-Key.,,,,
-,She sang so horribly off-pitch that the entire world went crooked!,,,,1
-,"In this moment of crisis, you were chosen to receive a legendary DJ deck.",,,,
-,"With it, you can tune the world and blast off-key monsters back into harmony.",,,,
-,"You’ll push forward,restore harmony to the land and find the Princess to tell her --",,,,
-,"""Please… you’re really out of tune.""",,,,1
+,…Until she appeared.,hideGroup_bk1|showGroup_bk2,,,
+,The legendary -- Princess Off-Key.,showObjects_Princess,,,
+,She sang so horribly off-pitch that the entire world went crooked!,showObjects_PrincessSing|hideObjects_Princess,,,
+,"In this moment of crisis, you were chosen to receive a legendary DJ deck.",hideGroup_bk2|showGroup_bk3|showObjects_Hero,,,
+,"With it, you can tune the world and blast off-key monsters back into harmony.",showObjects_HeroPlay|hideObjects_Hero,,,
+,"You’ll push forward,restore harmony to the land and find the Princess to tell her --",showObjects_HeroPrincess|hideObjects_HeroPlay,,,
+,Please… you’re really out of tune.,hideGroup_bk3|hideGroup_all,,,1
+,,hideGroup_all,,,1

@@ -47,7 +47,7 @@ TextureImporter:
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 7
-  spritePivot: {x: 0.5, y: 0.5}
+  spritePivot: {x: 0.5, y: 0}
   spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
@@ -165,7 +165,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: normal_idle_0_2
+      name: normal
       rect:
         serializedVersion: 2
         x: 256
@@ -196,9 +196,9 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
+      normal: -5319686813339951269
       normal_idle_0_0: -3259624691387238159
       normal_idle_0_1: 2716741734251707788
-      normal_idle_0_2: -5319686813339951269
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

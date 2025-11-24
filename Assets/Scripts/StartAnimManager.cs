@@ -232,7 +232,11 @@ public class StartAnimManager : Singleton<StartAnimManager>
             case "showobjects":
                 ShowObjects(value);
                 break;
-                
+
+            case "hideobjects":
+                HideObjects(value);
+                break;
+
             default:
                 Debug.LogWarning($"未知的action: {actionName}");
                 break;
@@ -309,7 +313,32 @@ public class StartAnimManager : Singleton<StartAnimManager>
             Debug.LogWarning($"找不到名为 {transformName} 的Transform");
         }
     }
-    
+    private void HideObjects(string transformName)
+    {
+        Transform targetTransform = FindTransformInScene(transformName);
+        if (targetTransform != null)
+        {
+            Image[] images = targetTransform.GetComponentsInChildren<Image>(true);
+            foreach (Image img in images)
+            {
+                img.DOFade(0, 0.5f);
+                // 确保Image有CanvasGroup
+                CanvasGroup canvasGroup = img.GetComponent<CanvasGroup>();
+                if (canvasGroup == null)
+                {
+                    canvasGroup = img.gameObject.AddComponent<CanvasGroup>();
+                }
+                
+                canvasGroup.alpha = 0f;
+                canvasGroup.DOFade(0f, 0.5f);
+            }
+            Debug.Log($"显示Objects: {transformName} ({images.Length} 个Image)");
+        }
+        else
+        {
+            Debug.LogWarning($"找不到名为 {transformName} 的Transform");
+        }
+    }
     /// <summary>
     /// 在当前场景中查找指定名称的CanvasGroup（在parent的子对象中查找）
     /// </summary>
