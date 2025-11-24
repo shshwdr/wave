@@ -52,6 +52,9 @@ public class TutorialManager : Singleton<TutorialManager>
         {
             Debug.LogWarning("未找到TutorialMenu，教程功能可能无法正常工作！");
         }
+#if !UNITY_EDITOR
+        showTutorial = true;
+#endif
     }
 
     private void Start()

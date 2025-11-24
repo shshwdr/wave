@@ -44,6 +44,9 @@ public class StartAnimManager : Singleton<StartAnimManager>
     
     private void Awake()
     {
+#if !UNITY_EDITOR
+        enable = true;
+#endif
         // 如果没有指定parent，使用自身作为parent
         if (parent == null)
         {
