@@ -22,7 +22,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private Collider2D enemyCollider;
     [SerializeField] private EnemyHealthBar healthBar;
     [SerializeField] private GameObject shieldObject; // 盾牌显示对象（shield敌人使用）
-    [SerializeField] private SpriteRenderAnim spriteRenderAnim; // Sprite动画组件
+    [SerializeField] protected SpriteRenderAnim spriteRenderAnim; // Sprite动画组件
 
     private int currentHealth;
     private int maxHealth;
@@ -30,7 +30,7 @@ public class Enemy : MonoBehaviour
     private bool isDead = false;
     private Vector3 spriteRendererOriginalLocalPos; // spriteRenderer的原始本地位置
     private Tween jumpTween; // 当前的跳跃动画
-    private EnemyInfo enemyInfo; // 敌人信息
+    protected EnemyInfo enemyInfo; // 敌人信息
     protected BoardManager boardManager; // 棋盘管理器引用
     
     // 技能系统
@@ -1489,7 +1489,7 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// 尝试播放攻击动画
     /// </summary>
-    private void TryPlayAtkAnimation()
+    protected void TryPlayAtkAnimation()
     {
         if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
             return;

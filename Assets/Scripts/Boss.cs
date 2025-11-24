@@ -38,6 +38,12 @@ public class Boss : Enemy
         {
             transform.position = startWorldPos;
         }
+
+        if (enemyInfo.identifier == "elite")
+        {
+            spriteRenderAnim.transform.localScale = new Vector3(-spriteRenderAnim.transform.localScale.x, spriteRenderAnim.transform.localScale.y);
+            spriteRenderAnim.transform.Translate(0.5f,0,0);
+        }
     }
     
     /// <summary>
@@ -180,20 +186,11 @@ public class Boss : Enemy
     private void TryPlayBossAtkAnimation()
     {
         // 使用反射获取enemyInfo
-        var enemyInfoField = typeof(Enemy).GetField("enemyInfo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        if (enemyInfoField == null)
-            return;
-            
-        EnemyInfo info = (EnemyInfo)enemyInfoField.GetValue(this);
-        if (info == null || string.IsNullOrEmpty(info.identifier))
+        if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
             return;
             
         // 使用反射调用父类的TryPlayAtkAnimation方法
-        var method = typeof(Enemy).GetMethod("TryPlayAtkAnimation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        if (method != null)
-        {
-            method.Invoke(this, null);
-        }
+        TryPlayAtkAnimation();
     }
     
     /// <summary>

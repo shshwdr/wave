@@ -3889,7 +3889,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8fc86b94e57f11a4488a8b51ef454072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enable: 1
+  enable: 0
   parent: {fileID: 1146564739}
   textComponent: {fileID: 892084911}
   textCanvasGroup: {fileID: 421403735}
@@ -4775,7 +4775,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23bdc4accfebd054388d31297203fd89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  showTutorial: 1
+  showTutorial: 0
 --- !u!4 &794148596
 Transform:
   m_ObjectHideFlags: 0
