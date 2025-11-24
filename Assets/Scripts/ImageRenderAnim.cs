@@ -10,7 +10,7 @@ public class ImageRenderAnim : MonoBehaviour
 {
     [Header("设置")]
     [SerializeField] private List<Sprite> sprites = new List<Sprite>(); // Sprite列表
-    [SerializeField] private float switchTime = 0.1f; // 切换sprite的时间间隔
+    private float switchTime = 0.25f; // 切换sprite的时间间隔
     [SerializeField] private bool playOnStart = false; // 是否在Start时自动播放
     [SerializeField] private bool loop = false; // 是否循环播放
     
@@ -35,6 +35,7 @@ public class ImageRenderAnim : MonoBehaviour
         {
             Debug.LogError($"ImageRenderAnim: 无法找到Image组件在 {gameObject.name}");
         }
+        
     }
     
     private void Start()

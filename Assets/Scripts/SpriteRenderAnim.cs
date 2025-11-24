@@ -40,6 +40,8 @@ public class SpriteRenderAnim : MonoBehaviour
         {
             Debug.LogError($"SpriteRenderAnim: 无法找到mainRender组件在 {gameObject.name}");
         }
+
+        switchTime = MainGameManager.Instance.switchTime;
     }
 
     /// <summary>

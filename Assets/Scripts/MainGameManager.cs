@@ -56,6 +56,8 @@ public class MainGameManager : Singleton<MainGameManager>
     public bool isPublish = false; // 发布模式，禁用所有编辑快捷键
     
     public List<Sprite> tileSprites;
+
+    public float switchTime = 0.25f;
     
     
     
@@ -2761,9 +2763,7 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             enemyDescriptionPanel.SetActive(false);
         }
-
-        GameManager.Instance.MusicGameOver();
-
+        
         // 等待敌人移动动画完成后显示弹窗
         DOVirtual.DelayedCall(0.5f, () =>
         {
@@ -2772,13 +2772,11 @@ public class MainGameManager : Singleton<MainGameManager>
                 {
                     // 重试当前关卡
                     RetryLevel();
-                    GameManager.Instance.MusicGameRestart();
                 },
                 onRestart: () =>
                 {
                     // 重新开始游戏
                     Restart();
-                    GameManager.Instance.MusicGameRestart();
                 },
                 onQuit: () =>
                 {
@@ -2913,7 +2911,7 @@ public class MainGameManager : Singleton<MainGameManager>
             // {
             //     message = $"Earned {totalGoldEarned} gold! ({levelGold} from level + {goldFromChests} from chests)";
             // }
-            ToastManager.Instance.ShowToast(message);
+            //ToastManager.Instance.ShowToast(message);
         }
 
         // 关闭技能显示
@@ -2972,7 +2970,7 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         else
         {
-            // 战斗-事件-商店-战斗的循环ShowShopMenu
+            // 战斗-事件-商店-战斗的循环
             // 先显示事件，然后显示商店
             ShowEventMenu();
         }
