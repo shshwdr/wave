@@ -4963,8 +4963,9 @@ GameObject:
   - component: {fileID: 805631454}
   - component: {fileID: 805631456}
   - component: {fileID: 805631455}
+  - component: {fileID: 805631457}
   m_Layer: 5
-  m_Name: Image
+  m_Name: bk
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5027,6 +5028,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 805631453}
   m_CullTransparentMesh: 1
+--- !u!225 &805631457
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 805631453}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1001 &807607020
 PrefabInstance:
   m_ObjectHideFlags: 0
