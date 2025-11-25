@@ -320,6 +320,7 @@ public class Boss : Enemy
                     enemy.Heal(healAmount);
                 }
             }
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Elite/sfx_elite_cure_all");
         }
         
         Debug.Log("Boss使用healAll技能，恢复所有怪物已损失血量的一半");
@@ -357,6 +358,7 @@ public class Boss : Enemy
         MainGameManager instance = UnityEngine.Object.FindObjectOfType<MainGameManager>();
         if (instance != null)
         {
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Elite/sfx_boss_death");
             instance.CompleteLevel();
         }
     }

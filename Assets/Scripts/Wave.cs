@@ -497,6 +497,7 @@ public class Wave : MonoBehaviour
                     // 标记有bounty技能
                     hasBounty = true;
                     bountyValue = value;
+                    FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_coin_skill");
                     break;
                     
                 case "exchange":
