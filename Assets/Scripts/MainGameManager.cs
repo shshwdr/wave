@@ -2135,7 +2135,7 @@ public class MainGameManager : Singleton<MainGameManager>
         //         waveDamage = waveGroupTotalDamage[waveGroupId] / waveCount;
         //     }
         // }
-        
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/PlayerStatus/sfx_ally_attack");
         // 所有ally向右侧发射投射物
         foreach (var ally in allyManager.ActiveAllies)
         {
