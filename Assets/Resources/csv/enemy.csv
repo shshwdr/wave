@@ -1,7 +1,7 @@
 ﻿identifier,name,description,hp,hpIncrease,attack,attackIncrease,speed,range,skill,skillValue,skillCD,gold
 normal,Drifter,No special ability.,50,10,10,5,1,1,,,,
 hp,Tallhorn,"High HP, harder to defeat.",200,20,20,5,1,1,,,,
-archer,Slinger,Can perform ranged attacks.,80,10,5,5,1,4,,,,
+archer,Slinger,Can perform ranged attacks.,80,10,5,5,1,10,,,,
 speed,Hoppit,Moves faster than normal enemies.,70,10,5,5,2,1,,,,
 healer,healer,Can heal nearby allies each turn.,80,10,5,5,1,1,heal,2,2,
 fog,Puff,Creates fog that hides tiles.,120,10,10,5,1,1,createFog,2,2,
@@ -10,7 +10,7 @@ summon,Swamp Herald,Can summon smaller minions to assist in battle.,200,10,10,5,
 shield,shield,Generates a shield each turn that blocks the first incoming attack.,100,10,10,5,1,1,ignoreFirstAttack,,,
 moveForward,moveForward,moveForward,70,10,10,5,1,1,hitMoveForward,,,
 removeWave,removeWave,removeWave,70,10,10,5,1,1,removeWave,,,
-elite,Wolf-Tone,You can only win by defeating him in this battle.\nHe will disable certain colors.,700,0,10,0,0,0,blockColor,2,4,
+elite,Wolf-Tone,You can only win by defeating him in this battle.\nHe can howl so off-pitch that it throws off your sense of sound and locks one of your colors.,700,0,10,0,0,0,blockColor,2,4,
 elite2,elite,You can only win by defeating it in this battle.\nIt will heal all enemies.,1000,0,10,0,0,0,healAll,,3,
 boss,Princess Off-Key,You can only win by defeating her in this battle.\nShe will disable certain colors and heal all enemies.,2000,0,10,0,0,0,healAll,2,3,
 chest,chest,Take Max 1 damage per time,1,1,0,0,1,0,lockHP,,,1

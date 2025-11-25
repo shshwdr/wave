@@ -2810,6 +2810,9 @@ public class MainGameManager : Singleton<MainGameManager>
             if (boardManager != null)
             {
                 boardManager.ClearBoard();
+                // 重新初始化棋盘，因为清空后需要重新生成tiles
+                boardManager.InitializeBoard();
+                boardManager.GenerateRandomColors();
             }
             
             // 清除战斗场景上的所有内容
@@ -2844,7 +2847,7 @@ public class MainGameManager : Singleton<MainGameManager>
                     () =>
                     {
                         // 确认按钮点击，进入下一关
-                        Debug.Log("确认配置，进入下一关");
+                        PlayerLevelUp(); // 调用PlayerLevelUp()来重新开始战斗
                     }
                 );
             }
