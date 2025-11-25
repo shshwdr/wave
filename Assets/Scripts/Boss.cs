@@ -42,7 +42,7 @@ public class Boss : Enemy
         if (enemyInfo.identifier == "elite")
         {
             spriteRenderAnim.transform.localScale = new Vector3(-spriteRenderAnim.transform.localScale.x, spriteRenderAnim.transform.localScale.y);
-            spriteRenderAnim.transform.Translate(0.5f,0,0);
+            spriteRenderAnim.transform.Translate(0.3f,0,0);
         }
     }
     
