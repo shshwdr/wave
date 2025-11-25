@@ -18,7 +18,7 @@ healWhenPass,Wave Harmony,"When this wave passes a tile of the same color, heal 
 hitAddColor,Color Spread,"When this wave hits an enemy, convert one random tile to this color.","When this wave hits an enemy, convert one random tile to this color.",blue,0,hitAddColor,1|2,2,1,3,3,,4
 damageIncreaseAll,Amplify,All wave damage increase {0}% ,All wave damage increase {0}% ,red,0,damageIncreaseAll,15|25,2,1,3,3,,4
 addDamageWhenPass,Resonant Flow,"When this wave passes a tile of the same color, its damage increases by {0}%","When this wave passes a tile of the same color, its damage increases by {0}%",red,0,addDamageWhenPass,30|50,2,1,3,3,,4
-spawnAlly,Summon,Spawn ally (HP = total wave dmg).,Spawn an ally on the grid with HP equal to {0}% of the total damage of this wave.,yellow,0,spawnAlly,20|40,2,1,3,3,,3
+spawnAlly,Summon,Spawn ally (HP = {0}% total wave dmg).,Spawn an ally on the grid with HP equal to {0}% of the total damage of this wave.,yellow,0,spawnAlly,20|40,2,1,3,3,,3
 summonAttack,Ally Volley,"All allies fire forward, dealing damage equal to the wave’s damage.","All allies fire forward, dealing damage equal to the wave’s damage.",blue,0,summonAttack,,1,1,3,3,spawnAlly,
 summonHeal,Shared Heal,"When you heal in this wave, heal all allies for the same amount.","When you heal in this wave, heal all allies for the same amount.",green,0,summonHeal,,1,1,3,3,spawnAlly,6
 noAttackNoCost,Slip,"If this wave deals no damage, you can immediately move again (once per turn).","If this wave deals no damage, you can immediately move again (once per turn).",red,0,noAttackNoCost,,1,1,3,3,,4

@@ -162,33 +162,6 @@ MonoBehaviour:
   MinDistance: 0
   MaxDistance: 0
   Length: 0
---- !u!114 &-6888540362730978450
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
-  m_Name: event:/SFX/PlayerStatus/sfx_ally_attack
-  m_EditorClassIdentifier: 
-  Path: event:/SFX/PlayerStatus/sfx_ally_attack
-  Guid:
-    Data1: 1493382533
-    Data2: 1336943646
-    Data3: 2082450315
-    Data4: 988346961
-  Banks:
-  - {fileID: 660754851785372748}
-  IsStream: 0
-  Is3D: 0
-  IsOneShot: 1
-  Parameters: []
-  MinDistance: 1
-  MaxDistance: 20
-  Length: 2000
 --- !u!114 &-6619890243025840493
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -616,6 +589,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 1000
+--- !u!114 &-3222943083917160293
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/PlayerStatus/sfx_ally_attack
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/PlayerStatus/sfx_ally_attack
+  Guid:
+    Data1: 1493382533
+    Data2: 1336943646
+    Data3: 2082450315
+    Data4: 988346961
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2000
 --- !u!114 &-3018869625674459141
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -752,6 +752,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 0
+--- !u!114 &-301214920444176511
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/PlayerStatus/sfx_ally_damaged
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/PlayerStatus/sfx_ally_damaged
+  Guid:
+    Data1: -29840071
+    Data2: 1198315230
+    Data3: -1702374505
+    Data4: -1270105299
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -798,15 +825,15 @@ MonoBehaviour:
   - {fileID: -9020401687528056349}
   - {fileID: -1623018954301473045}
   - {fileID: -6619890243025840493}
-  - {fileID: 2166419949995423481}
-  - {fileID: -6888540362730978450}
+  - {fileID: -301214920444176511}
+  - {fileID: -3222943083917160293}
   EditorParameters: []
   MasterBanks:
   - {fileID: 660754851785372748}
   StringsBanks:
   - {fileID: 640263147909748573}
   cacheVersion: 131848
-  cacheTime: 638996189608528034
+  cacheTime: 638996593625169349
   SerializableEventsDict:
   - key: event:/Music/mus_gameplay_basic_level
     index: 0
@@ -940,7 +967,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 638996189608528034
+  lastModified: 638996593625169349
   FileSizes:
   - Name: 
     Value: 2588
@@ -960,7 +987,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 638996189608467793
+  lastModified: 638996593625157482
   FileSizes: []
   Exists: 1
 --- !u!114 &765191302033869737
@@ -1125,33 +1152,6 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 2500
---- !u!114 &2166419949995423481
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
-  m_Name: event:/SFX/PlayerStatus/sfx_ally_damaged
-  m_EditorClassIdentifier: 
-  Path: event:/SFX/PlayerStatus/sfx_ally_damaged
-  Guid:
-    Data1: -29840071
-    Data2: 1198315230
-    Data3: -1702374505
-    Data4: -1270105299
-  Banks:
-  - {fileID: 660754851785372748}
-  IsStream: 0
-  Is3D: 0
-  IsOneShot: 1
-  Parameters: []
-  MinDistance: 1
-  MaxDistance: 20
-  Length: 1000
 --- !u!114 &2470142769465394043
 MonoBehaviour:
   m_ObjectHideFlags: 0

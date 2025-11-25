@@ -4,7 +4,7 @@
 ,"The Hoppits kept time like metronomes,",showObjects_Hoppit,,,
 ,"the Tallhorn held long notes as smooth as strings,",showObjects_Tallhorn,,,
 ,and even the Swamp Heralds’ low frequencies could shake a concert hall.,showObjects_Swamp,,,
-,…Until she appeared.,hideGroup_bk1|showGroup_bk2,,,
+,…Until SHE appeared.,hideGroup_bk1|showGroup_bk2,,,
 ,The legendary -- Princess Off-Key.,showObjects_Princess,,,
 ,She sang so horribly off-pitch that the entire world went crooked!,showObjects_PrincessSing|hideObjects_Princess,,,
 ,"In this moment of crisis, you were chosen to receive a legendary DJ deck.",hideGroup_bk2|showGroup_bk3|showObjects_Hero,,,
