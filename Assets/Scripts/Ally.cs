@@ -130,6 +130,7 @@ public class Ally : MonoBehaviour
         {
             Die();
         }
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/PlayerStatus/sfx_ally_damaged");
     }
 
     /// <summary>
