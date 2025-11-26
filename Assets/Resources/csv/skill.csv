@@ -2,7 +2,7 @@
 damageIncrease,Damage, +{0}% damage.,This wave deals +{0}% damage.,red,0,damageIncrease,50|75,2,1,3,3,,
 healWhenHit,Leech,Heal {0}% of damage dealt.,,green,,healWhenHit,10|20,2,1,3,3,,
 buffNextDamage,Next Boost,Next wave +{0}% damage.,,blue,0,buffNextDamage,50|75,2,1,3,3,,
-hitEnemyBack,Push Back,Push back {0} tiles.,"When this wave hits an enemy, push it back {0} tiles.",red,1,hitEnemyBack,1,1,1,3,3,,
+hitEnemyBack,Push Back,Push back {0} tiles.,"When this wave hits an enemy, push it back {0} tiles.",red,0,hitEnemyBack,1,1,1,3,3,,
 wavePenetrate,Pierce,Penetrate {0} enemies.,This wave can penetrate {0} additional enemies.,red,,wavePenetrate,1|2,2,1,3,3,,2
 hitTakeDamage,Impact Crash,Collided foes take {0}% wave damage.,"When a knocked-back enemy collides with another enemy or a wall, deal {0}% of wave damage to both.",red,0,hitTakeDamage,100,1,1,3,3,hitEnemyBack,
 aoeAttack,Splash,Adjacent foes take {0} damage.,"When this wave hits an enemy, also deal {0} damage to adjacent enemies.",red,,aoeAttack,50|75,2,1,3,3,,4
