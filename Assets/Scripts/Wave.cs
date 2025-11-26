@@ -705,7 +705,7 @@ public class Wave : MonoBehaviour
                 }
                 else
                 {
-                    direction = (enemy.transform.position - transform.position).normalized; // 向前移动的波浪正常计算方向
+                    direction = Vector3.right; // 向前移动的波浪向右击退
                 }
                 float finalDamage = damage;
                 

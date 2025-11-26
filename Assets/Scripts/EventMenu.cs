@@ -189,22 +189,36 @@ public class EventMenu : MenuBase
         
         // 获取所有type和eventType相同且未使用的事件
         List<EventInfo> matchingEvents = new List<EventInfo>();
+        List<EventInfo> matchingEventsNoUsed = new List<EventInfo>();
+        
         foreach (var eventInfo in CSVLoader.Instance.eventInfoMap.Values)
         {
             if (eventInfo.isAvailable && 
                 !string.IsNullOrEmpty(eventInfo.type) && 
-                eventInfo.type == eventType &&
-                !usedEventIdentifiers.Contains(eventInfo.identifier))
+                eventInfo.type == eventType)
             {
-                matchingEvents.Add(eventInfo);
+                if (!usedEventIdentifiers.Contains(eventInfo.identifier))
+                {
+                    
+                    matchingEvents.Add(eventInfo);
+                }
+                matchingEventsNoUsed.Add(eventInfo);
             }
         }
-        
+
+        if (matchingEvents.Count == 0)
+        {
+            matchingEvents = matchingEventsNoUsed;
+        }
         // 随机选择一个
         if (matchingEvents.Count > 0)
         {
             int randomIndex = Random.Range(0, matchingEvents.Count);
             return matchingEvents[randomIndex];
+        }
+        else
+        {
+            Debug.LogError($"no event ${eventType}");
         }
         
         return null;
