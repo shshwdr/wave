@@ -55,7 +55,7 @@ public class Boss : Enemy
             return;
             
         isMoving = true;
-        
+        ShowSpawnEffect();
         // 计算目标位置（每次移动1格）
         Vector2Int targetGridPos;
         if (movingDown)
