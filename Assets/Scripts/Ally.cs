@@ -1,10 +1,37 @@
 using UnityEngine;
 using DG.Tweening;
 
+
+public class Character : MonoBehaviour
+{
+    
+    [SerializeField] protected ParticleSystem showSmoke;
+    [SerializeField] protected ParticleSystem hitEffect;
+
+    public void ShowSpawnEffect()
+    {
+        var effect = Instantiate(showSmoke,transform);
+        effect.transform.parent = effect.transform.parent.parent;
+        effect.gameObject.SetActive(true);
+        // showSmoke.transform.parent = showSmoke.transform.parent.parent;
+        // showSmoke.gameObject.SetActive(true);
+        // showSmoke.Play();
+    }
+
+    public void ShowHitEffect()
+    {
+        //hitEffect.gameObject.SetActive(true);
+        var effect = Instantiate(hitEffect,transform);
+        effect.gameObject.SetActive(true);
+        //hitEffect.Play();
+    }
+    
+    
+}
 /// <summary>
 /// 我方随从系统 - 不会攻击，但会被敌人攻击并阻挡敌人
 /// </summary>
-public class Ally : MonoBehaviour
+public class Ally : Character
 {
     [Header("属性")]
     [SerializeField] private int maxHealth = 100;
@@ -103,6 +130,8 @@ public class Ally : MonoBehaviour
            // healthBar.Init(this, maxHealth);
             healthBar.UpdateHealthBar(currentHealth, maxHealth);
         }
+
+        ShowSpawnEffect();
     }
 
     /// <summary>

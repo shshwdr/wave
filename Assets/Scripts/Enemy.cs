@@ -5,7 +5,7 @@ using DG.Tweening;
 /// <summary>
 /// 敌人系统
 /// </summary>
-public class Enemy : MonoBehaviour
+public class Enemy : Character
 {
     [Header("属性")]
     [SerializeField] private int defaultMaxHealth = 100;
@@ -23,6 +23,8 @@ public class Enemy : MonoBehaviour
     [SerializeField] private EnemyHealthBar healthBar;
     [SerializeField] private GameObject shieldObject; // 盾牌显示对象（shield敌人使用）
     [SerializeField] protected SpriteRenderAnim spriteRenderAnim; // Sprite动画组件
+    
+    
 
     private int currentHealth;
     private int maxHealth;
@@ -190,6 +192,7 @@ public class Enemy : MonoBehaviour
             healthBar.Init(this, maxHealth);
             healthBar.UpdateHealthBar(currentHealth, maxHealth);
         }
+        ShowSpawnEffect();
     }
     
     /// <summary>
@@ -279,6 +282,7 @@ public class Enemy : MonoBehaviour
         // 检查死亡
         bool willDie = currentHealth <= 0;
         
+        ShowHitEffect();
         // 播放受伤动画（会自动切换到idle）
         TryPlayHurtAnimation();
 
@@ -435,7 +439,7 @@ public class Enemy : MonoBehaviour
         
         // 更新网格位置
         gridPosition = finalPos;
-        
+        ShowSpawnEffect();
         // 移动到新位置
         transform.DOMove(targetWorldPos, knockbackDuration)
             .SetEase(Ease.OutQuad);
@@ -518,6 +522,7 @@ public class Enemy : MonoBehaviour
         if (speed <= 0)
             speed = 1; // 默认移动1格
 
+        ShowSpawnEffect();
         // 获取EnemyManager和BoardManager
         EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
         if (boardManager == null)

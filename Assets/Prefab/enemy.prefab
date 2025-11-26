@@ -89,6 +89,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6130992482406845614, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      propertyPath: hitEffect
+      value: 
+      objectReference: {fileID: 5699237877309474046}
+    - target: {fileID: 6130992482406845614, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      propertyPath: showSmoke
+      value: 
+      objectReference: {fileID: 214240784248551253}
+    - target: {fileID: 6130992482406845614, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
       propertyPath: spriteRenderer
       value: 
       objectReference: {fileID: 3261914039145932306}
@@ -111,6 +119,11 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 9063316386630984826}
   m_SourcePrefab: {fileID: 100100000, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+--- !u!198 &214240784248551253 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 330082315963677530, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+  m_PrefabInstance: {fileID: 463187714249722895}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1147153415773980666 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 686257096781171701, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
@@ -136,6 +149,11 @@ MonoBehaviour:
 --- !u!4 &4647896785187724293 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5110801923874050058, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+  m_PrefabInstance: {fileID: 463187714249722895}
+  m_PrefabAsset: {fileID: 0}
+--- !u!198 &5699237877309474046 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 5294632697712707825, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
   m_PrefabInstance: {fileID: 463187714249722895}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &538735178360744261

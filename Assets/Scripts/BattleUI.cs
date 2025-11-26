@@ -16,6 +16,7 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private TMP_Text enemyCountText; // 剩余敌人数显示
     [SerializeField] private TMP_Text goldText; // 金币显示
     [SerializeField] private TMP_Text turnsRemainingText; // 剩余回合数显示
+    [SerializeField] private TMP_Text levelDescText; // 关卡描述显示
     [SerializeField] private Image healthBarFill;
     [SerializeField] private Image swapCountBarFill;
 
@@ -133,6 +134,43 @@ public class BattleUI : MonoBehaviour
             else
             {
                 turnsRemainingText.gameObject.SetActive(false);
+            }
+        }
+
+        // 更新关卡描述显示
+        if (levelDescText != null && mainGameManager != null)
+        {
+            LevelInfo currentLevelInfo = mainGameManager.GetCurrentLevelInfo();
+            if (currentLevelInfo != null)
+            {
+                string message = "";
+                string type = currentLevelInfo.type != null ? currentLevelInfo.type.ToLower() : "";
+                
+                switch (type)
+                {
+                    case "gold":
+                        int turns = currentLevelInfo.turns > 0 ? currentLevelInfo.turns : 0;
+                        message = $"Destroy chests to collect gold in {turns} turns!";
+                        break;
+                    case "boss":
+                        message = "Defeat the boss to win!";
+                        break;
+                    case "puzzle":
+                        int puzzleTurns = currentLevelInfo.turns > 0 ? currentLevelInfo.turns : 0;
+                        message = $"Clear all tiles in {puzzleTurns} turns!";
+                        break;
+                    case "normal":
+                    default:
+                        message = "Eliminate all enemies to win!";
+                        break;
+                }
+                
+                levelDescText.text = message;
+                levelDescText.gameObject.SetActive(true);
+            }
+            else
+            {
+                levelDescText.gameObject.SetActive(false);
             }
         }
     }

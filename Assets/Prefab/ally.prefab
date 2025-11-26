@@ -117,6 +117,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 965de991ae3dda84bba0e9359b41c4ba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  showSmoke: {fileID: 7587379213341030758}
+  hitEffect: {fileID: 2640562167709780685}
   maxHealth: 100
   moveSpeed: 0
   spriteRenderer: {fileID: 6552842040611288382}
@@ -153,8 +155,18 @@ MonoBehaviour:
   OverrideAttenuation: 0
   OverrideMinDistance: 1
   OverrideMaxDistance: 20
+--- !u!198 &2640562167709780685 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 5294632697712707825, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+  m_PrefabInstance: {fileID: 7917179916854542908}
+  m_PrefabAsset: {fileID: 0}
 --- !u!212 &6552842040611288382 stripped
 SpriteRenderer:
   m_CorrespondingSourceObject: {fileID: 3976438991730341634, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+  m_PrefabInstance: {fileID: 7917179916854542908}
+  m_PrefabAsset: {fileID: 0}
+--- !u!198 &7587379213341030758 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: 330082315963677530, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
   m_PrefabInstance: {fileID: 7917179916854542908}
   m_PrefabAsset: {fileID: 0}
