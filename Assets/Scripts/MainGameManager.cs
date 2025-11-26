@@ -43,6 +43,10 @@ public class MainGameManager : Singleton<MainGameManager>
     [SerializeField] private GameObject enemyDescriptionPanel;
     [SerializeField] private TMP_Text enemyDescriptionText;
     
+    [Header("随从描述显示UI")]
+    [SerializeField] private GameObject allyDescriptionPanel;
+    [SerializeField] private TMP_Text allyDescriptionText;
+    
     [Header("回合横幅UI")]
     [SerializeField] private TurnBanner turnBanner;
 
@@ -213,6 +217,9 @@ public class MainGameManager : Singleton<MainGameManager>
         
         // 初始化敌人描述显示UI
         InitEnemyDescriptionUI();
+        
+        // 初始化随从描述显示UI
+        InitAllyDescriptionUI();
         
         // 初始化回合横幅UI
         InitTurnBanner();
@@ -411,6 +418,66 @@ public class MainGameManager : Singleton<MainGameManager>
         if (enemyDescriptionPanel != null)
         {
             enemyDescriptionPanel.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// 初始化随从描述显示UI
+    /// </summary>
+    private void InitAllyDescriptionUI()
+    {
+        if (allyDescriptionPanel == null)
+        {
+            // 创建随从描述显示面板
+            GameObject canvasObj = GameObject.Find("Canvas");
+            if (canvasObj == null)
+            {
+                canvasObj = new GameObject("Canvas");
+                Canvas canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObj.AddComponent<CanvasScaler>();
+                canvasObj.AddComponent<GraphicRaycaster>();
+            }
+
+            allyDescriptionPanel = new GameObject("AllyDescriptionPanel");
+            allyDescriptionPanel.transform.SetParent(canvasObj.transform);
+            RectTransform rectTransform = allyDescriptionPanel.AddComponent<RectTransform>();
+            // 右上角：anchorMin和anchorMax都是(1,1)，pivot是(1,1)
+            rectTransform.anchorMin = new Vector2(1, 1);
+            rectTransform.anchorMax = new Vector2(1, 1);
+            rectTransform.pivot = new Vector2(1, 1);
+            rectTransform.anchoredPosition = new Vector2(-20, -20); // 距离右上角20像素
+            rectTransform.sizeDelta = new Vector2(400, 300);
+
+            // 添加背景
+            Image bg = allyDescriptionPanel.AddComponent<Image>();
+            bg.color = new Color(0, 0, 0, 0.7f);
+
+            // 添加文本
+            GameObject textObj = new GameObject("AllyDescriptionText");
+            textObj.transform.SetParent(allyDescriptionPanel.transform);
+            RectTransform textRect = textObj.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.sizeDelta = Vector2.zero;
+            textRect.anchoredPosition = Vector2.zero;
+            textRect.offsetMin = new Vector2(10, 10);
+            textRect.offsetMax = new Vector2(-10, -10);
+
+            allyDescriptionText = textObj.AddComponent<TextMeshProUGUI>();
+            allyDescriptionText.fontSize = 26;
+            allyDescriptionText.color = Color.white;
+            allyDescriptionText.alignment = TextAlignmentOptions.TopLeft;
+            // 从CSVLoader获取font
+            if (CSVLoader.Instance != null && CSVLoader.Instance.font != null)
+            {
+                allyDescriptionText.font = CSVLoader.Instance.font;
+            }
+        }
+
+        if (allyDescriptionPanel != null)
+        {
+            allyDescriptionPanel.SetActive(false);
         }
     }
     
@@ -929,7 +996,11 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             // 显示敌人描述
             UpdateEnemyDescription(hoveredEnemy);
-            // 隐藏技能显示
+            // 隐藏随从描述和技能显示
+            if (allyDescriptionPanel != null)
+            {
+                allyDescriptionPanel.SetActive(false);
+            }
             if (skillDisplayPanel != null)
             {
                 skillDisplayPanel.SetActive(false);
@@ -942,6 +1013,28 @@ public class MainGameManager : Singleton<MainGameManager>
             if (enemyDescriptionPanel != null)
             {
                 enemyDescriptionPanel.SetActive(false);
+            }
+        }
+        
+        // 检查是否悬停在随从上
+        Ally hoveredAlly = GetAllyUnderMouse();
+        if (hoveredAlly != null && !hoveredAlly.IsDead)
+        {
+            // 显示随从描述
+            UpdateAllyDescription(hoveredAlly);
+            // 隐藏技能显示
+            if (skillDisplayPanel != null)
+            {
+                skillDisplayPanel.SetActive(false);
+            }
+            return;
+        }
+        else
+        {
+            // 没有悬停在随从上，隐藏随从描述
+            if (allyDescriptionPanel != null)
+            {
+                allyDescriptionPanel.SetActive(false);
             }
         }
         
@@ -1035,11 +1128,25 @@ public class MainGameManager : Singleton<MainGameManager>
                 if (touchedEnemy != null && !touchedEnemy.IsDead)
                 {
                     UpdateEnemyDescription(touchedEnemy);
+                    // 隐藏随从描述
+                    if (allyDescriptionPanel != null)
+                    {
+                        allyDescriptionPanel.SetActive(false);
+                    }
                 }
-                // 检查是否触摸到tile
-                else if (boardManager != null && boardManager.IsValidPosition(gridPos))
+                // 检查是否触摸到随从
+                else
                 {
-                    UpdateSkillDisplay(gridPos);
+                    Ally touchedAlly = GetAllyAtPosition(touchWorldPos);
+                    if (touchedAlly != null && !touchedAlly.IsDead)
+                    {
+                        UpdateAllyDescription(touchedAlly);
+                    }
+                    // 检查是否触摸到tile
+                    else if (boardManager != null && boardManager.IsValidPosition(gridPos))
+                    {
+                        UpdateSkillDisplay(gridPos);
+                    }
                 }
             }
             else if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
@@ -1051,6 +1158,10 @@ public class MainGameManager : Singleton<MainGameManager>
                 if (enemyDescriptionPanel != null)
                 {
                     enemyDescriptionPanel.SetActive(false);
+                }
+                if (allyDescriptionPanel != null)
+                {
+                    allyDescriptionPanel.SetActive(false);
                 }
                 if (skillDisplayPanel != null)
                 {
@@ -1070,11 +1181,25 @@ public class MainGameManager : Singleton<MainGameManager>
                     if (touchedEnemy != null && !touchedEnemy.IsDead)
                     {
                         UpdateEnemyDescription(touchedEnemy);
+                        // 隐藏随从描述
+                        if (allyDescriptionPanel != null)
+                        {
+                            allyDescriptionPanel.SetActive(false);
+                        }
                     }
-                    // 检查是否触摸到tile
-                    else if (boardManager != null && boardManager.IsValidPosition(newGridPos))
+                    // 检查是否触摸到随从
+                    else
                     {
-                        UpdateSkillDisplay(newGridPos);
+                        Ally touchedAlly = GetAllyAtPosition(touchWorldPos);
+                        if (touchedAlly != null && !touchedAlly.IsDead)
+                        {
+                            UpdateAllyDescription(touchedAlly);
+                        }
+                        // 检查是否触摸到tile
+                        else if (boardManager != null && boardManager.IsValidPosition(newGridPos))
+                        {
+                            UpdateSkillDisplay(newGridPos);
+                        }
                     }
                 }
             }
@@ -1180,6 +1305,106 @@ public class MainGameManager : Singleton<MainGameManager>
         
         // 使用与GetEnemyAtPosition相同的逻辑
         return GetEnemyAtPosition(mouseWorldPos);
+    }
+    
+    /// <summary>
+    /// 检查位置是否在随从的sprite范围内
+    /// </summary>
+    private bool IsPositionInAllyBounds(Ally ally, Vector3 worldPos)
+    {
+        if (ally == null)
+            return false;
+            
+        SpriteRenderer sr = ally.GetComponent<SpriteRenderer>();
+        if (sr == null)
+            sr = ally.GetComponentInChildren<SpriteRenderer>();
+            
+        if (sr != null && sr.enabled && sr.sprite != null)
+        {
+            // 检查世界坐标是否在sprite的bounds内
+            Bounds spriteBounds = sr.bounds;
+            if (spriteBounds.Contains(worldPos))
+            {
+                // 进一步检查是否点击在sprite的实际像素上（非透明区域）
+                // 将世界坐标转换为sprite的本地坐标
+                Vector3 localPos = sr.transform.InverseTransformPoint(worldPos);
+                
+                // 获取sprite的像素坐标
+                Rect spriteRect = sr.sprite.rect;
+                Vector2 pixelPos = new Vector2(
+                    (localPos.x / spriteBounds.size.x) * spriteRect.width + spriteRect.width * 0.5f,
+                    (localPos.y / spriteBounds.size.y) * spriteRect.height + spriteRect.height * 0.5f
+                );
+                
+                // 检查像素是否在sprite范围内（简化检查，只检查bounds）
+                if (pixelPos.x >= 0 && pixelPos.x < spriteRect.width &&
+                    pixelPos.y >= 0 && pixelPos.y < spriteRect.height)
+                {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /// <summary>
+    /// 从世界坐标获取随从
+    /// </summary>
+    private Ally GetAllyAtPosition(Vector3 worldPos)
+    {
+        if (allyManager == null)
+            return null;
+            
+        foreach (var ally in allyManager.ActiveAllies)
+        {
+            if (ally == null || ally.IsDead)
+                continue;
+                
+            if (IsPositionInAllyBounds(ally, worldPos))
+            {
+                return ally;
+            }
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// 获取鼠标下的随从（基于spriteRenderer的实际sprite区域）
+    /// </summary>
+    private Ally GetAllyUnderMouse()
+    {
+        if (mainCamera == null || allyManager == null)
+            return null;
+            
+        // 将鼠标屏幕坐标转换为世界坐标
+        Vector3 mouseScreenPos = Input.mousePosition;
+        mouseScreenPos.z = mainCamera.nearClipPlane;
+        Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(mouseScreenPos);
+        mouseWorldPos.z = 0;
+        
+        // 使用与GetAllyAtPosition相同的逻辑
+        return GetAllyAtPosition(mouseWorldPos);
+    }
+    
+    /// <summary>
+    /// 更新随从描述显示
+    /// </summary>
+    private void UpdateAllyDescription(Ally ally)
+    {
+        if (ally == null || allyDescriptionPanel == null || allyDescriptionText == null)
+        {
+            if (allyDescriptionPanel != null)
+            {
+                allyDescriptionPanel.SetActive(false);
+            }
+            return;
+        }
+        
+        // 显示固定的描述文本
+        allyDescriptionText.text = "This is the Speaker you summoned. It will help you fend off the enemy's attacks.";
+        allyDescriptionPanel.SetActive(true);
     }
     
     /// <summary>
@@ -2764,6 +2989,12 @@ public class MainGameManager : Singleton<MainGameManager>
             enemyDescriptionPanel.SetActive(false);
         }
         
+        // 关闭随从描述显示
+        if (allyDescriptionPanel != null)
+        {
+            allyDescriptionPanel.SetActive(false);
+        }
+        
         // 等待敌人移动动画完成后显示弹窗
         DOVirtual.DelayedCall(0.5f, () =>
         {
@@ -2826,6 +3057,10 @@ public class MainGameManager : Singleton<MainGameManager>
             if (enemyDescriptionPanel != null)
             {
                 enemyDescriptionPanel.SetActive(false);
+            }
+            if (allyDescriptionPanel != null)
+            {
+                allyDescriptionPanel.SetActive(false);
             }
 
             if (PlayerManager.Instance != null)
@@ -2929,6 +3164,12 @@ public class MainGameManager : Singleton<MainGameManager>
             enemyDescriptionPanel.SetActive(false);
         }
         
+        // 关闭随从描述显示
+        if (allyDescriptionPanel != null)
+        {
+            allyDescriptionPanel.SetActive(false);
+        }
+        
         // 离开战斗模式时清除战场
         ClearBattleScene();
         
@@ -2961,15 +3202,8 @@ public class MainGameManager : Singleton<MainGameManager>
         
         if (isGameWin)
         {
-            // 显示胜利统计菜单
-            StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
-            if (statisticsMenu == null)
-            {
-                // 如果没有找到，创建一个新的
-                GameObject menuObj = new GameObject("StatisticsMenu");
-                statisticsMenu = menuObj.AddComponent<StatisticsMenu>();
-            }
-            statisticsMenu.ShowWinStatistics();
+            // 最终胜利：先显示最终event，然后显示统计菜单
+            ShowFinalEventMenu();
         }
         else
         {
@@ -3006,6 +3240,50 @@ public class MainGameManager : Singleton<MainGameManager>
             // 事件完成后，显示商店
             ShowShopMenu();
         });
+    }
+    
+    /// <summary>
+    /// 显示最终事件菜单（游戏胜利后的最终event）
+    /// </summary>
+    private void ShowFinalEventMenu()
+    {
+        // 检查是否有eventType，如果没有则直接显示统计菜单
+        if (currentLevelInfo == null || string.IsNullOrEmpty(currentLevelInfo.eventType))
+        {
+            // eventType为空，不显示事件，直接显示统计菜单
+            ShowWinStatistics();
+            return;
+        }
+        
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("EventMenu");
+            eventMenu = menuObj.AddComponent<EventMenu>();
+        }
+        
+        // 显示对应类型的最终事件（isFinal = true）
+        eventMenu.ShowEventByType(currentLevelInfo.eventType, () =>
+        {
+            // 最终事件完成后，显示统计菜单
+            ShowWinStatistics();
+        }, isFinal: true);
+    }
+    
+    /// <summary>
+    /// 显示胜利统计菜单
+    /// </summary>
+    private void ShowWinStatistics()
+    {
+        StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
+        if (statisticsMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("StatisticsMenu");
+            statisticsMenu = menuObj.AddComponent<StatisticsMenu>();
+        }
+        statisticsMenu.ShowWinStatistics();
     }
     
     /// <summary>

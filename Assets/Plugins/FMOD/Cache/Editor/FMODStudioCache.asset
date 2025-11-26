@@ -162,6 +162,33 @@ MonoBehaviour:
   MinDistance: 0
   MaxDistance: 0
   Length: 0
+--- !u!114 &-7259924344975857358
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/UI/sfx_coin_skill
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/UI/sfx_coin_skill
+  Guid:
+    Data1: 91236785
+    Data2: 1204726344
+    Data3: -1359258710
+    Data4: 932348662
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1000
 --- !u!114 &-6619890243025840493
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -670,6 +697,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 500
+--- !u!114 &-2321612448238972487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Elite/sfx_boss_death
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Elite/sfx_boss_death
+  Guid:
+    Data1: -502694336
+    Data2: 1179409766
+    Data3: 1777543335
+    Data4: 1780248234
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2500
 --- !u!114 &-1623018954301473045
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -752,6 +806,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 0
+--- !u!114 &-301621500041157904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/SFX/Elite/sfx_elite_cure_all
+  m_EditorClassIdentifier: 
+  Path: event:/SFX/Elite/sfx_elite_cure_all
+  Guid:
+    Data1: -341678407
+    Data2: 1133418950
+    Data3: 1832550016
+    Data4: 1697940294
+  Banks:
+  - {fileID: 660754851785372748}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2500
 --- !u!114 &-301214920444176511
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -827,16 +908,16 @@ MonoBehaviour:
   - {fileID: -6619890243025840493}
   - {fileID: -301214920444176511}
   - {fileID: -3222943083917160293}
-  - {fileID: 2313311189487161605}
-  - {fileID: 3954713009296091875}
-  - {fileID: 4199177747240011295}
+  - {fileID: -2321612448238972487}
+  - {fileID: -7259924344975857358}
+  - {fileID: -301621500041157904}
   EditorParameters: []
   MasterBanks:
   - {fileID: 660754851785372748}
   StringsBanks:
   - {fileID: 640263147909748573}
   cacheVersion: 131848
-  cacheTime: 638996925455382535
+  cacheTime: 638997465856840333
   SerializableEventsDict:
   - key: event:/Music/mus_gameplay_basic_level
     index: 0
@@ -902,6 +983,12 @@ MonoBehaviour:
     index: 30
   - key: event:/SFX/PlayerStatus/sfx_ally_attack
     index: 31
+  - key: event:/SFX/Elite/sfx_boss_death
+    index: 32
+  - key: event:/SFX/UI/sfx_coin_skill
+    index: 33
+  - key: event:/SFX/Elite/sfx_elite_cure_all
+    index: 34
 --- !u!114 &15506562395170768
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -970,7 +1057,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 638996925455382535
+  lastModified: 638997465856840333
   FileSizes:
   - Name: 
     Value: 2734
@@ -990,7 +1077,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 638996925455317226
+  lastModified: 638997465856830240
   FileSizes: []
   Exists: 1
 --- !u!114 &765191302033869737
@@ -1155,33 +1242,6 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 2500
---- !u!114 &2313311189487161605
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
-  m_Name: event:/SFX/Elite/sfx_boss_death
-  m_EditorClassIdentifier: 
-  Path: event:/SFX/Elite/sfx_boss_death
-  Guid:
-    Data1: -502694336
-    Data2: 1179409766
-    Data3: 1777543335
-    Data4: 1780248234
-  Banks:
-  - {fileID: 660754851785372748}
-  IsStream: 0
-  Is3D: 0
-  IsOneShot: 1
-  Parameters: []
-  MinDistance: 1
-  MaxDistance: 20
-  Length: 2500
 --- !u!114 &2470142769465394043
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1319,33 +1379,6 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 1000
---- !u!114 &3954713009296091875
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
-  m_Name: event:/SFX/UI/sfx_coin_skill
-  m_EditorClassIdentifier: 
-  Path: event:/SFX/UI/sfx_coin_skill
-  Guid:
-    Data1: 91236785
-    Data2: 1204726344
-    Data3: -1359258710
-    Data4: 932348662
-  Banks:
-  - {fileID: 660754851785372748}
-  IsStream: 0
-  Is3D: 0
-  IsOneShot: 1
-  Parameters: []
-  MinDistance: 1
-  MaxDistance: 20
-  Length: 1000
 --- !u!114 &4176130181649943182
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1374,33 +1407,6 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 0
---- !u!114 &4199177747240011295
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
-  m_Name: event:/SFX/Elite/sfx_elite_cure_all
-  m_EditorClassIdentifier: 
-  Path: event:/SFX/Elite/sfx_elite_cure_all
-  Guid:
-    Data1: -341678407
-    Data2: 1133418950
-    Data3: 1832550016
-    Data4: 1697940294
-  Banks:
-  - {fileID: 660754851785372748}
-  IsStream: 0
-  Is3D: 0
-  IsOneShot: 1
-  Parameters: []
-  MinDistance: 1
-  MaxDistance: 20
-  Length: 2500
 --- !u!114 &4396848971557513334
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -157,7 +157,7 @@ public class BoardManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 网格坐标转世界坐标
+    /// 网格坐标转世界坐标r
     /// </summary>
     public Vector3 GridToWorldPosition(Vector2Int gridPos)
     {

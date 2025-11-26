@@ -31,6 +31,8 @@ public class EventMenu : MenuBase
     private EventInfo currentEvent;
     private int selectedOptionIndex = -1;
     private Action onEventComplete; // 事件完成后的回调（进入商店）
+    private bool isFinalEvent = false; // 是否是最终event
+    private TMP_Text nextButtonText; // nextButton的文本组件
     private static HashSet<string> usedEventIdentifiers = new HashSet<string>(); // 已使用的事件标识符
 
     /// <summary>
@@ -63,6 +65,8 @@ public class EventMenu : MenuBase
         if (nextButton != null)
         {
             nextButton.onClick.AddListener(OnNextClicked);
+            // 获取nextButton的文本组件
+            nextButtonText = nextButton.GetComponentInChildren<TMP_Text>();
         }
         
         // 初始隐藏结果面板
@@ -116,16 +120,17 @@ public class EventMenu : MenuBase
     /// <summary>
     /// 根据eventType显示事件菜单
     /// </summary>
-    public void ShowEventByType(string eventType, Action onComplete = null)
+    public void ShowEventByType(string eventType, Action onComplete = null, bool isFinal = false)
     {
         onEventComplete = onComplete;
+        isFinalEvent = isFinal;
         
         // 根据eventType查找匹配的事件
         currentEvent = GetEventByType(eventType);
         if (currentEvent == null)
         {
-            Debug.LogWarning($"没有找到eventType为{eventType}的事件，直接进入商店");
-            // 如果没有找到匹配的事件，直接进入商店
+            Debug.LogWarning($"没有找到eventType为{eventType}的事件，跳过事件");
+            // 如果没有找到匹配的事件，直接调用回调
             onEventComplete?.Invoke();
             return;
         }
@@ -354,6 +359,11 @@ public class EventMenu : MenuBase
         if (nextButton != null)
         {
             nextButton.gameObject.SetActive(true);
+            // 如果是最终event，显示"The End"，否则显示"Continue"
+            if (nextButtonText != null)
+            {
+                nextButtonText.text = isFinalEvent ? "The End" : "Continue";
+            }
         }
     }
     
