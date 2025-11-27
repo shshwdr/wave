@@ -1706,6 +1706,15 @@ MonoBehaviour:
   levelDescText: {fileID: 357183535}
   healthBarFill: {fileID: 1925757771}
   swapCountBarFill: {fileID: 0}
+  healthBarContainer: {fileID: 0}
+  damageShakeDuration: 0.3
+  damageShakeStrength: 20
+  damageShakeVibrato: 20
+  healPulseDuration: 0.5
+  healPulseScale: 1.2
+  healPulseCount: 4
+  healthBarAnimationDuration: 0.5
+  healthNumberAnimationDuration: 0.5
 --- !u!1 &216478421
 GameObject:
   m_ObjectHideFlags: 0
