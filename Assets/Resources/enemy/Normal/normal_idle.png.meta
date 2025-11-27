@@ -165,7 +165,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: normal
+      name: normal_idle_0_2
       rect:
         serializedVersion: 2
         x: 256
@@ -179,8 +179,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b5fda86370dac26b0800000000000000
-      internalID: -5319686813339951269
+      spriteID: 00000000000000000800000000000000
+      internalID: 0
       vertices: []
       indices: 
       edges: []
@@ -199,6 +199,7 @@ TextureImporter:
       normal: -5319686813339951269
       normal_idle_0_0: -3259624691387238159
       normal_idle_0_1: 2716741734251707788
+      normal_idle_0_2: 0
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

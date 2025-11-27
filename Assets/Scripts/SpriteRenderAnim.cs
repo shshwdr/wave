@@ -181,6 +181,11 @@ public class SpriteRenderAnim : MonoBehaviour
 
         string folderPath = $"enemy/{identifier}";
         Sprite[] sprites = LoadSpritesBySuffix(folderPath, "special");
+
+        if (sprites == null || sprites.Length == 0)
+        {
+            PlayAtk();
+        }
         
         if (sprites != null && sprites.Length > 0)
         {
