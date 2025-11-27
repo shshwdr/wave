@@ -112,6 +112,31 @@ public class SpriteRenderAnim : MonoBehaviour
     }
 
     /// <summary>
+    /// 播放Shielded待机动画（shield怪物防御后使用）
+    /// </summary>
+    public void PlayIdleShielded()
+    {
+        if (string.IsNullOrEmpty(identifier))
+        {
+            Debug.LogError($"SpriteRenderAnim: identifier为空，无法播放Shielded待机动画");
+            return;
+        }
+
+        string folderPath = $"enemy/{identifier}";
+        Sprite[] sprites = LoadSpritesBySuffix(folderPath, "shielded");
+        
+        if (sprites == null || sprites.Length == 0)
+        {
+            // 如果找不到Shielded动画，回退到普通idle
+            Debug.LogWarning($"SpriteRenderAnim: 无法找到Shielded待机动画 - {folderPath}/*shielded，使用普通idle");
+            PlayIdle();
+            return;
+        }
+
+        PlayAnim(sprites, true);
+    }
+
+    /// <summary>
     /// 播放受伤动画
     /// </summary>
     public void PlayHurt()
@@ -192,6 +217,33 @@ public class SpriteRenderAnim : MonoBehaviour
             
             PlayAnimThenFollow("special", "idle");
             //PlayAnim(sprites, false);
+        }
+    }
+
+    /// <summary>
+    /// 播放特殊技能动画，然后播放Shielded idle（shield怪物防御时使用）
+    /// </summary>
+    public void PlaySpecialThenShielded()
+    {
+        if (string.IsNullOrEmpty(identifier))
+        {
+            return;
+        }
+
+        string folderPath = $"enemy/{identifier}";
+        Sprite[] sprites = LoadSpritesBySuffix(folderPath, "special");
+
+        if (sprites == null || sprites.Length == 0)
+        {
+            // 如果没有special动画，直接播放Shielded idle
+            PlayIdleShielded();
+            return;
+        }
+        
+        if (sprites != null && sprites.Length > 0)
+        {
+            // 播放special动画后切换到shielded idle
+            PlayAnimThenFollow("special", "shielded");
         }
     }
 

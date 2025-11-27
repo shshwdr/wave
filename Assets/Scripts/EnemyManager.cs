@@ -462,11 +462,18 @@ public class EnemyManager : MonoBehaviour
         List<Enemy> createFogEnemies = new List<Enemy>();
         List<Enemy> dirtyWaterEnemies = new List<Enemy>();
         List<Enemy> summonEnemies = new List<Enemy>();
+        List<Enemy> shieldEnemies = new List<Enemy>(); // shield怪物列表
         
         foreach (var enemy in activeEnemies.ToList())
         {
             if (enemy == null || enemy.IsDead)
                 continue;
+            
+            // 检查是否是shield怪物
+            if (enemy.IsShieldEnemy())
+            {
+                shieldEnemies.Add(enemy);
+            }
             
             // 先减少冷却时间（模拟TakeAction中的冷却减少逻辑）
             enemy.ReduceCooldown();
@@ -637,6 +644,22 @@ public class EnemyManager : MonoBehaviour
                 }
             });
             currentDelay += 0.5f + actionDelay;
+        }
+        
+        // 3.4 shield怪物执行防御操作（在移动/攻击完成后）
+        if (shieldEnemies.Count > 0)
+        {
+            DOVirtual.DelayedCall(currentDelay, () =>
+            {
+                foreach (var enemy in shieldEnemies)
+                {
+                    if (enemy != null && !enemy.IsDead)
+                    {
+                        enemy.PerformDefense();
+                    }
+                }
+            });
+            currentDelay += 0.5f + actionDelay; // 防御动画持续时间 + 延迟
         }
         
         // 4. 所有行动完成后调用回调

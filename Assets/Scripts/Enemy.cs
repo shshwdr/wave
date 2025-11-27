@@ -44,6 +44,7 @@ public class Enemy : Character
     // Shield敌人系统
     private bool hasShield = false; // 是否有shield技能
     private bool shieldActive = false; // 盾牌是否激活（每回合开始时为true）
+    private bool isShielded = false; // 是否处于防御状态（播放Shielded idle动画）
     
     // LockHP敌人系统
     private bool hasLockHP = false; // 是否有lockHP技能
@@ -109,6 +110,7 @@ public class Enemy : Character
         // 初始化shield系统
         hasShield = false;
         shieldActive = false;
+        isShielded = false;
         if (enemyInfo != null && enemyInfo.identifier == "shield")
         {
             hasShield = true;
@@ -193,6 +195,10 @@ public class Enemy : Character
             healthBar.UpdateHealthBar(currentHealth, maxHealth);
         }
         ShowSpawnEffect();
+        if (enemyInfo.identifier == "shield")
+        {
+            PerformDefense();
+        }
     }
     
     /// <summary>
@@ -245,10 +251,17 @@ public class Enemy : Character
         if (hasShield && shieldActive)
         {
             shieldActive = false;
+            isShielded = false; // 被攻击后，重置防御状态，播放普通idle
             UpdateShieldDisplay();
             DamageNumber.CreateDamageNumber(0, transform.position, false);
             // 伤害被吃掉，不造成伤害
             return;
+        }
+        
+        // 被攻击后，重置防御状态
+        if (hasShield && isShielded)
+        {
+            isShielded = false;
         }
         
         // 应用lockHP技能：每次被攻击只掉1滴血
@@ -620,6 +633,11 @@ public class Enemy : Character
         // 移动完成后切换到idle
         moveSequence.OnComplete(() =>
         {
+            // 移动后，重置防御状态，播放普通idle
+            if (hasShield)
+            {
+                isShielded = false;
+            }
             TryPlayIdleAnimation();
         });
     }
@@ -698,6 +716,12 @@ public class Enemy : Character
                     break;
                 }
             }
+        }
+        
+        // 攻击后，重置防御状态，播放普通idle
+        if (hasShield)
+        {
+            isShielded = false;
         }
         
         // 原地doShake动画
@@ -1519,8 +1543,47 @@ public class Enemy : Character
         if (SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier) && spriteRenderAnim != null)
         {
             spriteRenderAnim.SetIdentifier(folderIdentifier);
-            spriteRenderAnim.PlayIdle();
+            // 如果是shield怪物且处于防御状态，播放Shielded idle动画
+            if (hasShield && isShielded)
+            {
+                spriteRenderAnim.PlayIdleShielded();
+            }
+            else
+            {
+                spriteRenderAnim.PlayIdle();
+            }
         }
+    }
+    
+    /// <summary>
+    /// 执行防御操作（shield怪物每回合开始时调用）
+    /// </summary>
+    public void PerformDefense()
+    {
+        if (!hasShield || isDead)
+            return;
+            
+        // 设置防御状态
+        isShielded = true;
+        
+        // 播放special动画，然后自动切换到Shielded idle
+        if (enemyInfo == null || string.IsNullOrEmpty(enemyInfo.identifier))
+            return;
+            
+        string folderIdentifier = char.ToUpper(enemyInfo.identifier[0]) + enemyInfo.identifier.Substring(1);
+        if (SpriteRenderAnim.HasAnimationFolder(enemyInfo.identifier) && spriteRenderAnim != null)
+        {
+            spriteRenderAnim.SetIdentifier(folderIdentifier);
+            spriteRenderAnim.PlaySpecialThenShielded();
+        }
+    }
+    
+    /// <summary>
+    /// 检查是否是shield怪物
+    /// </summary>
+    public bool IsShieldEnemy()
+    {
+        return hasShield;
     }
     
     /// <summary>

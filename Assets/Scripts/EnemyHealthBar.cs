@@ -92,6 +92,7 @@ public class EnemyHealthBar : MonoBehaviour
         }
 
         UpdateHealthBar(maxHealth, maxHealth);
+        
     }
     
     /// <summary>
