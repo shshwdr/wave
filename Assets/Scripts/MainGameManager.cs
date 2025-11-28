@@ -1953,6 +1953,9 @@ public class MainGameManager : Singleton<MainGameManager>
         
         // 应用healWhenSpawn技能（整个wave group只回一次血）
         ApplyHealWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
+        
+        // 应用soloHeal技能（如果生成来自只有一个tile，恢复失去血量的value%）
+        ApplySoloHealForWaveGroup(waveColor, tilesUsed, firstTilePos);
 
         // 立即应用重力（与波浪移动同时进行）
         // 等待一小段时间让消除动画完成，然后开始重力
@@ -2043,6 +2046,62 @@ public class MainGameManager : Singleton<MainGameManager>
         // 每个tile恢复 value% 的已损失血量，总回血量 = lostHealth × value% × tilesUsed
         float healPerTile = lostHealth * healWhenSpawnValue / 100f;
         int totalHeal = (int)(healPerTile * tilesUsed);
+        
+        if (totalHeal > 0)
+        {
+            PlayerManager.Instance.Heal(totalHeal);
+            // 在第一个wave的位置显示回血数字
+            Vector3 firstWavePos = boardManager.GridToWorldPosition(firstTilePos);
+            DamageNumber.CreateDamageNumber(totalHeal, firstWavePos, true);
+            // 回血效果已在PlayerManager.Heal()中创建
+        }
+    }
+    
+    /// <summary>
+    /// 应用soloHeal技能（如果生成来自只有一个tile，恢复失去血量的value%）
+    /// </summary>
+    private void ApplySoloHealForWaveGroup(TileColor waveColor, int tilesUsed, Vector2Int firstTilePos)
+    {
+        // 只有单个tile时才触发
+        if (tilesUsed != 1)
+            return;
+            
+        if (PlayerManager.Instance == null || SkillManager.Instance == null)
+            return;
+        
+        int colorIndex = (int)waveColor;
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+        
+        // 检查是否有soloHeal技能
+        bool hasSoloHeal = false;
+        int soloHealValue = 0;
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (SkillManager.Instance.HasSkill(identifier))
+            {
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "soloHeal")
+                {
+                    hasSoloHeal = true;
+                    soloHealValue = SkillManager.Instance.GetSkillValue(identifier);
+                    break;
+                }
+            }
+        }
+        
+        if (!hasSoloHeal)
+            return;
+        
+        // 计算已损失血量
+        int maxHealth = PlayerManager.Instance.MaxHealth;
+        int currentHealth = PlayerManager.Instance.CurrentHealth;
+        int lostHealth = maxHealth - currentHealth;
+        
+        if (lostHealth <= 0)
+            return; // 没有损失血量，不需要恢复
+        
+        // 恢复 value% 的已损失血量
+        int totalHeal = (int)(lostHealth * soloHealValue / 100f);
         
         if (totalHeal > 0)
         {

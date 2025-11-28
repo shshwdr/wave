@@ -40,7 +40,7 @@ public class Wave : MonoBehaviour
     private bool isFirstWave = false; // 是否是第一个wave（用于damageBottom）
     private bool hasDamageBottomSkill = false; // 是否有damageBottom技能（外部传入）
     private float damageMultiplier = 1f; // 伤害倍数（来自buffNextDamage）
-    private HashSet<Vector2Int> clearedTiles = new HashSet<Vector2Int>(); // 已清除fog/dirt的tile
+    private HashSet<TileCell> clearedTiles = new HashSet<TileCell>(); // 已清除fog/dirt的tile
     private int hitEnemyCount = 0; // 已击中的敌人数量（用于damageIncreaseWhenHitMore）
     private bool hasDamageIncreaseWhenHitMore = false; // 是否有damageIncreaseWhenHitMore技能
     private int damageIncreaseWhenHitMoreValue = 0; // damageIncreaseWhenHitMore的值
@@ -72,6 +72,8 @@ public class Wave : MonoBehaviour
     private bool isMoving = false; // 是否正在移动
     private int tilesUsed = 1; // 使用的tile数量（用于moreTileMoreDamage和encourageMoreTiles技能）
     private bool moveBackward = false; // 是否向后移动（向左）
+    private bool hasAllOrNothing = false; // 是否有allOrNothing技能
+    private int allOrNothingValue = 0; // allOrNothing的值
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -191,9 +193,9 @@ public class Wave : MonoBehaviour
         }
         
         // 开始检测位置变化，清除经过的tile的fog和dirt（只有向前移动的波浪清除）
-        if (boardManager != null && !moveBackward)
+        if (boardManager != null)
         {
-            InvokeRepeating(nameof(CheckAndClearFogDirt), 0.05f, 0.05f);
+            InvokeRepeating(nameof(CheckAndClearFogDirt), 0.04f, 0.04f);
         }
 
         // 使用协程或Update来处理带波动的移动
@@ -262,13 +264,13 @@ public class Wave : MonoBehaviour
         // 检查位置是否有效
         if (!boardManager.IsValidPosition(currentGridPos))
             return;
-        
-        // 如果这个tile已经清除过，跳过
-        if (clearedTiles.Contains(currentGridPos))
-            return;
-        
         // 获取当前tile
         TileCell tile = boardManager.GetTile(currentGridPos);
+        
+        // 如果这个tile已经清除过，跳过
+        if (clearedTiles.Contains(tile))
+            return;
+        
         if (tile != null)
         {
             // 检查wave是否真的与tile重叠（使用bounds检测）
@@ -329,7 +331,7 @@ public class Wave : MonoBehaviour
                 }
                 
                 // 记录已清除的tile（无论是否有fog或dirt都记录，避免重复处理）
-                clearedTiles.Add(currentGridPos);
+                clearedTiles.Add(tile);
             }
         }
     }
@@ -412,23 +414,28 @@ public class Wave : MonoBehaviour
             }
         }
         
+        // 获取基础伤害
+        float baseDamage = 20f; // 默认基础伤害
+        if (PlayerManager.Instance != null)
+        {
+            baseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+        }
+        
         if (hasMoreTileMoreDamage)
         {
-            // 基础伤害变成 value% base damage × tiles used
-            float baseDamage = 20f; // 默认基础伤害
-            if (PlayerManager.Instance != null)
+            // 超过5个tile的波，每多一个tile，攻击力增加value%
+            damage = baseDamage;
+            if (tilesUsed > 5)
             {
-                baseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+                int extraTiles = tilesUsed - 5;
+                float damageMultiplier = 1f + (extraTiles * moreTileMoreDamageValue / 100f);
+                damage = damage * damageMultiplier;
             }
-            damage = baseDamage * (moreTileMoreDamageValue / 100f) * tilesUsed;
         }
         else
         {
             // 如果没有moreTileMoreDamage技能，使用PlayerManager的基础伤害
-            if (PlayerManager.Instance != null)
-            {
-                damage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
-            }
+            damage = baseDamage;
         }
         
         // 应用buffNextDamage的伤害加成
@@ -565,6 +572,12 @@ public class Wave : MonoBehaviour
                 case "encourageMoreTiles":
                     // encourageMoreTiles在最后处理，这里只标记
                     break;
+                    
+                case "allOrNothing":
+                    // 超过value个tile的波，伤害增加150，否则伤害减少50%
+                    hasAllOrNothing = true;
+                    allOrNothingValue = value;
+                    break;
             }
         }
         
@@ -591,10 +604,23 @@ public class Wave : MonoBehaviour
                     int value = SkillManager.Instance.GetSkillValue(identifier);
                     if (tilesUsed > value)
                     {
-                        damage = damage * 2.5f; // 增加150% = 乘以2.5
+                        damage = damage * 2.0f; // 增加150% = 乘以2.5
                     }
                     break;
                 }
+            }
+        }
+        
+        // 处理allOrNothing技能（超过value个tile的波，伤害增加150，否则伤害减少50%）
+        if (hasAllOrNothing)
+        {
+            if (tilesUsed > allOrNothingValue)
+            {
+                damage = damage * 2.0f; // 伤害增加150
+            }
+            else
+            {
+                damage = damage * 0.5f; // 伤害减少50%
             }
         }
     }
