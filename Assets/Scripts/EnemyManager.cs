@@ -288,6 +288,11 @@ public class EnemyManager : MonoBehaviour
 
         // 根据difficulty计算敌人属性
         int difficulty = currentLevelInfo != null ? currentLevelInfo.difficulty : 0;
+        // 困难模式：所有level的difficulty自动加1
+        if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
+        {
+            difficulty += 1;
+        }
         int calculatedHP = enemyInfo.hp + difficulty * enemyInfo.hpIncrease;
         int calculatedAttack = enemyInfo.attack + difficulty * enemyInfo.attackIncrease;
         

@@ -13,6 +13,7 @@ public class ShopSkillItem : MonoBehaviour
     [SerializeField] private TMP_Text skillDescriptionText;
     [SerializeField] private TMP_Text priceText;
     [SerializeField] private Button buyButton;
+    [SerializeField] private GameObject lockIcon; // 锁的图标GameObject
 
     private SkillInfo skillInfo;
     private SkillSelectMenu parentMenu;
@@ -95,6 +96,17 @@ public class ShopSkillItem : MonoBehaviour
             {
                 buttonText.text = (isUpgrade ? "Upgrade" : "Buy") +$"({price})";
             }
+        }
+    }
+
+    /// <summary>
+    /// 设置锁图标的显示/隐藏
+    /// </summary>
+    public void SetLockVisible(bool visible)
+    {
+        if (lockIcon != null)
+        {
+            lockIcon.SetActive(visible);
         }
     }
 

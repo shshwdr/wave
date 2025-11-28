@@ -3012,6 +3012,11 @@ public class MainGameManager : Singleton<MainGameManager>
         
         // 根据difficulty计算boss属性
         int difficulty = currentLevelInfo != null ? currentLevelInfo.difficulty : 0;
+        // 困难模式：所有level的difficulty自动加1
+        if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
+        {
+            difficulty += 1;
+        }
         int calculatedHP = bossInfo.hp + difficulty * bossInfo.hpIncrease;
         
         // 应用boss初始血量减少（如果有）
@@ -3110,6 +3115,11 @@ public class MainGameManager : Singleton<MainGameManager>
         
         // 根据difficulty计算敌人属性
         int difficulty = currentLevelInfo != null ? currentLevelInfo.difficulty : 0;
+        // 困难模式：所有level的difficulty自动加1
+        if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
+        {
+            difficulty += 1;
+        }
         int calculatedHP = enemyInfo.hp + difficulty * enemyInfo.hpIncrease;
         int calculatedAttack = enemyInfo.attack + difficulty * enemyInfo.attackIncrease;
         
@@ -3295,12 +3305,6 @@ public class MainGameManager : Singleton<MainGameManager>
         if (currentLevelInfo != null && currentLevelInfo.gold > 0 && PlayerManager.Instance != null)
         {
             int goldToAdd = currentLevelInfo.gold;
-            
-            // 困难模式：每关过关获得的钱减少1
-            if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
-            {
-                goldToAdd = Mathf.Max(0, goldToAdd - 1);
-            }
             
             PlayerManager.Instance.AddGold(goldToAdd);
             levelGold = goldToAdd;

@@ -35,6 +35,9 @@ public class SkillSelectMenu : MenuBase
     [Header("刷新按钮")]
     [SerializeField] private Button refreshButton;
     
+    [Header("锁定按钮")]
+    [SerializeField] private Button lockButton;
+    
     [Header("金币显示")]
     [SerializeField] private TMP_Text goldText;
     
@@ -45,6 +48,8 @@ public class SkillSelectMenu : MenuBase
     private Dictionary<string, SkillIconUI> skillIconMap = new Dictionary<string, SkillIconUI>(); // 技能identifier -> UI实例
     private List<GameObject> shopSkillItems = new List<GameObject>(); // 商店技能项列表
     private int currentRefreshPrice = 1; // 当前刷新价格（每次进入商店重置为1）
+    private bool isLocked = false; // 锁定状态
+    private HashSet<string> lockedSkillIdentifiers = new HashSet<string>(); // 锁定的技能identifier列表
 
     // 拖拽相关
     private SkillIconUI draggingIcon = null;
@@ -67,6 +72,13 @@ public class SkillSelectMenu : MenuBase
         if (refreshButton != null)
         {
             refreshButton.onClick.AddListener(OnRefreshClicked);
+        }
+
+        // 初始化锁定按钮
+        if (lockButton != null)
+        {
+            lockButton.onClick.AddListener(OnLockClicked);
+            UpdateLockButtonText();
         }
 
         // 初始化颜色区域的详情按钮和颜色图片
@@ -135,8 +147,18 @@ public class SkillSelectMenu : MenuBase
         currentRefreshPrice = 0;
         UpdateRefreshButton();
 
+        // 如果有锁定的技能，保留它们；否则正常刷新
+        bool hadLockedSkills = lockedSkillIdentifiers.Count > 0;
+        if (hadLockedSkills)
+        {
+            // 保留锁定的技能，不刷新商店
+            // 但清除锁定状态（锁会移除）
+            isLocked = false;
+            UpdateLockButtonText();
+        }
+
         // 更新商店显示
-        UpdateShop();
+        UpdateShop(hadLockedSkills);
 
         // 更新颜色区域和背包
         UpdateColorAreas();
@@ -158,7 +180,7 @@ public class SkillSelectMenu : MenuBase
     /// <summary>
     /// 更新商店显示
     /// </summary>
-    private void UpdateShop()
+    private void UpdateShop(bool useLockedSkills = false)
     {
         if (shopParent == null)
             return;
@@ -173,8 +195,41 @@ public class SkillSelectMenu : MenuBase
         }
         shopSkillItems.Clear();
 
-        // 获取所有可购买的技能（有buyPrice或upgradePrice的）
-        List<SkillInfo> shopSkills = GetShopSkills();
+        List<SkillInfo> shopSkills = new List<SkillInfo>();
+
+        // 如果有锁定的技能，先添加锁定的技能
+        if (useLockedSkills && lockedSkillIdentifiers.Count > 0)
+        {
+            if (CSVLoader.Instance != null && CSVLoader.Instance.cardInfoMap != null)
+            {
+                foreach (var identifier in lockedSkillIdentifiers)
+                {
+                    if (CSVLoader.Instance.cardInfoMap.ContainsKey(identifier))
+                    {
+                        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                        // 检查技能是否仍然可以购买或升级
+                        bool canBuy = !SkillManager.Instance.HasSkill(identifier) && skillInfo.buyPrice > 0;
+                        bool canUpgrade = SkillManager.Instance.HasSkill(identifier) && 
+                                         SkillManager.Instance.CanUpgradeSkill(identifier) && 
+                                         skillInfo.upgradePrice > 0;
+                        if (canBuy || canUpgrade)
+                        {
+                            shopSkills.Add(skillInfo);
+                        }
+                    }
+                }
+            }
+            // 清除锁定状态（锁会移除）
+            lockedSkillIdentifiers.Clear();
+        }
+
+        // 如果技能数量不足3个，补充新技能
+        if (shopSkills.Count < 3)
+        {
+            int needCount = 3 - shopSkills.Count;
+            List<SkillInfo> newSkills = GetShopSkills(needCount, shopSkills);
+            shopSkills.AddRange(newSkills);
+        }
 
         // 创建商店技能项
         foreach (var skillInfo in shopSkills)
@@ -187,14 +242,26 @@ public class SkillSelectMenu : MenuBase
     }
     
     /// <summary>
-    /// 获取商店技能列表（随机选择3个）
+    /// 获取商店技能列表（随机选择指定数量的技能）
     /// </summary>
-    private List<SkillInfo> GetShopSkills()
+    /// <param name="count">需要获取的技能数量，默认为3</param>
+    /// <param name="excludeSkills">需要排除的技能列表（例如已锁定的技能）</param>
+    private List<SkillInfo> GetShopSkills(int count = 3, List<SkillInfo> excludeSkills = null)
     {
         List<SkillInfo> allAvailableSkills = new List<SkillInfo>();
         
         if (CSVLoader.Instance == null || CSVLoader.Instance.cardInfoMap == null)
             return new List<SkillInfo>();
+
+        // 获取需要排除的identifier集合
+        HashSet<string> excludeIdentifiers = new HashSet<string>();
+        if (excludeSkills != null)
+        {
+            foreach (var skill in excludeSkills)
+            {
+                excludeIdentifiers.Add(skill.identifier);
+            }
+        }
 
         // 获取当前关卡等级
         int currentLevel = 1;
@@ -205,6 +272,10 @@ public class SkillSelectMenu : MenuBase
         
         foreach (var skillInfo in CSVLoader.Instance.cardInfoMap.Values)
         {
+            // 排除已锁定的技能
+            if (excludeIdentifiers.Contains(skillInfo.identifier))
+                continue;
+
             if (!skillInfo.available)
                 continue;
             
@@ -247,20 +318,20 @@ public class SkillSelectMenu : MenuBase
             }
         }
 
-        // 随机选择3个技能
+        // 随机选择指定数量的技能
         List<SkillInfo> result = new List<SkillInfo>();
         if (allAvailableSkills.Count == 0)
         {
             return result;
         }
 
-        // 如果可用技能少于3个，返回所有可用技能
-        int count = Mathf.Min(3, allAvailableSkills.Count);
+        // 如果可用技能少于需要的数量，返回所有可用技能
+        int actualCount = Mathf.Min(count, allAvailableSkills.Count);
         
         // 创建临时列表用于随机选择
         List<SkillInfo> tempList = new List<SkillInfo>(allAvailableSkills);
         
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < actualCount; i++)
         {
             int randomIndex = Random.Range(0, tempList.Count);
             result.Add(tempList[randomIndex]);
@@ -291,6 +362,9 @@ public class SkillSelectMenu : MenuBase
         }
         
         shopItem.Init(skillInfo, this);
+        
+        // 更新锁的显示状态
+        shopItem.SetLockVisible(isLocked);
     }
     
     /// <summary>
@@ -411,11 +485,149 @@ public class SkillSelectMenu : MenuBase
             currentRefreshPrice++;
         }
 
-        // 刷新商店
-        UpdateShop();
+        // 刷新商店（保留锁定的技能，只刷新未锁定的技能）
+        RefreshShop();
         UpdateGoldDisplay();
         UpdateRefreshButton();
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_hold_skill_color");
+    }
+
+    /// <summary>
+    /// 刷新商店（保留锁定的技能，只刷新未锁定的技能）
+    /// </summary>
+    private void RefreshShop()
+    {
+        if (shopParent == null)
+            return;
+
+        // 获取锁定的技能信息（用于排除）
+        List<SkillInfo> lockedSkills = new List<SkillInfo>();
+        if (lockedSkillIdentifiers.Count > 0)
+        {
+            if (CSVLoader.Instance != null && CSVLoader.Instance.cardInfoMap != null)
+            {
+                foreach (var identifier in lockedSkillIdentifiers)
+                {
+                    if (CSVLoader.Instance.cardInfoMap.ContainsKey(identifier))
+                    {
+                        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                        // 检查技能是否仍然可以购买或升级
+                        bool canBuy = !SkillManager.Instance.HasSkill(identifier) && skillInfo.buyPrice > 0;
+                        bool canUpgrade = SkillManager.Instance.HasSkill(identifier) && 
+                                         SkillManager.Instance.CanUpgradeSkill(identifier) && 
+                                         skillInfo.upgradePrice > 0;
+                        if (canBuy || canUpgrade)
+                        {
+                            lockedSkills.Add(skillInfo);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 移除未锁定的技能项
+        List<GameObject> itemsToRemove = new List<GameObject>();
+        foreach (var item in shopSkillItems)
+        {
+            if (item != null)
+            {
+                ShopSkillItem shopItem = item.GetComponent<ShopSkillItem>();
+                if (shopItem != null && !lockedSkillIdentifiers.Contains(shopItem.SkillIdentifier))
+                {
+                    itemsToRemove.Add(item);
+                }
+            }
+        }
+        foreach (var item in itemsToRemove)
+        {
+            shopSkillItems.Remove(item);
+            Destroy(item);
+        }
+
+        // 计算需要补充的技能数量
+        int lockedCount = shopSkillItems.Count;
+        int needCount = 3 - lockedCount;
+
+        // 如果技能数量不足3个，补充新技能
+        if (needCount > 0)
+        {
+            List<SkillInfo> newSkills = GetShopSkills(needCount, lockedSkills);
+            foreach (var skillInfo in newSkills)
+            {
+                CreateShopSkillItem(skillInfo);
+            }
+        }
+        
+        // 更新金币显示
+        UpdateGoldDisplay();
+    }
+
+    /// <summary>
+    /// 锁定按钮点击事件
+    /// </summary>
+    private void OnLockClicked()
+    {
+        isLocked = !isLocked;
+        
+        if (isLocked)
+        {
+            // 锁定：保存当前所有商店技能的identifier
+            lockedSkillIdentifiers.Clear();
+            foreach (var item in shopSkillItems)
+            {
+                if (item != null)
+                {
+                    ShopSkillItem shopItem = item.GetComponent<ShopSkillItem>();
+                    if (shopItem != null)
+                    {
+                        lockedSkillIdentifiers.Add(shopItem.SkillIdentifier);
+                    }
+                }
+            }
+        }
+        else
+        {
+            // 解锁：清除锁定的技能列表
+            lockedSkillIdentifiers.Clear();
+        }
+        
+        UpdateLockButtonText();
+        UpdateLockIcons();
+        UpdateRefreshButton(); // 更新刷新按钮状态
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
+    }
+
+    /// <summary>
+    /// 更新锁定按钮文本
+    /// </summary>
+    private void UpdateLockButtonText()
+    {
+        if (lockButton != null)
+        {
+            TMP_Text buttonText = lockButton.GetComponentInChildren<TMP_Text>();
+            if (buttonText != null)
+            {
+                buttonText.text = isLocked ? "Unlock" : "Lock";
+            }
+        }
+    }
+
+    /// <summary>
+    /// 更新所有技能项的锁图标显示
+    /// </summary>
+    private void UpdateLockIcons()
+    {
+        foreach (var item in shopSkillItems)
+        {
+            if (item != null)
+            {
+                ShopSkillItem shopItem = item.GetComponent<ShopSkillItem>();
+                if (shopItem != null)
+                {
+                    shopItem.SetLockVisible(isLocked);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -428,13 +640,17 @@ public class SkillSelectMenu : MenuBase
             TMP_Text buttonText = refreshButton.GetComponentInChildren<TMP_Text>();
             if (buttonText != null)
             {
-                buttonText.text = $"refresh({currentRefreshPrice})";
+                buttonText.text = $"Refresh({currentRefreshPrice})";
             }
 
             // 更新按钮可交互状态（检查金币是否足够）
+            // 如果有锁定的技能，仍然可以刷新（只刷新未锁定的技能）
+            // 但如果所有技能都被锁定（3个），则禁用刷新按钮
             if (PlayerManager.Instance != null)
             {
-                refreshButton.interactable = PlayerManager.Instance.Gold >= currentRefreshPrice;
+                bool allLocked = lockedSkillIdentifiers.Count >= 3;
+                bool canRefresh = PlayerManager.Instance.Gold >= currentRefreshPrice && !allLocked;
+                refreshButton.interactable = canRefresh;
             }
         }
     }
