@@ -93,7 +93,7 @@ public class ShopSkillItem : MonoBehaviour
             TMP_Text buttonText = buyButton.GetComponentInChildren<TMP_Text>();
             if (buttonText != null)
             {
-                buttonText.text = isUpgrade ? "Upgrade" : "Buy" +$"({price})";
+                buttonText.text = (isUpgrade ? "Upgrade" : "Buy") +$"({price})";
             }
         }
     }

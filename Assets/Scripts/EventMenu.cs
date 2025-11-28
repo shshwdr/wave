@@ -461,11 +461,11 @@ public class EventMenu : MenuBase
                             PlayerManager.Instance.AddTempSwapCount(exchangeAmount);
                             if (exchangeAmount > 0)
                             {
-                                resultMessages.Add($"You gained {exchangeAmount} exchange count.");
+                                resultMessages.Add($"You gained {exchangeAmount} swap count.");
                             }
                             else
                             {
-                                resultMessages.Add($"You lost {Mathf.Abs(exchangeAmount)} exchange count.");
+                                resultMessages.Add($"You lost {Mathf.Abs(exchangeAmount)} swap count.");
                             }
                         }
                     }

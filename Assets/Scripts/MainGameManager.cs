@@ -2722,6 +2722,20 @@ public class MainGameManager : Singleton<MainGameManager>
         currentState = GameState.EnemyTurn;
         isProcessing = true; // 敌人移动时也禁止操作
 
+        // 隐藏所有技能、敌人、随从面板
+        if (skillDisplayPanel != null)
+        {
+            skillDisplayPanel.SetActive(false);
+        }
+        if (enemyDescriptionPanel != null)
+        {
+            enemyDescriptionPanel.SetActive(false);
+        }
+        if (allyDescriptionPanel != null)
+        {
+            allyDescriptionPanel.SetActive(false);
+        }
+
         // 显示"Enemy Turn" banner，等banner离开后再开始敌人行动
         // if (turnBanner != null)
         // {

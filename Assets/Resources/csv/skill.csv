@@ -9,12 +9,12 @@ aoeAttack,Splash,Adjacent foes take {0} damage.,"When this wave hits an enemy, a
 more,Color Surge, +{0}% spawn chance.,This color tile has {0}% higher chance to appear.,red,,more,60|100|150,3,1,3,3,,4
 less,Color Drought, -{0}% spawn chance.,This color tile has {0}% lower chance to appear.,green,,less,30|50|80,3,1,3,3,,4
 bounty,Bounty, +{0} gold on kill.,Killing an enemy with this color grants {0} gold.,red,,bounty,1,1,1,6,3,,6
-exchange,Exchange, +{0} exchange use on kill,Killing an enemy with this color restores {0} exchange use.,red,,exchange,1|2,2,1,3,3,,4
+exchange,Exchange, +{0} swap on kill,Killing an enemy with this color restores {0} exchange use.,red,,exchange,1|2,2,1,3,3,,4
 pure,Solo,1-tile wave +{0}% damage.,"If a wave is generated from only one tile, it deals +{0}% damage.",red,,pure,100|150,2,1,3,3,,6
-overhealDoDamage,Overheal Burst,Overheal do {0}% damage to random enemy,Overheal do {0}% damage to random enemy,green,0,overhealDoDamage,200|300,2,1,3,3,,6
+overhealDoDamage,Overheal,Overheal do {0}% damage to random enemy,Overheal do {0}% damage to random enemy,green,0,overhealDoDamage,200|300,2,1,3,3,,6
 lowHP,Execution, +{0}% damage to enemies below 30% HP., +{0}% damage to enemies below 30% HP.,blue,0,lowHP,75|100,2,1,3,3,,5
 highHP,First Strike, +{0}% damage to enemies at full HP., +{0}% damage to enemies at full HP.,yellow,0,highHP,100|150,2,1,3,3,,
-healWhenPass,Wave Harmony,"When this wave passes a tile of the same color, heal {0}% of max HP","When this wave passes a tile of the same color, heal {0}% of max HP",green,0,healWhenPass,3|5,2,1,3,3,,4
+healWhenPass,Harmony,"When this wave passes a tile of the same color, heal {0}% of max HP","When this wave passes a tile of the same color, heal {0}% of max HP",green,0,healWhenPass,3|5,2,1,3,3,,4
 hitAddColor,Color Spread,"When this wave hits an enemy, convert one random tile to this color.","When this wave hits an enemy, convert one random tile to this color.",blue,0,hitAddColor,1|2,2,1,3,3,,4
 damageIncreaseAll,Amplify,All wave damage increase {0}% ,All wave damage increase {0}% ,red,0,damageIncreaseAll,15|25,2,1,3,3,,4
 addDamageWhenPass,Resonant Flow,"When this wave passes a tile of the same color, its damage increases by {0}%","When this wave passes a tile of the same color, its damage increases by {0}%",red,0,addDamageWhenPass,30|50,2,1,3,3,,4
