@@ -3064,7 +3064,7 @@ public class MainGameManager : Singleton<MainGameManager>
     /// <summary>
     /// 重试当前关卡
     /// </summary>
-    private void RetryLevel()
+    public void RetryLevel()
     {
         // 如果玩家等级 > 0，回到这场战斗前的商店页面
         // 如果玩家等级 == 0（第一关），重新开始这场战斗

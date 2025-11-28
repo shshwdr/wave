@@ -1,5 +1,5 @@
 ﻿enemies,startEnemyCount,gold,difficulty,bossIdentifier,turns,type,eventType
-normal|3,2,3,0,,,normal,
+shield|1|normal|3,2,3,0,,,normal,
 speed|2|normal|3,3,4,0,,,normal,1
 archer|1|normal|3|speed|1|archer|1,3,4,0,,,normal,
 healer|1|normal|3|speed|1|archer|1|healer|1,3,5,0,,,normal,1

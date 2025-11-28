@@ -22,6 +22,7 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private Image healthBarFill;
     [SerializeField] private Image swapCountBarFill;
     [SerializeField] private RectTransform healthBarContainer; // HP bar容器（用于抖动和缩放）
+    [SerializeField] private Button restartButton; // Restart按钮
 
     [Header("HP Bar特效设置")]
     [SerializeField] private float damageShakeDuration = 0.3f; // 扣血抖动持续时间
@@ -128,6 +129,37 @@ public class BattleUI : MonoBehaviour
         {
             originalSwapTextScale = swapTextRect.localScale;
         }
+        
+        // 初始化Restart按钮
+        if (restartButton != null)
+        {
+            restartButton.onClick.RemoveAllListeners();
+            restartButton.onClick.AddListener(OnRestartButtonClicked);
+        }
+    }
+    
+    /// <summary>
+    /// Restart按钮点击事件
+    /// </summary>
+    private void OnRestartButtonClicked()
+    {
+        // 显示确认对话框
+        ConfirmDialog.ShowConfirm(
+            title: "Restart Level",
+            content: "Do you want to restart this level?",
+            onYes: () =>
+            {
+                // 选择Yes，执行restart逻辑（和失败界面的restart一样）
+                if (mainGameManager != null)
+                {
+                    mainGameManager.RetryLevel();
+                }
+            },
+            onNo: () =>
+            {
+                // 选择No，关闭对话框（DialogBase会自动处理）
+            }
+        );
     }
 
     private void Update()

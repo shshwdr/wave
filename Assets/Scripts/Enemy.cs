@@ -45,6 +45,7 @@ public class Enemy : Character
     private bool hasShield = false; // 是否有shield技能
     private bool shieldActive = false; // 盾牌是否激活（每回合开始时为true）
     private bool isShielded = false; // 是否处于防御状态（播放Shielded idle动画）
+    private bool hasAttackedThisTurn = false; // 本回合是否已经攻击（如果攻击了，则不再执行防御操作）
     
     // LockHP敌人系统
     private bool hasLockHP = false; // 是否有lockHP技能
@@ -722,6 +723,7 @@ public class Enemy : Character
         if (hasShield)
         {
             isShielded = false;
+            hasAttackedThisTurn = true; // 标记本回合已攻击，不再执行防御操作
         }
         
         // 原地doShake动画
@@ -1484,6 +1486,7 @@ public class Enemy : Character
         if (hasShield)
         {
             shieldActive = true;
+            hasAttackedThisTurn = false; // 重置攻击标志
             UpdateShieldDisplay();
             FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_shield_attack");
         }
@@ -1561,6 +1564,10 @@ public class Enemy : Character
     public void PerformDefense()
     {
         if (!hasShield || isDead)
+            return;
+        
+        // 如果本回合已经攻击了，则不执行防御操作（不播放special动画，不播放shielded idle，不设置isShielded）
+        if (hasAttackedThisTurn)
             return;
             
         // 设置防御状态
