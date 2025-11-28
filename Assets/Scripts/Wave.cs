@@ -74,6 +74,11 @@ public class Wave : MonoBehaviour
     private bool moveBackward = false; // 是否向后移动（向左）
     private bool hasAllOrNothing = false; // 是否有allOrNothing技能
     private int allOrNothingValue = 0; // allOrNothing的值
+    private bool hasBossEcho = false; // 是否有bossEcho技能
+    private int bossEchoValue = 0; // bossEcho的值
+    private bool hasMinionEcho = false; // 是否有minionEcho技能
+    private int minionEchoValue = 0; // minionEcho的值
+    private bool isSkillTriggeredDamage = false; // 标记当前伤害是否是技能触发的（防止技能互相触发）
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
@@ -143,6 +148,7 @@ public class Wave : MonoBehaviour
         hasTarget = false; // 重置target技能
         targetValue = 0;
         tilesUsed = tilesUsedCount; // 记录使用的tile数量
+        isSkillTriggeredDamage = false; // 重置技能触发标志
         
         // 初始化波动相关变量
         columnIndex = gridPos.x; // 列索引
@@ -578,6 +584,18 @@ public class Wave : MonoBehaviour
                     hasAllOrNothing = true;
                     allOrNothingValue = value;
                     break;
+                    
+                case "bossEcho":
+                    // 攻击普通敌人时，对Boss造成伤害
+                    hasBossEcho = true;
+                    bossEchoValue = value;
+                    break;
+                    
+                case "minionEcho":
+                    // 攻击Boss时，对随机普通敌人造成伤害
+                    hasMinionEcho = true;
+                    minionEchoValue = value;
+                    break;
             }
         }
         
@@ -831,6 +849,18 @@ public class Wave : MonoBehaviour
                     ApplyAoeAttack(enemy, finalDamage);
                 }
                 
+                // 应用bossEcho技能 - 攻击普通敌人时，对Boss造成伤害
+                if (hasBossEcho && !isSkillTriggeredDamage && enemy != null && !(enemy is Boss))
+                {
+                    ApplyBossEcho(finalDamage);
+                }
+                
+                // 应用minionEcho技能 - 攻击Boss时，对随机普通敌人造成伤害
+                if (hasMinionEcho && !isSkillTriggeredDamage && enemy != null && enemy is Boss)
+                {
+                    ApplyMinionEcho(finalDamage);
+                }
+                
                 // 击中回血
                 if (hasHealWhenHit && PlayerManager.Instance != null)
                 {
@@ -921,6 +951,108 @@ public class Wave : MonoBehaviour
                 targetTile.SetColor(waveColor);
             }
         }
+    }
+    
+    /// <summary>
+    /// 应用bossEcho技能 - 攻击普通敌人时，对Boss造成伤害
+    /// </summary>
+    private void ApplyBossEcho(float baseDamage)
+    {
+        Boss boss = MainGameManager.GetCurrentBoss();
+        if (boss == null || boss.IsDead)
+            return;
+        
+        // 计算对Boss造成的伤害（baseDamage的bossEchoValue%）
+        float echoDamage = baseDamage * (bossEchoValue / 100f);
+        
+        // 设置标志，防止技能互相触发
+        isSkillTriggeredDamage = true;
+        
+        // 对Boss造成伤害
+        float redWaveBaseDamage = 20f;
+        if (PlayerManager.Instance != null)
+        {
+            redWaveBaseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+        }
+        if (waveColor == TileColor.Red)
+        {
+            redWaveBaseDamage = baseDamage;
+        }
+        boss.TakeDamage((int)echoDamage, Vector3.right, false, 0, redWaveBaseDamage);
+        
+        // 清除标志
+        isSkillTriggeredDamage = false;
+    }
+    
+    /// <summary>
+    /// 应用minionEcho技能 - 攻击Boss时，对随机普通敌人造成伤害
+    /// </summary>
+    private void ApplyMinionEcho(float baseDamage)
+    {
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (enemyManager == null)
+            return;
+        
+        // 获取所有活着的普通敌人（排除Boss）
+        List<Enemy> normalEnemies = new List<Enemy>();
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy != null && !enemy.IsDead && !(enemy is Boss))
+            {
+                normalEnemies.Add(enemy);
+            }
+        }
+        
+        // 如果没有普通敌人，直接返回
+        if (normalEnemies.Count == 0)
+            return;
+        
+        // 随机选择一个普通敌人
+        int randomIndex = Random.Range(0, normalEnemies.Count);
+        Enemy targetEnemy = normalEnemies[randomIndex];
+        
+        // 计算对普通敌人造成的伤害（baseDamage的minionEchoValue%）
+        float echoDamage = baseDamage * (minionEchoValue / 100f);
+        
+        // 设置标志，防止技能互相触发
+        isSkillTriggeredDamage = true;
+        
+        // 对普通敌人造成伤害
+        float redWaveBaseDamage = 20f;
+        if (PlayerManager.Instance != null)
+        {
+            redWaveBaseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+        }
+        if (waveColor == TileColor.Red)
+        {
+            redWaveBaseDamage = baseDamage;
+        }
+        else
+        {
+            // 计算红色wave的基础伤害（用于hitTakeDamage）
+            if (SkillManager.Instance != null)
+            {
+                List<SkillInfo> redSkills = SkillManager.Instance.GetOwnedSkillsByColor("red");
+                float redDamage = 20f;
+                if (PlayerManager.Instance != null)
+                {
+                    redDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+                }
+                foreach (var skill in redSkills)
+                {
+                    int value = SkillManager.Instance.GetSkillValue(skill.identifier);
+                    if (skill.effect == "damageIncrease")
+                    {
+                        redDamage = redDamage * (1f + value / 100f);
+                    }
+                }
+                redWaveBaseDamage = redDamage;
+            }
+        }
+        targetEnemy.TakeDamage((int)echoDamage, Vector3.right, false, 0, redWaveBaseDamage);
+        
+        // 清除标志
+        isSkillTriggeredDamage = false;
     }
     
     /// <summary>
@@ -1042,6 +1174,12 @@ public class Wave : MonoBehaviour
                 redWaveBaseDamage = finalDamage;
             }
             boss.TakeDamage((int)finalDamage, direction, false, 0, redWaveBaseDamage);
+            
+            // 应用minionEcho技能 - 攻击Boss时，对随机普通敌人造成伤害
+            if (hasMinionEcho && !isSkillTriggeredDamage)
+            {
+                ApplyMinionEcho(finalDamage);
+            }
             
             // 记录伤害
             MainGameManager.RecordWaveDamage(waveGroupId, finalDamage);

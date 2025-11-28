@@ -1,7 +1,7 @@
 ﻿identifier,name,description,hp,hpIncrease,attack,attackIncrease,speed,range,skill,skillValue,skillCD,gold
 normal,Drifter,No special ability.,50,10,10,5,1,1,,,,
 hp,Tallhorn,"High HP, harder to defeat.",200,20,20,5,1,1,,,,
-archer,Slinger,Can perform ranged attacks.,80,10,5,5,1,10,,,,
+archer,Slinger,Can perform ranged attacks.,50,10,5,5,1,10,,,,
 speed,Hoppit,Moves faster than normal enemies.,70,10,5,5,2,1,,,,
 healer,Healbud,Heal one enemy.,80,10,5,5,1,1,heal,2,2,
 fog,Puff,Creates fog that hides tiles.,120,10,10,5,1,1,createFog,2,2,

@@ -132,7 +132,7 @@ public class SkillSelectMenu : MenuBase
         onConfirm = onConfirmCallback;
 
         // 重置刷新价格为1
-        currentRefreshPrice = 1;
+        currentRefreshPrice = 0;
         UpdateRefreshButton();
 
         // 更新商店显示
