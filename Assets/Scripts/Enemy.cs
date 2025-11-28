@@ -103,6 +103,14 @@ public class Enemy : Character
     {
         gridPosition = gridPos;
         maxHealth = health > 0 ? health : defaultMaxHealth;
+        
+        // 困难模式：增加20%血量（至少增加10点）
+        if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
+        {
+            int healthIncrease = Mathf.Max(10, Mathf.RoundToInt(maxHealth * 0.2f));
+            maxHealth += healthIncrease;
+        }
+        
         currentHealth = maxHealth;
         isDead = false;
         enemyInfo = info;

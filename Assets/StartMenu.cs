@@ -11,6 +11,10 @@ public class StartMenu : MonoBehaviour
     [Header("UI组件")]
     [SerializeField] private CanvasGroup groupCanvas; // 整个group的CanvasGroup（用于fade in）
     [SerializeField] private Button startButton; // 开始游戏按钮
+    [SerializeField] private Button hardModeButton; // 困难模式按钮
+    [SerializeField] private GameObject hardModeDisableImage; // 困难模式按钮
+    
+    [SerializeField] private TMPro.TMP_Text startButtonText; // 开始按钮文本（用于修改文字）
     
     [Header("设置")]
     [SerializeField] private float fadeInDuration = 0.5f; // fade in持续时间
@@ -55,10 +59,63 @@ public class StartMenu : MonoBehaviour
         {
             startButton.onClick.RemoveAllListeners();
             startButton.onClick.AddListener(OnStartButtonClicked);
+            
+            // 如果没有指定startButtonText，尝试从按钮获取
+            if (startButtonText == null)
+            {
+                startButtonText = startButton.GetComponentInChildren<TMPro.TMP_Text>();
+            }
         }
         else
         {
             Debug.LogWarning("StartMenu: startButton未设置！");
+        }
+        
+        // 设置困难模式按钮点击事件
+        if (hardModeButton != null)
+        {
+            hardModeButton.onClick.RemoveAllListeners();
+            hardModeButton.onClick.AddListener(OnHardModeButtonClicked);
+        }
+        
+        // 更新按钮显示
+        UpdateButtonDisplay();
+    }
+    
+    /// <summary>
+    /// 更新按钮显示
+    /// </summary>
+    private void UpdateButtonDisplay()
+    {
+        // 检查是否已赢得游戏
+        bool hasWonGame = GameDataManager.Instance != null && GameDataManager.Instance.HasWonGame();
+        
+        // 如果已赢得游戏，显示困难模式按钮，并将开始按钮文字改为"Normal Mode"
+        if (hasWonGame)
+        {
+            if (hardModeButton != null)
+            {
+                hardModeDisableImage.SetActive(false);
+                hardModeButton.enabled=true;
+            }
+            
+            if (startButtonText != null)
+            {
+                startButtonText.text = "Normal Mode";
+            }
+        }
+        else
+        {
+            if (hardModeButton != null)
+            {
+                hardModeDisableImage.SetActive(true);
+                hardModeButton.enabled=false;
+            }
+            
+            if (startButtonText != null)
+            {
+                startButtonText.text = "Start";
+            }
         }
     }
     
@@ -67,18 +124,27 @@ public class StartMenu : MonoBehaviour
     /// </summary>
     private void OnStartButtonClicked()
     {
-        // // 播放按钮点击音效 - 这对于Web平台很重要，必须在用户交互时触发音频来解锁浏览器音频权限
-        // // 如果按钮有自动音效，这里也会触发；如果没有，可以播放一个通用的UI音效
-        // try
-        // {
-        //     // 尝试播放按钮点击音效（如果存在）
-        //     RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
-        // }
-        // catch (System.Exception e)
-        // {
-        //     // 如果音效不存在，至少触发一次FMOD操作来解锁浏览器音频权限
-        //     Debug.LogWarning($"[StartMenu] Button sound not found, but FMOD operation triggered: {e.Message}");
-        // }
+        // 设置普通模式
+        if (GameDataManager.Instance != null)
+        {
+            GameDataManager.Instance.SetIsInHardMode(false);
+        }
+        
+        // 加载Game场景
+        SceneManager.LoadScene(gameSceneName);
+    }
+    
+    /// <summary>
+    /// 困难模式按钮点击事件
+    /// </summary>
+    private void OnHardModeButtonClicked()
+    {
+        
+        // 设置困难模式
+        if (GameDataManager.Instance != null)
+        {
+            GameDataManager.Instance.SetIsInHardMode(true);
+        }
         
         // 加载Game场景
         SceneManager.LoadScene(gameSceneName);

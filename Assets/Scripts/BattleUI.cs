@@ -23,6 +23,8 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private Image swapCountBarFill;
     [SerializeField] private RectTransform healthBarContainer; // HP bar容器（用于抖动和缩放）
     [SerializeField] private Button restartButton; // Restart按钮
+    [SerializeField] private Button settingButton; // Setting按钮
+    [SerializeField] private TMP_Text hardModeText; // HARD MODE字样
 
     [Header("HP Bar特效设置")]
     [SerializeField] private float damageShakeDuration = 0.3f; // 扣血抖动持续时间
@@ -135,6 +137,28 @@ public class BattleUI : MonoBehaviour
         {
             restartButton.onClick.RemoveAllListeners();
             restartButton.onClick.AddListener(OnRestartButtonClicked);
+            
+            // 困难模式下隐藏retry按钮
+            bool isInHardMode = GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode();
+            restartButton.gameObject.SetActive(!isInHardMode);
+        }
+        
+        // 初始化Setting按钮
+        if (settingButton != null)
+        {
+            settingButton.onClick.RemoveAllListeners();
+            settingButton.onClick.AddListener(OnSettingButtonClicked);
+        }
+        
+        // 初始化HARD MODE字样
+        if (hardModeText != null)
+        {
+            bool isInHardMode = GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode();
+            hardModeText.gameObject.SetActive(isInHardMode);
+            if (isInHardMode)
+            {
+                hardModeText.text = "HARD MODE";
+            }
         }
     }
     
@@ -160,6 +184,26 @@ public class BattleUI : MonoBehaviour
                 // 选择No，关闭对话框（DialogBase会自动处理）
             }
         );
+    }
+    
+    /// <summary>
+    /// Setting按钮点击事件
+    /// </summary>
+    private void OnSettingButtonClicked()
+    {
+        // 显示设置菜单
+        SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
+        if (settingMenu == null)
+        {
+            // 如果没有找到，创建一个新的
+            GameObject menuObj = new GameObject("SettingMenu");
+            settingMenu = menuObj.AddComponent<SettingMenu>();
+        }
+        
+        if (settingMenu != null)
+        {
+            settingMenu.Show();
+        }
     }
 
     private void Update()

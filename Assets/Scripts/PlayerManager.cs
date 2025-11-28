@@ -11,6 +11,7 @@ public class PlayerManager : Singleton<PlayerManager>
     [Header("玩家属性")]
     [SerializeField] private int maxHealth = 100;
     [SerializeField] private int maxSwapCount = 2; // 每次战斗的交换次数
+    [SerializeField] private int hardModeSwapCount = 2; // 困难模式下的交换次数
 
     [Header("动画")]
     public SpriteRenderAnim anim; // 玩家动画组件
@@ -36,7 +37,17 @@ public class PlayerManager : Singleton<PlayerManager>
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
     public int CurrentSwapCount => currentSwapCount;
-    public int MaxSwapCount => maxSwapCount + tempSwapCount; // 临时交换次数可以突破上限
+    public int MaxSwapCount
+    {
+        get
+        {
+            // 困难模式下使用hardModeSwapCount
+            int baseSwapCount = (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode()) 
+                ? hardModeSwapCount 
+                : maxSwapCount;
+            return baseSwapCount + tempSwapCount; // 临时交换次数可以突破上限
+        }
+    }
     public int Gold => gold;
     public bool IsDead => currentHealth <= 0;
     public float BaseWaveDamage => baseWaveDamage;
@@ -105,8 +116,12 @@ public class PlayerManager : Singleton<PlayerManager>
         maxHealth = health > 0 ? health : maxHealth;
         currentHealth = maxHealth;
         
-        maxSwapCount = swapCount > 0 ? swapCount : maxSwapCount;
-        currentSwapCount = maxSwapCount;
+        // 根据困难模式选择基础交换次数
+        int baseSwapCount = (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode()) 
+            ? hardModeSwapCount 
+            : maxSwapCount;
+        maxSwapCount = swapCount > 0 ? swapCount : baseSwapCount;
+        currentSwapCount = MaxSwapCount;
         
         // 初始化waveSkillsDict（如果还未初始化）
         InitializeWaveSkillsDict();
@@ -215,8 +230,8 @@ public class PlayerManager : Singleton<PlayerManager>
         tempWaveDamageBonus = 0f;
         bossDamageReduction = 0f;
         enemyDamageBonus = 0f;
-        // 战斗结束时恢复exchange到最大值
-        currentSwapCount = maxSwapCount;
+        // 战斗结束时恢复exchange到最大值（根据困难模式）
+        currentSwapCount = MaxSwapCount;
     }
     
     /// <summary>

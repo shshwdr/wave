@@ -27,6 +27,7 @@ public class StatisticsMenu : MenuBase
     [SerializeField] private Button restartButton; // 胜利时显示
     [SerializeField] private Button closeButtonOverride; // 商店中显示（覆盖MenuBase的closeButton）
     [SerializeField] private Button totalToggle; // 切换显示当前波次/所有波次统计
+    [SerializeField] private Button tryHardModeButton; // 尝试困难模式按钮（胜利时显示）
     
     [Header("技能详情显示")]
     [SerializeField] private GameObject skillDetailPanel;
@@ -37,6 +38,9 @@ public class StatisticsMenu : MenuBase
     [SerializeField] private Color backgroundColorWin; // 商店模式的背景颜色
     [SerializeField] private Color backgroundColor2; // 胜利模式的背景颜色
     [SerializeField] private Image backgroundImage; // 胜利模式的背景图片
+    [SerializeField] private GameObject victoryGO; // 胜利模式的背景图片
+    
+    
     
     private bool isWinMode = false; // true = 胜利模式, false = 商店模式
     private bool showTotalStatistics = false; // true = 显示所有波次统计, false = 显示当前波次统计
@@ -67,6 +71,13 @@ public class StatisticsMenu : MenuBase
         {
             restartButton.onClick.AddListener(OnRestartClicked);
             restartButton.gameObject.SetActive(false); // 默认隐藏
+        }
+        
+        // 初始化TryHardMode按钮
+        if (tryHardModeButton != null)
+        {
+            tryHardModeButton.onClick.AddListener(OnTryHardModeClicked);
+            tryHardModeButton.gameObject.SetActive(false); // 默认隐藏
         }
         
         // 初始化Close按钮（如果提供了覆盖版本）
@@ -280,6 +291,7 @@ public class StatisticsMenu : MenuBase
             {
                 backgroundImage.gameObject.SetActive(true);
                 backgroundImage.color = backgroundColorWin;
+                victoryGO.SetActive(true);
             }
         }
         else
@@ -289,6 +301,7 @@ public class StatisticsMenu : MenuBase
             {
                 backgroundImage.gameObject.SetActive(true);
                 backgroundImage.color = backgroundColor2;
+                victoryGO.SetActive(false);
             }
         }
     }
@@ -305,6 +318,12 @@ public class StatisticsMenu : MenuBase
             {
                 restartButton.gameObject.SetActive(true);
             }
+            // 显示TryHardMode按钮（如果GameDataManager存在且hasWonGame为true）
+            if (tryHardModeButton != null)
+            {
+                bool showHardModeButton = GameDataManager.Instance != null && GameDataManager.Instance.HasWonGame();
+                tryHardModeButton.gameObject.SetActive(showHardModeButton);
+            }
             if (closeButtonOverride != null)
             {
                 closeButtonOverride.gameObject.SetActive(false);
@@ -320,10 +339,14 @@ public class StatisticsMenu : MenuBase
         }
         else
         {
-            // 商店模式：显示Close按钮，隐藏Restart按钮
+            // 商店模式：显示Close按钮，隐藏Restart按钮和TryHardMode按钮
             if (restartButton != null)
             {
                 restartButton.gameObject.SetActive(false);
+            }
+            if (tryHardModeButton != null)
+            {
+                tryHardModeButton.gameObject.SetActive(false);
             }
             if (closeButtonOverride != null)
             {
@@ -643,6 +666,26 @@ public class StatisticsMenu : MenuBase
     private void OnRestartClicked()
     {
         // 重新开始游戏
+        MainGameManager mainGameManager = FindObjectOfType<MainGameManager>();
+        if (mainGameManager != null)
+        {
+            mainGameManager.Restart();
+        }
+        Hide();
+    }
+    
+    /// <summary>
+    /// TryHardMode按钮点击事件
+    /// </summary>
+    private void OnTryHardModeClicked()
+    {
+        // 设置困难模式标识
+        if (GameDataManager.Instance != null)
+        {
+            GameDataManager.Instance.SetIsInHardMode(true);
+        }
+        
+        // 重新开始游戏（困难模式）
         MainGameManager mainGameManager = FindObjectOfType<MainGameManager>();
         if (mainGameManager != null)
         {

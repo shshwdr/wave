@@ -655,6 +655,18 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             Restart();
         }
+        
+        // 清除全局标识（按H键清除hasWonGame和isInHardMode）
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            if (GameDataManager.Instance != null)
+            {
+                GameDataManager.Instance.SetHasWonGame(false);
+                GameDataManager.Instance.SetIsInHardMode(false);
+                Debug.Log("已清除全局标识：hasWonGame 和 isInHardMode");
+            }
+        }
+        
         if (currentState == GameState.GameOver)
             return;
 
@@ -712,6 +724,13 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             ClearHighlights();
         }
+        
+        // 如果设置菜单打开，清除高亮
+        SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
+        if (settingMenu != null && settingMenu.IsActive)
+        {
+            ClearHighlights();
+        }
     }
 
     /// <summary>
@@ -739,6 +758,13 @@ public class MainGameManager : Singleton<MainGameManager>
         // 如果事件菜单打开，不响应输入
         EventMenu eventMenu = FindObjectOfType<EventMenu>();
         if (eventMenu != null && eventMenu.IsActive)
+        {
+            return;
+        }
+        
+        // 如果设置菜单打开，不响应输入
+        SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
+        if (settingMenu != null && settingMenu.IsActive)
         {
             return;
         }
@@ -1028,6 +1054,13 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             return;
         }
+        
+        // 如果设置菜单打开，不响应hover
+        SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
+        if (settingMenu != null && settingMenu.IsActive)
+        {
+            return;
+        }
 
         // 首先检查是否悬停在敌人上
         Enemy hoveredEnemy = GetEnemyUnderMouse();
@@ -1090,11 +1123,22 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         else
         {
-            // 鼠标不在有效位置，隐藏技能显示
+            // 鼠标不在有效位置，隐藏所有信息显示并清除高亮
             if (skillDisplayPanel != null)
             {
                 skillDisplayPanel.SetActive(false);
             }
+            if (enemyDescriptionPanel != null)
+            {
+                enemyDescriptionPanel.SetActive(false);
+            }
+            if (allyDescriptionPanel != null)
+            {
+                allyDescriptionPanel.SetActive(false);
+            }
+            // 清除tile高亮
+            ClearHighlights();
+            lastHighlightPos = new Vector2Int(-1, -1); // 重置高亮位置
         }
     }
     
@@ -1116,6 +1160,13 @@ public class MainGameManager : Singleton<MainGameManager>
         // 如果事件菜单打开，不响应touch
         EventMenu eventMenu = FindObjectOfType<EventMenu>();
         if (eventMenu != null && eventMenu.IsActive)
+        {
+            return;
+        }
+        
+        // 如果设置菜单打开，不响应touch
+        SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
+        if (settingMenu != null && settingMenu.IsActive)
         {
             return;
         }
@@ -1512,7 +1563,7 @@ public class MainGameManager : Singleton<MainGameManager>
             sb.AppendLine(enemy.EnemyInfo.description);
         }
         
-        enemyDescriptionText.text = sb.ToString();
+        enemyDescriptionText.text = sb.ToString().Replace("\\n", "\n");
         enemyDescriptionPanel.SetActive(true);
     }
 
@@ -2405,6 +2456,8 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             if (ally != null && !ally.IsDead)
             {
+                // 播放攻击动画
+                ally.TryPlayAtkAnimation();
                 CreateAllyProjectile(ally, (int)waveDamage);
             }
         }
@@ -3168,10 +3221,18 @@ public class MainGameManager : Singleton<MainGameManager>
         // 掉落gold（使用当前关卡信息）
         if (currentLevelInfo != null && currentLevelInfo.gold > 0 && PlayerManager.Instance != null)
         {
-            PlayerManager.Instance.AddGold(currentLevelInfo.gold);
-            levelGold = currentLevelInfo.gold;
-            totalGoldEarned += currentLevelInfo.gold;
-            Debug.Log($"关卡完成，获得 {currentLevelInfo.gold} gold");
+            int goldToAdd = currentLevelInfo.gold;
+            
+            // 困难模式：每关过关获得的钱减少1
+            if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
+            {
+                goldToAdd = Mathf.Max(0, goldToAdd - 1);
+            }
+            
+            PlayerManager.Instance.AddGold(goldToAdd);
+            levelGold = goldToAdd;
+            totalGoldEarned += goldToAdd;
+            Debug.Log($"关卡完成，获得 {goldToAdd} gold");
         }
         
         // 如果是gold关卡，添加从chest获得的金钱
@@ -3245,6 +3306,12 @@ public class MainGameManager : Singleton<MainGameManager>
                     }
                 }
                 
+                // 设置hasWonGame标识
+                if (isGameWin && GameDataManager.Instance != null)
+                {
+                    GameDataManager.Instance.SetHasWonGame(true);
+                }
+                
                 if (isGameWin)
                 {
                     // 最终胜利：先显示最终event，然后显示统计菜单
@@ -3291,6 +3358,12 @@ public class MainGameManager : Singleton<MainGameManager>
                     {
                         isGameWin = true;
                     }
+                }
+                
+                // 设置hasWonGame标识
+                if (isGameWin && GameDataManager.Instance != null)
+                {
+                    GameDataManager.Instance.SetHasWonGame(true);
                 }
                 
                 if (isGameWin)

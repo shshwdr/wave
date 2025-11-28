@@ -41,6 +41,7 @@ public class Ally : Character
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Collider2D allyCollider;
     [SerializeField] private EnemyHealthBar healthBar;
+    [SerializeField] protected SpriteRenderAnim spriteRenderAnim; // Sprite动画组件
 
     private int currentHealth;
     private Vector2Int gridPosition;
@@ -59,6 +60,8 @@ public class Ally : Character
             spriteRenderer = GetComponent<SpriteRenderer>();
         if (allyCollider == null)
             allyCollider = GetComponentInChildren<Collider2D>();
+        if (spriteRenderAnim == null)
+            spriteRenderAnim = GetComponentInChildren<SpriteRenderAnim>();
         
         // 确保有Collider2D
         if (allyCollider == null)
@@ -113,12 +116,20 @@ public class Ally : Character
             transform.position = worldPos;
         }
 
-        if (spriteRenderer != null)
+        // 初始化动画系统
+        if (SpriteRenderAnim.HasAnimationFolder("Ally") && spriteRenderAnim != null)
+        {
+            // 设置identifier并播放idle动画
+            spriteRenderAnim.SetIdentifier("Ally");
+            spriteRenderAnim.PlayIdle();
+        }
+        else if (spriteRenderer != null)
         {
             spriteRenderer.enabled = true;
             // 可以设置一个默认的随从sprite，或者使用资源加载
             // spriteRenderer.sprite = Resources.Load<Sprite>("ally/default");
         }
+        
         if (allyCollider != null)
         {
             allyCollider.enabled = true;
@@ -224,6 +235,18 @@ public class Ally : Character
     public void SetHealthBar(EnemyHealthBar healthBar)
     {
         this.healthBar = healthBar;
+    }
+    
+    /// <summary>
+    /// 尝试播放攻击动画
+    /// </summary>
+    public void TryPlayAtkAnimation()
+    {
+        if (SpriteRenderAnim.HasAnimationFolder("Ally") && spriteRenderAnim != null)
+        {
+            spriteRenderAnim.SetIdentifier("Ally");
+            spriteRenderAnim.PlayAtk();
+        }
     }
 }
 
