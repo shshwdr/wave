@@ -131,6 +131,17 @@ public class TurnBanner : MonoBehaviour
     /// <param name="onComplete">动画完成后的回调</param>
     public void ShowBanner(string text, System.Action onComplete = null)
     {
+        ShowBanner(text, holdDuration, onComplete);
+    }
+    
+    /// <summary>
+    /// 显示回合横幅（支持自定义停留时间）
+    /// </summary>
+    /// <param name="text">显示的文本（如"Player Turn"或"Enemy Turn"）</param>
+    /// <param name="customHoldDuration">自定义停留时间（秒）</param>
+    /// <param name="onComplete">动画完成后的回调</param>
+    public void ShowBanner(string text, float customHoldDuration, System.Action onComplete = null)
+    {
         if (bannerText != null)
         {
             bannerText.text = text;
@@ -153,8 +164,8 @@ public class TurnBanner : MonoBehaviour
         sequence.Append(bannerRect.DOAnchorPos(centerPosition, moveInDuration).SetEase(Ease.OutQuad));
         sequence.Join(transform.DOScaleY(1f, moveInDuration).SetEase(Ease.OutQuad));
         
-        // 2. 停顿
-        sequence.AppendInterval(holdDuration);
+        // 2. 停顿（使用自定义停留时间）
+        sequence.AppendInterval(customHoldDuration);
         
         // 3. 迅速向右移动离开，同时scale.y回到0
         sequence.Append(bannerRect.DOAnchorPos(rightEndPosition, moveOutDuration).SetEase(Ease.InQuad));

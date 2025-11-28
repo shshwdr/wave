@@ -16,6 +16,7 @@ public class BattleUI : MonoBehaviour
     
     [SerializeField] private TMP_Text enemyCountText; // 剩余敌人数显示
     [SerializeField] private TMP_Text goldText; // 金币显示
+    [SerializeField] private TMP_Text goldIncreaseText; // 金币增加提示文本
     [SerializeField] private TMP_Text turnsRemainingText; // 剩余回合数显示
     [SerializeField] private TMP_Text levelDescText; // 关卡描述显示
     [SerializeField] private Image healthBarFill;
@@ -48,6 +49,17 @@ public class BattleUI : MonoBehaviour
     private Tween pulseTween; // 脉冲动画
     private Vector3 originalHealthBarScale = Vector3.one; // HP bar原始缩放
     private Vector3 originalHealthBarPosition = Vector3.zero; // HP bar原始位置
+    
+    // 金币相关
+    private int lastGold = -1; // 上一次的金币数量
+    private Tween goldIncreaseTween; // 金币增加动画
+    private Tween goldTextPulseTween; // 金币文本脉冲动画
+    private Vector3 originalGoldIncreasePosition = Vector3.zero; // 金币增加文本原始位置
+    private Vector3 originalGoldTextScale = Vector3.one; // 金币文本原始缩放
+    
+    // Swap相关
+    private Tween swapTextPulseTween; // Swap文本脉冲动画
+    private Vector3 originalSwapTextScale = Vector3.one; // Swap文本原始缩放
 
     private void Start()
     {
@@ -90,6 +102,31 @@ public class BattleUI : MonoBehaviour
             currentDisplayHealthInt = playerManager.CurrentHealth;
             targetHealth = playerManager.CurrentHealth;
             maxHealth = playerManager.MaxHealth;
+            
+            // 初始化金币显示
+            lastGold = playerManager.Gold;
+        }
+        
+        // 初始化金币增加文本
+        if (goldIncreaseText != null)
+        {
+            goldIncreaseText.gameObject.SetActive(false);
+            if (goldIncreaseText.transform is RectTransform goldIncreaseRect)
+            {
+                originalGoldIncreasePosition = goldIncreaseRect.anchoredPosition;
+            }
+        }
+        
+        // 初始化金币文本原始缩放
+        if (goldText != null && goldText.transform is RectTransform goldTextRect)
+        {
+            originalGoldTextScale = goldTextRect.localScale;
+        }
+        
+        // 初始化Swap文本原始缩放
+        if (swapCountText != null && swapCountText.transform is RectTransform swapTextRect)
+        {
+            originalSwapTextScale = swapTextRect.localScale;
         }
     }
 
@@ -158,7 +195,18 @@ public class BattleUI : MonoBehaviour
         // 更新金币显示
         if (goldText != null && playerManager != null)
         {
-            goldText.text = $"Gold: {playerManager.Gold}";
+            int currentGold = playerManager.Gold;
+            
+            // 检测金币变化
+            if (lastGold != -1 && currentGold > lastGold)
+            {
+                // 金币增加，显示增加提示并播放脉冲效果
+                ShowGoldIncrease(currentGold - lastGold);
+                PlayGoldTextPulse();
+            }
+            
+            goldText.text = $"Gold: {currentGold}";
+            lastGold = currentGold;
         }
 
         // 更新剩余回合数显示（只在turns不为0时显示）
@@ -414,6 +462,127 @@ public class BattleUI : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// 播放Swap文本脉冲效果（类似回血脉冲）
+    /// </summary>
+    public void PlaySwapTextPulse()
+    {
+        if (swapCountText == null)
+            return;
+        
+        RectTransform swapTextRect = swapCountText.transform as RectTransform;
+        if (swapTextRect == null)
+            return;
+        
+        // 如果前一个脉冲动画未完成，先恢复初始状态
+        if (swapTextPulseTween != null && swapTextPulseTween.IsActive())
+        {
+            swapTextPulseTween.Kill();
+            swapTextRect.localScale = originalSwapTextScale;
+        }
+        
+        // 播放脉冲动画（放大缩小）
+        Sequence pulseSequence = DOTween.Sequence();
+        float scalePerPulse = healPulseDuration / healPulseCount;
+        
+        for (int i = 0; i < healPulseCount; i++)
+        {
+            pulseSequence.Append(swapTextRect.DOScale(originalSwapTextScale * healPulseScale, scalePerPulse * 0.5f).SetEase(Ease.OutQuad));
+            pulseSequence.Append(swapTextRect.DOScale(originalSwapTextScale, scalePerPulse * 0.5f).SetEase(Ease.InQuad));
+        }
+        
+        swapTextPulseTween = pulseSequence.OnComplete(() =>
+        {
+            // 动画完成后确保恢复原始缩放
+            swapTextRect.localScale = originalSwapTextScale;
+        });
+    }
+    
+    /// <summary>
+    /// 播放金币文本脉冲效果（类似回血脉冲）
+    /// </summary>
+    private void PlayGoldTextPulse()
+    {
+        if (goldText == null)
+            return;
+        
+        RectTransform goldTextRect = goldText.transform as RectTransform;
+        if (goldTextRect == null)
+            return;
+        
+        // 如果前一个脉冲动画未完成，先恢复初始状态
+        if (goldTextPulseTween != null && goldTextPulseTween.IsActive())
+        {
+            goldTextPulseTween.Kill();
+            goldTextRect.localScale = originalGoldTextScale;
+        }
+        
+        // 播放脉冲动画（放大缩小）
+        Sequence pulseSequence = DOTween.Sequence();
+        float scalePerPulse = healPulseDuration / healPulseCount;
+        
+        for (int i = 0; i < healPulseCount; i++)
+        {
+            pulseSequence.Append(goldTextRect.DOScale(originalGoldTextScale * healPulseScale, scalePerPulse * 0.5f).SetEase(Ease.OutQuad));
+            pulseSequence.Append(goldTextRect.DOScale(originalGoldTextScale, scalePerPulse * 0.5f).SetEase(Ease.InQuad));
+        }
+        
+        goldTextPulseTween = pulseSequence.OnComplete(() =>
+        {
+            // 动画完成后确保恢复原始缩放
+            goldTextRect.localScale = originalGoldTextScale;
+        });
+    }
+    
+    /// <summary>
+    /// 显示金币增加提示
+    /// </summary>
+    private void ShowGoldIncrease(int amount)
+    {
+        if (goldIncreaseText == null)
+            return;
+        
+        // 停止之前的动画
+        if (goldIncreaseTween != null && goldIncreaseTween.IsActive())
+        {
+            goldIncreaseTween.Kill();
+        }
+        
+        // 设置文本内容
+        goldIncreaseText.text = $"+{amount}";
+        goldIncreaseText.gameObject.SetActive(true);
+        
+        // 获取RectTransform
+        RectTransform goldIncreaseRect = goldIncreaseText.transform as RectTransform;
+        if (goldIncreaseRect == null)
+            return;
+        
+        // 重置位置
+        goldIncreaseRect.anchoredPosition = originalGoldIncreasePosition;
+        
+        // 重置透明度
+        Color originalColor = goldIncreaseText.color;
+        goldIncreaseText.color = new Color(originalColor.r, originalColor.g, originalColor.b, 1f);
+        
+        // 创建上升动画序列
+        Sequence sequence = DOTween.Sequence();
+        
+        // 向上移动并淡出
+        Vector2 endPosition = originalGoldIncreasePosition + new Vector3(0, 50f,0); // 向上移动50像素
+        sequence.Append(goldIncreaseRect.DOAnchorPos(endPosition, 1f).SetEase(Ease.OutQuad));
+        sequence.Join(goldIncreaseText.DOFade(0f, 1f).SetEase(Ease.OutQuad));
+        
+        // 动画完成后隐藏
+        sequence.OnComplete(() =>
+        {
+            goldIncreaseText.gameObject.SetActive(false);
+            goldIncreaseRect.anchoredPosition = originalGoldIncreasePosition;
+            goldIncreaseText.color = originalColor;
+        });
+        
+        goldIncreaseTween = sequence;
+    }
+    
     private void OnDestroy()
     {
         // 清理所有动画
@@ -425,6 +594,12 @@ public class BattleUI : MonoBehaviour
             shakeTween.Kill();
         if (pulseTween != null)
             pulseTween.Kill();
+        if (goldIncreaseTween != null)
+            goldIncreaseTween.Kill();
+        if (goldTextPulseTween != null)
+            goldTextPulseTween.Kill();
+        if (swapTextPulseTween != null)
+            swapTextPulseTween.Kill();
     }
 }
 

@@ -543,6 +543,31 @@ public class MainGameManager : Singleton<MainGameManager>
         // 进入战斗模式时载入敌人
         // 从关卡管理器获取关卡信息并生成敌人
         currentLevelInfo = LevelManager.Instance.GetNextLevel(playerLevel);
+        
+        // 检查是否是boss战斗
+        bool isBossFight = currentLevelInfo != null && !string.IsNullOrEmpty(currentLevelInfo.bossIdentifier);
+        
+        // 如果是boss战斗，先显示"Boss Fight!"横幅
+        if (isBossFight && turnBanner != null)
+        {
+            turnBanner.ShowBanner("Boss Fight!", () =>
+            {
+                // 横幅显示完成后，继续初始化战斗
+                InitializeBattleAfterBanner();
+            });
+        }
+        else
+        {
+            // 不是boss战斗，直接初始化
+            InitializeBattleAfterBanner();
+        }
+    }
+    
+    /// <summary>
+    /// 在显示Boss Fight横幅后初始化战斗（或直接调用，如果不是boss战斗）
+    /// </summary>
+    private void InitializeBattleAfterBanner()
+    {
         if (currentLevelInfo != null && enemyManager != null)
         {
             enemyManager.SpawnEnemiesFromLevel(currentLevelInfo);
@@ -738,6 +763,13 @@ public class MainGameManager : Singleton<MainGameManager>
                         // 选择第二个格子并交换
                         if (gridPos != firstSwapTilePos)
                         {
+                            // 触发swap text脉冲效果（无论是否成功）
+                            BattleUI battleUI = FindObjectOfType<BattleUI>();
+                            if (battleUI != null)
+                            {
+                                battleUI.PlaySwapTextPulse();
+                            }
+                            
                             // 检查是否可以交换
                             if (PlayerManager.Instance != null && !PlayerManager.Instance.CanSwap())
                             {
@@ -896,6 +928,13 @@ public class MainGameManager : Singleton<MainGameManager>
                     boardManager.IsValidPosition(gridPos) && 
                     gridPos != dragStartPos)
                 {
+                    // 触发swap text脉冲效果（无论是否成功）
+                    BattleUI battleUI = FindObjectOfType<BattleUI>();
+                    if (battleUI != null)
+                    {
+                        battleUI.PlaySwapTextPulse();
+                    }
+                    
                     // 检查是否可以交换
                     if (PlayerManager.Instance != null && !PlayerManager.Instance.CanSwap())
                     {
@@ -3170,46 +3209,102 @@ public class MainGameManager : Singleton<MainGameManager>
             allyDescriptionPanel.SetActive(false);
         }
         
-        // 离开战斗模式时清除战场
-        ClearBattleScene();
-        
-        // 战斗结束后清除临时伤害加成并恢复exchange
-        if (PlayerManager.Instance != null)
+        // 显示Victory横幅，停留2秒，期间不可操作
+        if (turnBanner != null)
         {
-            PlayerManager.Instance.EndBattle();
-        }
-
-        // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
-        bool isGameWin = false;
-        if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
-        {
-            // 找到levelInfoMap中level值最大的那个
-            int maxLevel = -1;
-            foreach (var kvp in CSVLoader.Instance.levelInfoMap)
+            turnBanner.ShowBanner("Victory!", 2f, () =>
             {
-                if (kvp.Value.level > maxLevel)
+                // 横幅显示完成后继续
+                // 离开战斗模式时清除战场
+                ClearBattleScene();
+                
+                // 战斗结束后清除临时伤害加成并恢复exchange
+                if (PlayerManager.Instance != null)
                 {
-                    maxLevel = kvp.Value.level;
+                    PlayerManager.Instance.EndBattle();
                 }
-            }
-            
-            // 如果当前玩家等级已经达到或超过最大level，说明战胜了最后一个level
-            if (maxLevel >= 0 && playerLevel >= maxLevel)
-            {
-                isGameWin = true;
-            }
-        }
-        
-        if (isGameWin)
-        {
-            // 最终胜利：先显示最终event，然后显示统计菜单
-            ShowFinalEventMenu();
+
+                // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
+                bool isGameWin = false;
+                if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
+                {
+                    // 找到levelInfoMap中level值最大的那个
+                    int maxLevel = -1;
+                    foreach (var kvp in CSVLoader.Instance.levelInfoMap)
+                    {
+                        if (kvp.Value.level > maxLevel)
+                        {
+                            maxLevel = kvp.Value.level;
+                        }
+                    }
+                    
+                    // 如果当前玩家等级已经达到或超过最大level，说明战胜了最后一个level
+                    if (maxLevel >= 0 && playerLevel >= maxLevel)
+                    {
+                        isGameWin = true;
+                    }
+                }
+                
+                if (isGameWin)
+                {
+                    // 最终胜利：先显示最终event，然后显示统计菜单
+                    ShowFinalEventMenu();
+                }
+                else
+                {
+                    // 战斗-事件-商店-战斗的循环
+                    // 先显示事件，然后显示商店
+                    ShowEventMenu();
+                }
+            });
         }
         else
         {
-            // 战斗-事件-商店-战斗的循环
-            // 先显示事件，然后显示商店
-            ShowEventMenu();
+            // 如果没有banner，延迟2秒后继续
+            DOVirtual.DelayedCall(2f, () =>
+            {
+                // 离开战斗模式时清除战场
+                ClearBattleScene();
+                
+                // 战斗结束后清除临时伤害加成并恢复exchange
+                if (PlayerManager.Instance != null)
+                {
+                    PlayerManager.Instance.EndBattle();
+                }
+
+                // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
+                bool isGameWin = false;
+                if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
+                {
+                    // 找到levelInfoMap中level值最大的那个
+                    int maxLevel = -1;
+                    foreach (var kvp in CSVLoader.Instance.levelInfoMap)
+                    {
+                        if (kvp.Value.level > maxLevel)
+                        {
+                            maxLevel = kvp.Value.level;
+                        }
+                    }
+                    
+                    // 如果当前玩家等级已经达到或超过最大level，说明战胜了最后一个level
+                    if (maxLevel >= 0 && playerLevel >= maxLevel)
+                    {
+                        isGameWin = true;
+                    }
+                }
+                
+                if (isGameWin)
+                {
+                    // 最终胜利：先显示最终event，然后显示统计菜单
+                    ShowFinalEventMenu();
+                }
+                else
+                {
+                    // 战斗-事件-商店-战斗的循环
+                    // 先显示事件，然后显示商店
+                    ShowEventMenu();
+                }
+            });
         }
     }
     
