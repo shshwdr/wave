@@ -522,8 +522,8 @@ public class PlayerManager : Singleton<PlayerManager>
         maxHealth = Mathf.Max(1, maxHealth); // 确保至少为1
         
         // 按比例更新当前血量
-        currentHealth = Mathf.RoundToInt(maxHealth * healthPercent);
-        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        int diff = (int)(maxHealth * healthPercent - currentHealth);
+        Heal(diff);
     }
     
     /// <summary>
