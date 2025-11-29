@@ -1313,7 +1313,7 @@ public class SkillSelectMenu : MenuBase
     {
         if (closeButton != null)
         {
-            closeButton.gameObject.SetActive(enabled);
+            confirmButton.gameObject.SetActive(enabled);
         }
     }
     

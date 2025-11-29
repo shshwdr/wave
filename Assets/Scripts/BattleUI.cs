@@ -15,6 +15,8 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private TMP_Text damageText;
     
     [SerializeField] private TMP_Text enemyCountText; // 剩余敌人数显示
+    [SerializeField] private GameObject enemyCountOB; // 剩余敌人数显示
+    
     [SerializeField] private TMP_Text goldText; // 金币显示
     [SerializeField] private TMP_Text goldIncreaseText; // 金币增加提示文本
     [SerializeField] private TMP_Text turnsRemainingText; // 剩余回合数显示
@@ -225,7 +227,7 @@ public class BattleUI : MonoBehaviour
         // 更新交换次数显示
         if (swapCountText != null)
         {
-            swapCountText.text = $"Swap: {playerManager.CurrentSwapCount}/{playerManager.MaxSwapCount}";
+            swapCountText.text = $"{playerManager.CurrentSwapCount}/{playerManager.MaxSwapCount}";
         }
 
         if (swapCountBarFill != null)
@@ -237,14 +239,14 @@ public class BattleUI : MonoBehaviour
         // 更新等级显示
         if (levelText != null && mainGameManager != null)
         {
-            levelText.text = $"Level: {mainGameManager.PlayerLevel+1}";
+            levelText.text = $"LEVEL {mainGameManager.PlayerLevel+1}";
         }
         
         // 更新wave伤害显示
         if (damageText != null && playerManager != null)
         {
             float baseDamage = playerManager.GetCurrentBattleBaseDamage();
-            damageText.text = $"Wave Damage: {baseDamage:F0}";
+            damageText.text = $"{baseDamage:F0}";
         }
 
         // 更新剩余敌人显示（只在normal模式下显示）
@@ -259,12 +261,12 @@ public class BattleUI : MonoBehaviour
             {
                 int remaining = enemyManager.GetRemainingEnemyCount();
                 int total = enemyManager.GetTotalEnemyCount();
-                enemyCountText.text = $"Enemies: {remaining}/{total}";
-                enemyCountText.gameObject.SetActive(true);
+                enemyCountText.text = $"{remaining}/{total}";
+                enemyCountOB.gameObject.SetActive(true);
             }
             else
             {
-                enemyCountText.gameObject.SetActive(false);
+                enemyCountOB.gameObject.SetActive(false);
             }
         }
 
@@ -281,7 +283,7 @@ public class BattleUI : MonoBehaviour
                 PlayGoldTextPulse();
             }
             
-            goldText.text = $"Gold: {currentGold}";
+            goldText.text = $"x{currentGold}";
             lastGold = currentGold;
         }
 

@@ -350,12 +350,12 @@ ScriptedImporter:
     originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
-    border: {x: 0, y: 0, z: 0, w: 0}
+    border: {x: 0, y: 47, z: 39, w: 56}
     rect:
       serializedVersion: 2
-      x: 4
+      x: 49
       y: 732
-      width: 1246
+      width: 1201
       height: 371
     spriteID: c772c33e1dfbc1a43a829d2c5e56643f
     spriteBone: []
@@ -371,7 +371,7 @@ ScriptedImporter:
     originalName: 
     pivot: {x: 0.5, y: 0.5}
     alignment: 0
-    border: {x: 0, y: 0, z: 0, w: 0}
+    border: {x: 12, y: 9, z: 10, w: 11}
     rect:
       serializedVersion: 2
       x: 1369
