@@ -509,8 +509,7 @@ public class Wave : MonoBehaviour
                 case "bounty":
                     // 标记有bounty技能
                     hasBounty = true;
-                    bountyValue = value;
-                    FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_coin_skill");
+                    bountyValue = value;                   
                     break;
                     
                 case "exchange":
@@ -830,6 +829,7 @@ public class Wave : MonoBehaviour
                     {
                         PlayerManager.Instance.AddGold(bountyValue);
                         Debug.Log($"Bounty: 获得 {bountyValue} gold");
+                        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_coin_skill");
                     }
                     
                     // 触发exchange技能
