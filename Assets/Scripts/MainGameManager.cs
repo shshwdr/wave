@@ -145,6 +145,27 @@ public class MainGameManager : Singleton<MainGameManager>
     }
     
     /// <summary>
+    /// 检查是否是战斗的第一回合
+    /// </summary>
+    /// <returns>如果是第一回合返回true，否则返回false</returns>
+    public bool IsFirstTurn()
+    {
+        // currentTurn == 0 表示第一回合的玩家回合
+        // currentTurn == 1 表示第一回合的敌人回合
+        // 所以 currentTurn <= 1 表示第一回合（包括玩家和敌人回合）
+        return currentTurn <= 0;
+    }
+    
+    /// <summary>
+    /// 获取当前回合数
+    /// </summary>
+    /// <returns>当前回合数（从0开始，0表示第一回合的玩家回合）</returns>
+    public int GetCurrentTurn()
+    {
+        return currentTurn;
+    }
+    
+    /// <summary>
     /// 记录从chest（敌人）获得的金钱（用于gold关卡统计）
     /// </summary>
     public void RecordGoldFromChest(int gold)

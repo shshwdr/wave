@@ -198,7 +198,11 @@ public class Enemy : Character
         ShowSpawnEffect();
         if (enemyInfo.identifier == "shield")
         {
-            PerformDefense();
+            if (MainGameManager.Instance.IsFirstTurn())
+            {
+                
+                PerformDefense();
+            }
         }
     }
     
@@ -248,8 +252,8 @@ public class Enemy : Character
         if (isDead)
             return;
 
-        // Shield敌人：每回合第一次攻击被吃掉
-        if (hasShield && shieldActive)
+        // Shield敌人：每回合第一次攻击被吃掉（但如果本回合已经攻击过，则不执行防御逻辑）
+        if (hasShield && shieldActive && !hasAttackedThisTurn)
         {
             shieldActive = false;
             isShielded = false; // 被攻击后，重置防御状态，播放普通idle
@@ -1087,6 +1091,8 @@ public class Enemy : Character
     /// </summary>
     public void ReduceCooldown()
     {
+
+        hasAttackedThisTurn = false; // 重置攻击标志
         if (skillCooldown > 0 && currentCooldown > 0)
         {
             currentCooldown--;
@@ -1511,9 +1517,7 @@ public class Enemy : Character
         if (hasShield)
         {
             shieldActive = true;
-            hasAttackedThisTurn = false; // 重置攻击标志
-            UpdateShieldDisplay();
-            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_shield_attack");
+            //UpdateShieldDisplay();
         }
     }
     

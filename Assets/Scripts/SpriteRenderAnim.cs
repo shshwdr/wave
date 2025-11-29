@@ -233,6 +233,7 @@ public class SpriteRenderAnim : MonoBehaviour
         string folderPath = $"enemy/{identifier}";
         Sprite[] sprites = LoadSpritesBySuffix(folderPath, "special");
 
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Enemies/sfx_shield_attack");
         if (sprites == null || sprites.Length == 0)
         {
             // 如果没有special动画，直接播放Shielded idle

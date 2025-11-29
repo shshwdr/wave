@@ -47,7 +47,7 @@ TextureImporter:
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 7
-  spritePivot: {x: 0.5, y: 0.5}
+  spritePivot: {x: 0.5, y: 0}
   spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
@@ -123,7 +123,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Shield_atk_0_0
+      name: Shield_no
       rect:
         serializedVersion: 2
         x: 0
@@ -144,7 +144,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Shield_atk_0_1
+      name: Shield_non
       rect:
         serializedVersion: 2
         x: 128
@@ -165,7 +165,7 @@ TextureImporter:
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Shield_atk_0_2
+      name: Shield_nono
       rect:
         serializedVersion: 2
         x: 256
@@ -238,11 +238,11 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Shield_atk_0_0: 1695699541834592489
-      Shield_atk_0_1: 6935494134583408394
-      Shield_atk_0_2: 6095645223362243686
       Shield_atk_0_3: -7539512152664575404
       Shield_atk_0_4: -8184967369217229438
+      Shield_no: 1695699541834592489
+      Shield_non: 6935494134583408394
+      Shield_nono: 6095645223362243686
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
