@@ -378,10 +378,11 @@ public class Enemy : Character
         // 确定击退方向（根据direction的x分量）
         bool knockbackRight = direction.x > 0;
         
-        // 逐步检查每个格子，如果遇到敌人或边界则停止
+        // 逐步检查每个格子，如果遇到敌人、随从或边界则停止
         Vector2Int currentPos = gridPosition;
         Vector2Int finalPos = currentPos;
         Enemy collidedEnemy = null;
+        Ally collidedAlly = null;
         bool hasCollision = false;
         for (int i = 1; i <= tiles; i++)
         {
@@ -435,7 +436,26 @@ public class Enemy : Character
                 }
             }
             
+            // 检查该位置是否有随从
+            AllyManager allyManager = FindObjectOfType<AllyManager>();
+            if (allyManager != null)
+            {
+                Ally ally = allyManager.GetAllyAtPosition(checkPos);
+                if (ally != null && !ally.IsDead)
+                {
+                    collidedAlly = ally;
+                    hasCollision = true;
+                    break; // 遇到随从，停止
+                }
+            }
+            
             finalPos = checkPos;
+        }
+        
+        // 如果有碰撞（包括碰撞随从），敌人不应该移动
+        if (hasCollision)
+        {
+            finalPos = currentPos; // 保持原位置
         }
         
         // 计算世界坐标
@@ -458,7 +478,7 @@ public class Enemy : Character
         transform.DOMove(targetWorldPos, knockbackDuration)
             .SetEase(Ease.OutQuad);
         
-        // 如果有hitTakeDamage技能，对自己和碰撞的敌人造成伤害
+        // 如果有hitTakeDamage技能，对自己和碰撞的敌人或随从造成伤害
         if (SkillManager.Instance != null)
         {
             bool hasHitTakeDamage = false;
@@ -507,12 +527,17 @@ public class Enemy : Character
                 // 对自己造成伤害（不触发击退，避免无限循环）
                 TakeDamage((int)collisionDamage, Vector3.right, false, 0, 0f);
                 
-                // 对碰撞的敌人造成伤害
+                // 对碰撞的敌人或随从造成伤害
                 float totalDamage = collisionDamage;
                 if (collidedEnemy != null && !collidedEnemy.IsDead)
                 {
                     collidedEnemy.TakeDamage((int)collisionDamage, Vector3.left, false, 0, 0f);
                     totalDamage += collisionDamage; // 两个敌人都受到伤害
+                }
+                else if (collidedAlly != null && !collidedAlly.IsDead)
+                {
+                    // collidedAlly.TakeDamage((int)collisionDamage);
+                    // totalDamage += collisionDamage; // 敌人和随从都受到伤害
                 }
                 
                 // 记录统计
