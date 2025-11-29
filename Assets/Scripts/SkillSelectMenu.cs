@@ -1311,7 +1311,7 @@ public class SkillSelectMenu : MenuBase
     /// </summary>
     public void SetCloseButtonEnabled(bool enabled)
     {
-        if (closeButton != null)
+        if (confirmButton != null)
         {
             confirmButton.gameObject.SetActive(enabled);
         }

@@ -82,6 +82,11 @@ public class TutorialManager : Singleton<TutorialManager>
             Debug.Log($"教程已禁用，跳过教程: {tutorialIdentifier}");
             return;
         }
+
+        if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
+        {
+            return;
+        }
         
         if (CSVLoader.Instance == null || CSVLoader.Instance.tutorialInfoMap == null)
         {

@@ -1,5 +1,5 @@
 ﻿enemies,startEnemyCount,gold,difficulty,bossIdentifier,turns,type,eventType
-hp|1|fog|1|normal|2|speed|2|normal|1|archer|1|normal|1|healer|1|normal|1,4,5,1,elite,,boss,eliteAfter
+normal|3,2,3,0,,,normal,
 speed|2|normal|3,3,4,0,,,normal,1
 archer|1|normal|3|speed|1|archer|1,3,4,0,,,normal,
 healer|1|normal|3|speed|1|archer|1|healer|1,3,5,0,,,normal,1

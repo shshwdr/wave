@@ -133,6 +133,12 @@ public class StartMenu : MonoBehaviour
         // 加载Game场景
         SceneManager.LoadScene(gameSceneName);
     }
+
+    IEnumerator onclick()
+    {
+        yield return new WaitForSeconds(0.3f);
+        
+    }
     
     /// <summary>
     /// 困难模式按钮点击事件

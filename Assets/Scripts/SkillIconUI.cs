@@ -84,6 +84,27 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
             titleText.text = SkillManager.Instance.GetSkillName(skillIdentifier, false);
         }
 
+        // 设置iconImage的颜色
+        if (iconImage != null)
+        {
+            // 根据skill实际分配到的颜色区域（colorIndex）来判断颜色
+            // colorIndex = -1 表示在背包中（不属于任何颜色）
+            // colorIndex = 0-3 表示在哪个颜色区域（0=红，1=黄，2=蓝，3=绿）
+            if (colorIndex < 0 || colorIndex >= 4)
+            {
+                // 如果不属于任何颜色（在背包中），使用FFEDDF颜色
+                Color defaultColor = TileColorUtil.HexToColor("#FFEDDF");
+                iconImage.color = defaultColor;
+            }
+            else
+            {
+                // 根据colorIndex获取对应的颜色
+                TileColor tileColor = (TileColor)colorIndex;
+                Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+                iconImage.color = colorValue;
+            }
+        }
+
         // TODO: 更新图标图片（如果有）
         // if (iconImage != null && skillInfo.icon != null)
         // {

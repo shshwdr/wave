@@ -113,6 +113,11 @@ public class StartAnimManager : Singleton<StartAnimManager>
             return;
         }
         
+        if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
+        {
+            return;
+        }
+        
         StartAnimation("1");
     }
 

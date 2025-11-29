@@ -712,9 +712,24 @@ public class MainGameManager : Singleton<MainGameManager>
                 HandleMouseHover();
             }
         }
+        // 处理中时（wave攻击过程中或敌人移动过程中）- 允许hover显示信息，但不允许点击交互
+        else if (isProcessing && (currentState == GameState.Processing || currentState == GameState.EnemyTurn))
+        {
+            // 处理中时仍然允许hover显示信息，但不允许点击交互
+            // 区分鼠标和触屏输入，避免冲突
+            if (Input.touchCount > 0)
+            {
+                // 触屏输入在isProcessing时已经被HandleTouchInput阻止，这里不需要处理
+            }
+            else
+            {
+                // 处理鼠标悬停（显示panel信息）
+                HandleMouseHover();
+            }
+        }
         else if (isProcessing)
         {
-            // 处理中时清除高亮
+            // 其他处理中状态时清除高亮
             ClearHighlights();
         }
         
@@ -3295,6 +3310,12 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public void CompleteLevel()
     {
+        // 防止重复调用：如果已经是完成状态，直接返回
+        if (currentState == GameState.LevelComplete)
+        {
+            return;
+        }
+        
         currentState = GameState.LevelComplete;
         isProcessing = true;
 
@@ -3463,6 +3484,14 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void ShowEventMenu()
     {
+        // 检查事件菜单是否已经显示，防止重复调用
+        EventMenu existingEventMenu = FindObjectOfType<EventMenu>();
+        if (existingEventMenu != null && existingEventMenu.IsActive)
+        {
+            Debug.LogWarning("EventMenu已经显示，跳过重复调用");
+            return;
+        }
+        
         // 检查是否有eventType，如果没有则直接进入商店
         if (currentLevelInfo == null || string.IsNullOrEmpty(currentLevelInfo.eventType))
         {
@@ -3471,7 +3500,7 @@ public class MainGameManager : Singleton<MainGameManager>
             return;
         }
         
-        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        EventMenu eventMenu = existingEventMenu;
         if (eventMenu == null)
         {
             // 如果没有找到，创建一个新的
@@ -3587,7 +3616,7 @@ public class MainGameManager : Singleton<MainGameManager>
             allyManager.ClearAllAllies();
         }
         
-        // 清除所有fog和dirt
+        // 清除所有fog、dirt和blockColor技能block的状态
         if (boardManager != null)
         {
             for (int x = 0; x < boardManager.Width; x++)
@@ -3605,6 +3634,8 @@ public class MainGameManager : Singleton<MainGameManager>
                         {
                             tile.SetDirty(false);
                         }
+                        // 清除blockColor技能block的状态
+                        tile.SetDisabled(false);
                     }
                 }
             }

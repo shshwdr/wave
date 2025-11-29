@@ -34,6 +34,7 @@ public class EventMenu : MenuBase
     private bool isFinalEvent = false; // 是否是最终event
     private TMP_Text nextButtonText; // nextButton的文本组件
     private static HashSet<string> usedEventIdentifiers = new HashSet<string>(); // 已使用的事件标识符
+    private bool isProcessingNext = false; // 是否正在处理next按钮点击（防止重复点击）
 
     /// <summary>
     /// 检查事件是否已被使用
@@ -95,6 +96,8 @@ public class EventMenu : MenuBase
     /// </summary>
     public void ShowEvent(Action onComplete = null)
     {
+        // 重置状态
+        isProcessingNext = false;
         onEventComplete = onComplete;
         
         // 随机选择一个未使用的事件
@@ -122,6 +125,8 @@ public class EventMenu : MenuBase
     /// </summary>
     public void ShowEventByType(string eventType, Action onComplete = null, bool isFinal = false)
     {
+        // 重置状态
+        isProcessingNext = false;
         onEventComplete = onComplete;
         isFinalEvent = isFinal;
         
@@ -565,8 +570,20 @@ public class EventMenu : MenuBase
     /// </summary>
     private void OnNextClicked()
     {
+        // 防止重复点击
+        if (isProcessingNext)
+        {
+            return;
+        }
+        
+        isProcessingNext = true;
+        
+        // 保存回调，因为Hide()可能会清空onEventComplete
+        Action callback = onEventComplete;
+        onEventComplete = null; // 清空回调，防止重复调用
+        
         Hide();
-        onEventComplete?.Invoke();
+        callback?.Invoke();
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
     }
     

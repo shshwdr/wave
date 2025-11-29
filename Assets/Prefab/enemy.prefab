@@ -112,6 +112,14 @@ PrefabInstance:
       propertyPath: spriteRenderAnim
       value: 
       objectReference: {fileID: 7387085114479324662}
+    - target: {fileID: 7468705500859589255, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 7468705500859589255, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 23
+      objectReference: {fileID: 0}
     - target: {fileID: 9209408494864702295, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
       propertyPath: m_Name
       value: enemy
