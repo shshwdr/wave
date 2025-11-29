@@ -651,11 +651,11 @@ public class StatisticsMenu : MenuBase
         {
             if (showTotalStatistics)
             {
-                buttonText.text = "Current";
+                buttonText.text = "CURRENT";
             }
             else
             {
-                buttonText.text = "Totle";
+                buttonText.text = "TOTAL";
             }
         }
     }
