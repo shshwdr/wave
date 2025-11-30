@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f8a5a04a3b145299afb77db9d03c233, type: 3}
+  m_Name: Move_Bounce
+  m_EditorClassIdentifier: 
+  effectName: bounce
+  startCharIndex: 0
+  charLength: 132
+  animationType: 0
+  fixedDuration: 0
+  durationPerChar: 0.8
+  noDelayForChars: 1
+  timeBetweenChars: 0.05
+  reverseCharOrder: 0
+  easingCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0.0053612716
+      value: 0.011193514
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.20540026
+      value: 0.9954206
+      inSlope: 0.06008374
+      outSlope: 0.06008374
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.13645391
+    - serializedVersion: 3
+      time: 0.4817505
+      value: -0.00053718686
+      inSlope: 0.07465157
+      outSlope: 0.07465157
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.17179182
+    - serializedVersion: 3
+      time: 0.7335351
+      value: 0.23002803
+      inSlope: 0.099989966
+      outSlope: 0.099989966
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0.041885376
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 0
+    m_PostInfinity: 0
+    m_RotationOrder: 4
+  startOffset: {x: 0, y: 0}
+  endOffset: {x: 0, y: 25}

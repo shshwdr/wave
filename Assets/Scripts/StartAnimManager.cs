@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
+using EasyTextEffects;
 
 /// <summary>
 /// 开场动画管理器 - 管理开场动画的显示和流程
@@ -26,7 +27,7 @@ public class StartAnimManager : Singleton<StartAnimManager>
     private bool isInAnimation = false; // 是否正在动画中
     private StartAnimInfo currentAnimInfo = null; // 当前动画信息
     private string currentAnimIdentifier = null; // 当前动画identifier
-    
+    public bool isBlocking => isInAnimation;
     /// <summary>
     /// 是否正在动画中
     /// </summary>
@@ -192,6 +193,15 @@ public class StartAnimManager : Singleton<StartAnimManager>
                 textCanvasGroup.DOFade(1f, 0.5f);
             }
         }
+
+        StartCoroutine(test());
+    }
+
+    IEnumerator test()
+    {
+        yield return new WaitForSeconds(0.1f);
+        
+        textComponent.GetComponent<TextEffect>().Refresh();
     }
     
     /// <summary>

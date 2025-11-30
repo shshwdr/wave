@@ -4506,6 +4506,11 @@ RectTransform:
   m_AnchoredPosition: {x: 188, y: 169}
   m_SizeDelta: {x: 350, y: 250}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &652552914 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1159078176697233253, guid: 4ba9982381ab2454ca720f5d582877a7, type: 3}
+  m_PrefabInstance: {fileID: 892084909}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &674600190
 GameObject:
   m_ObjectHideFlags: 0
@@ -4522,7 +4527,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &674600191
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4555,7 +4560,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8fc86b94e57f11a4488a8b51ef454072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enable: 0
+  enable: 1
   parent: {fileID: 1146564739}
   textComponent: {fileID: 892084911}
   textCanvasGroup: {fileID: 421403735}
@@ -5709,7 +5714,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23bdc4accfebd054388d31297203fd89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  showTutorial: 1
+  showTutorial: 0
 --- !u!4 &794148596
 Transform:
   m_ObjectHideFlags: 0
@@ -7008,6 +7013,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Text (TMP)
       objectReference: {fileID: 0}
+    - target: {fileID: 4149885756089379011, guid: 4ba9982381ab2454ca720f5d582877a7, type: 3}
+      propertyPath: m_text
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 5462925445408548279, guid: 4ba9982381ab2454ca720f5d582877a7, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -7091,7 +7100,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1159078176697233253, guid: 4ba9982381ab2454ca720f5d582877a7, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 892084914}
   m_SourcePrefab: {fileID: 100100000, guid: 4ba9982381ab2454ca720f5d582877a7, type: 3}
 --- !u!224 &892084910 stripped
 RectTransform:
@@ -7103,12 +7115,30 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4149885756089379011, guid: 4ba9982381ab2454ca720f5d582877a7, type: 3}
   m_PrefabInstance: {fileID: 892084909}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 652552914}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &892084914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 652552914}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9840f87219df84505803024c796e739d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  text: {fileID: 892084911}
+  usePreset: 1
+  preset: {fileID: 11400000, guid: 4ce9908ccf7134c95bb64f24bc3ab9c9, type: 2}
+  tagEffects: []
+  globalEffects: []
+  updatesPerSecond: 30
 --- !u!224 &898810995 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3377654716906095852, guid: 5fe13730da1276740a8f4cf3060e05f0, type: 3}
@@ -7904,7 +7934,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.9686275, g: 0.8745099, b: 0.45098042, a: 1}
+  m_Color: {r: 0.86274517, g: 0.7960785, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -9563,10 +9593,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1096489337}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -23.03}
-  m_SizeDelta: {x: 1400, y: 1224}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1308099845
 MonoBehaviour:
@@ -9588,7 +9618,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 957ca7da77f7e5b44b0298113b3f575d, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 3e7229f0261063a4a9f6051a6a2d6126, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -9619,8 +9649,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sprites:
-  - {fileID: 21300000, guid: 957ca7da77f7e5b44b0298113b3f575d, type: 3}
-  - {fileID: 21300000, guid: b7ef68070cfaa144f86ee89f9606f7d3, type: 3}
+  - {fileID: 21300000, guid: 3e7229f0261063a4a9f6051a6a2d6126, type: 3}
+  - {fileID: 21300000, guid: 856bc5148f3c6054bbf79aa794e83ff5, type: 3}
   playOnStart: 1
   loop: 1
 --- !u!1001 &1313911886

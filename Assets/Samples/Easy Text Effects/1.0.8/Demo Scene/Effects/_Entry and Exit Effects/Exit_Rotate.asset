@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee4b0ef2dd414493a6f1da97633e9e39, type: 3}
+  m_Name: Exit_Rotate
+  m_EditorClassIdentifier: 
+  effectTag: 
+  startCharIndex: 0
+  charLength: 0
+  animationType: 3
+  fixedDuration: 0
+  durationPerChar: 0.5
+  timeBetweenChars: 0
+  noDelayForChars: 0
+  reverseCharOrder: 1
+  easingCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0.033845957
+      outSlope: 0.033845957
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.3260263
+    - serializedVersion: 3
+      time: 0.1743941
+      value: -0.24639255
+      inSlope: -0.114933126
+      outSlope: -0.114933126
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.0633142
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  clampBetween0And1: 0
+  centerOffset: {x: 0, y: 0}
+  startAngle: 0
+  endAngle: 120

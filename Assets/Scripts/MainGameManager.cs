@@ -783,6 +783,11 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             return;
         }
+
+        if (StartAnimManager.Instance != null && StartAnimManager.Instance.isBlocking)
+        {
+            return;
+        }
         
         // 如果统计菜单打开，不响应输入
         StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
@@ -1066,6 +1071,10 @@ public class MainGameManager : Singleton<MainGameManager>
     {
         // 如果教程正在拦截输入，不响应hover
         if (TutorialManager.Instance != null && TutorialManager.Instance.IsBlockingInput)
+        {
+            return;
+        }
+        if (StartAnimManager.Instance != null && StartAnimManager.Instance.isBlocking)
         {
             return;
         }

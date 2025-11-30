@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.qiaozhilei.easy-text-effects": "https://github.com/LeiQiaoZhi/Easy-Text-Effect.git",
     "com.unity.collab-proxy": "2.10.1",
     "com.unity.feature.2d": "2.0.1",
     "com.unity.ide.rider": "3.0.36",
