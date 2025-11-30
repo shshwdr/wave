@@ -14,6 +14,9 @@ public class ShopSkillItem : MonoBehaviour
     [SerializeField] private TMP_Text priceText;
     [SerializeField] private Button buyButton;
     [SerializeField] private GameObject lockIcon; // 锁的图标GameObject
+    [SerializeField] private TMP_Text actionText; // 锁的图标GameObject
+    
+    
 
     private SkillInfo skillInfo;
     private SkillSelectMenu parentMenu;
@@ -91,11 +94,13 @@ public class ShopSkillItem : MonoBehaviour
             buyButton.interactable = canAfford;
             
             // 更新按钮文本
-            TMP_Text buttonText = buyButton.GetComponentInChildren<TMP_Text>();
-            if (buttonText != null)
-            {
-                buttonText.text = (isUpgrade ? "Upgrade" : "Buy") +$"({price})";
-            }
+            priceText.text = price.ToString();
+            actionText.text = (isUpgrade ? "UPGRADE" : "BUY");
+            // TMP_Text buttonText = buyButton.GetComponentInChildren<TMP_Text>();
+            // if (buttonText != null)
+            // {
+            //     buttonText.text = (isUpgrade ? "Upgrade" : "Buy") +$"({price})";
+            // }
         }
     }
 

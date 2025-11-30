@@ -144,7 +144,7 @@ public class SkillSelectMenu : MenuBase
         onConfirm = onConfirmCallback;
 
         // 重置刷新价格为1
-        currentRefreshPrice = 0;
+        currentRefreshPrice = 1;
         UpdateRefreshButton();
 
         // 如果有锁定的技能，保留它们；否则正常刷新

@@ -93,7 +93,7 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
             if (colorIndex < 0 || colorIndex >= 4)
             {
                 // 如果不属于任何颜色（在背包中），使用FFEDDF颜色
-                Color defaultColor = TileColorUtil.HexToColor("#FFEDDF");
+                Color defaultColor = TileColorUtil.HexToColor("#FFF0A7");
                 iconImage.color = defaultColor;
             }
             else
