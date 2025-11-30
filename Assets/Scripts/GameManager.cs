@@ -115,6 +115,16 @@ public class GameManager : Singleton<GameManager>
     {
         levelMusic.setParameterByName("Game Over", 0);
     }
+
+    public void MusicBoss()
+    {
+        levelMusic.setParameterByName("Music Level", 1);
+    }
+
+    public void MusicNormal()
+    {
+        levelMusic.setParameterByName("Music Level", 0);
+    }
 }
 
 

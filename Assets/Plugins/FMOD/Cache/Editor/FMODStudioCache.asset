@@ -917,7 +917,7 @@ MonoBehaviour:
   StringsBanks:
   - {fileID: 640263147909748573}
   cacheVersion: 131848
-  cacheTime: 639000304267361485
+  cacheTime: 639000493324474073
   SerializableEventsDict:
   - key: event:/Music/mus_gameplay_basic_level
     index: 0
@@ -1057,10 +1057,10 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639000304267361485
+  lastModified: 639000493324474073
   FileSizes:
   - Name: 
-    Value: 2734
+    Value: 2776
   Exists: 1
 --- !u!114 &660754851785372748
 MonoBehaviour:
@@ -1077,7 +1077,7 @@ MonoBehaviour:
   Path: Assets/FMODBuilds/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639000304267305806
+  lastModified: 639000493323345245
   FileSizes: []
   Exists: 1
 --- !u!114 &765191302033869737
@@ -1161,6 +1161,32 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 2000
+--- !u!114 &1109423054152958396
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fecb8ef7f94ca804a8ab72049b86782e, type: 3}
+  m_Name: parameter:/mus_gameplay_basic_level/Music Level
+  m_EditorClassIdentifier: 
+  Name: Music Level
+  StudioPath: 
+  Min: 0
+  Max: 1
+  Default: 0
+  ID:
+    data1: 2758118488
+    data2: 479008181
+  Type: 2
+  IsGlobal: 0
+  Labels:
+  - Normal
+  - Boss
+  Exists: 1
 --- !u!114 &1283880628461820473
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1349,9 +1375,10 @@ MonoBehaviour:
   IsOneShot: 0
   Parameters:
   - {fileID: -5157731874150286497}
+  - {fileID: 1109423054152958396}
   MinDistance: 1
   MaxDistance: 20
-  Length: 192000
+  Length: 0
 --- !u!114 &3922230274423410308
 MonoBehaviour:
   m_ObjectHideFlags: 0
