@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,9 +13,11 @@ public class TutorialMenu : MenuBase
     [SerializeField] private GameObject textContainer;
     [SerializeField] private Image textBackground;
     [SerializeField] private Button tutorialButton; // 用于点击继续的按钮
+    [SerializeField] private Transform normalPos; // 默认位置
     
     private bool isBlockingInput = false; // 是否拦截输入
     private System.Action onTutorialClicked; // 教程点击回调
+    private Dictionary<string, Transform> positionDict = new Dictionary<string, Transform>(); // 位置字典
     
     protected override void Awake()
     {
@@ -38,8 +41,34 @@ public class TutorialMenu : MenuBase
             tutorialButton.onClick.AddListener(OnTutorialPanelClicked);
         }
         
+        // 初始化位置字典：在animatedRect下查找所有的transform
+        InitializePositionDict();
+        
         // 初始隐藏
         Hide(true);
+    }
+    
+    /// <summary>
+    /// 初始化位置字典：在animatedRect下查找所有的transform
+    /// </summary>
+    private void InitializePositionDict()
+    {
+        positionDict.Clear();
+        
+        if (animatedRect != null)
+        {
+            // 遍历animatedRect下的所有子对象
+            for (int i = 0; i < animatedRect.childCount; i++)
+            {
+                Transform child = animatedRect.GetChild(i);
+                if (child != null && !string.IsNullOrEmpty(child.name))
+                {
+                    positionDict[child.name] = child;
+                }
+            }
+        }
+        
+        Debug.Log($"TutorialMenu: 初始化位置字典，共找到 {positionDict.Count} 个位置");
     }
     
     /// <summary>
@@ -48,7 +77,8 @@ public class TutorialMenu : MenuBase
     /// <param name="text">教程文本</param>
     /// <param name="blocking">是否拦截输入</param>
     /// <param name="onClicked">点击回调</param>
-    public void ShowTutorial(string text, bool blocking, System.Action onClicked = null)
+    /// <param name="dialoguePosition">对话位置名称</param>
+    public void ShowTutorial(string text, bool blocking, System.Action onClicked = null, string dialoguePosition = null)
     {
         isBlockingInput = blocking;
         onTutorialClicked = onClicked;
@@ -58,6 +88,9 @@ public class TutorialMenu : MenuBase
         {
             tutorialText.text = text ?? "";
         }
+        
+        // 根据dialoguePosition设置panel位置
+        SetPanelPosition(dialoguePosition);
         
         // 设置背景透明度（如果拦截输入，背景更明显；否则更透明）
         if (blockImage != null)
@@ -75,6 +108,61 @@ public class TutorialMenu : MenuBase
         
         // 显示菜单
         Show(true);
+    }
+    
+    /// <summary>
+    /// 根据dialoguePosition设置panel位置
+    /// </summary>
+    /// <param name="dialoguePosition">对话位置名称，如果为空则使用normalPos</param>
+    private void SetPanelPosition(string dialoguePosition)
+    {
+        if (textContainer == null)
+        {
+            Debug.LogWarning("TutorialMenu: textContainer为空，无法设置位置");
+            return;
+        }
+        
+        Transform targetParent = null;
+        
+        // 如果dialoguePosition为空，使用normalPos
+        if (string.IsNullOrEmpty(dialoguePosition))
+        {
+            targetParent = normalPos;
+        }
+        else
+        {
+            // 从字典中查找对应名字的transform
+            if (positionDict.TryGetValue(dialoguePosition, out Transform foundTransform))
+            {
+                targetParent = foundTransform;
+            }
+            else
+            {
+                Debug.LogWarning($"TutorialMenu: 找不到位置 '{dialoguePosition}'，使用normalPos");
+                targetParent = normalPos;
+            }
+        }
+        
+        // 如果找到了目标父级，将panel放到对应的transform下，pos归零
+        if (targetParent != null)
+        {
+            // 使用true保持本地坐标，这样设置localPosition更可靠
+            textContainer.transform.SetParent(targetParent, true);
+            RectTransform rectTransform = textContainer.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchoredPosition = Vector2.zero;
+                rectTransform.localPosition = Vector3.zero;
+            }
+            else
+            {
+                textContainer.transform.localPosition = Vector3.zero;
+            }
+        }
+        else
+        {
+            Debug.LogWarning("TutorialMenu: normalPos为空，无法设置panel位置");
+        }
     }
     
     /// <summary>

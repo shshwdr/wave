@@ -130,7 +130,8 @@ public class TutorialManager : Singleton<TutorialManager>
         tutorialMenu.ShowTutorial(
             tutorialInfo.text ?? "",
             blocking,
-            OnTutorialPanelClicked
+            OnTutorialPanelClicked,
+            tutorialInfo.dialoguePosition
         );
         
         // 触发事件

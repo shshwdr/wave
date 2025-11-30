@@ -12,7 +12,7 @@ shop,The DJ Deck suddenly pops out a new sticky note:,,disableShopClose|disableR
 ,Rule 3:,,,,,
 ,"Use gold to buy Effect Modules, make your waves extra shiny!",,,,,
 ,Choose one of the three modules shown in the top-left corner!,,,purchase,pickThree,
-,You can drag any purchased module onto any color on the bottom to plug it.,,,dragToColor,colors,
-,Equipped modules apply their effects to that color in battle.,,,,,
-,"You can unplug and swap effects, mix freely and build your perfect combo!",,,,,
-,"Now that you’ve learned everything, go rock the stage!",,enableRefresh|enableShopClose,,,1
+,You can drag any purchased module onto any color on the bottom to plug it.,upPos,,dragToColor,colors,
+,Equipped modules apply their effects to that color in battle.,upPos,,,,
+,"You can unplug and swap effects, mix freely and build your perfect combo!",upPos,,,,
+,"Now that you’ve learned everything, go rock the stage!",upPos,enableRefresh|enableShopClose,,,1
