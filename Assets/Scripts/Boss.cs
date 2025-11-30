@@ -43,7 +43,9 @@ public class Boss : Enemy
         {
             spriteRenderAnim.transform.localScale = new Vector3(-spriteRenderAnim.transform.localScale.x, spriteRenderAnim.transform.localScale.y);
             spriteRenderAnim.transform.Translate(0.3f,0,0);
+            GameManager.Instance.MusicBoss();
         }
+        
     }
     
     /// <summary>
@@ -353,14 +355,16 @@ public class Boss : Enemy
     {
         // 先调用父类的Die方法
         base.Die();
-        
+        GameManager.Instance.MusicNormal();
+
         // Boss死亡时立即结束战斗（胜利）
         MainGameManager instance = UnityEngine.Object.FindObjectOfType<MainGameManager>();
         if (instance != null)
         {
             FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Elite/sfx_boss_death");
-            instance.CompleteLevel();
+            instance.CompleteLevel();            
         }
+        
     }
 }
 

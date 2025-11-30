@@ -2936,7 +2936,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 else
                 {
                     // Boss已死亡，直接完成关卡
-                    CompleteLevel();
+                    CompleteLevel();                  
                 }
             });
         }
@@ -3205,7 +3205,8 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             allyDescriptionPanel.SetActive(false);
         }
-        
+        GameManager.Instance.MusicGameOver();
+
         // 等待敌人移动动画完成后显示弹窗
         DOVirtual.DelayedCall(0.5f, () =>
         {
@@ -3214,6 +3215,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 {
                     // 重试当前关卡
                     RetryLevel();
+                    GameManager.Instance.MusicGameRestart();
                 },
                 onRestart: () =>
                 {
@@ -3388,16 +3390,18 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             allyDescriptionPanel.SetActive(false);
         }
-        
+
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_win_level");
         // 显示Victory横幅，停留2秒，期间不可操作
         if (turnBanner != null)
         {
             turnBanner.ShowBanner("Victory!", 2f, () =>
+            
             {
                 // 横幅显示完成后继续
                 // 离开战斗模式时清除战场
-                ClearBattleScene();
-                
+                ClearBattleScene();                
+
                 // 战斗结束后清除临时伤害加成并恢复exchange
                 if (PlayerManager.Instance != null)
                 {
@@ -3441,7 +3445,7 @@ public class MainGameManager : Singleton<MainGameManager>
                     // 战斗-事件-商店-战斗的循环
                     // 先显示事件，然后显示商店
                     ShowEventMenu();
-                }
+                }                
             });
         }
         else
