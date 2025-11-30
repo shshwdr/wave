@@ -52,6 +52,9 @@ public class Enemy : Character
     
     // Buff/Debuff系统
     private int vulnerableStacks = 0; // vulnerable层数
+    
+    // 首次行动标记（每个敌人第一次行动时跳过）
+    private bool isFirstAction = true;
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
@@ -132,6 +135,9 @@ public class Enemy : Character
         // 初始化buff系统
         vulnerableStacks = 0;
         
+        // 初始化首次行动标记
+        isFirstAction = true;
+        
         // 初始化技能系统
         if (enemyInfo != null)
         {
@@ -198,11 +204,12 @@ public class Enemy : Character
         ShowSpawnEffect();
         if (enemyInfo.identifier == "shield")
         {
-            if (MainGameManager.Instance.IsFirstTurn())
-            {
-                
-                PerformDefense();
-            }
+            PerformDefense();
+        }
+        
+        if (isFirstAction && enemyInfo.identifier == "archer" && MainGameManager.Instance.IsFirstTurn())
+        {
+            isFirstAction = false;
         }
     }
     
@@ -718,6 +725,14 @@ public class Enemy : Character
     {
         if (isDead || enemyInfo == null)
             return;
+        
+        
+        // 如果是第一次行动，跳过并标记为已行动过
+        if (isFirstAction && enemyInfo.identifier == "archer")
+        {
+            isFirstAction = false;
+            return;
+        }
             
         int damage = enemyInfo.attack;
         if (damage <= 0)
@@ -936,6 +951,7 @@ public class Enemy : Character
     {
         if (isDead)
             return;
+        
             
         // 1. 检查主动技能（冷却时间>0）
         if (skillCooldown > 0)
