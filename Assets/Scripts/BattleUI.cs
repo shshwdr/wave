@@ -27,6 +27,11 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private Button restartButton; // Restart按钮
     [SerializeField] private Button settingButton; // Setting按钮
     [SerializeField] private TMP_Text hardModeText; // HARD MODE字样
+    
+    [Header("描述信息显示UI")]
+    [SerializeField] private GameObject skillDisplayPanel; // 用于显示格子技能信息的固定UI元素
+    [SerializeField] private GameObject enemyDescriptionPanel; // 用于显示敌人描述信息的固定UI元素
+    [SerializeField] private GameObject allyDescriptionPanel; // 用于显示随从描述信息的固定UI元素
 
     [Header("HP Bar特效设置")]
     [SerializeField] private float damageShakeDuration = 0.3f; // 扣血抖动持续时间
@@ -659,6 +664,66 @@ public class BattleUI : MonoBehaviour
         });
         
         goldIncreaseTween = sequence;
+    }
+    
+    /// <summary>
+    /// 获取技能显示面板内的第一个TMP_Text组件
+    /// </summary>
+    public TMP_Text GetSkillDisplayText()
+    {
+        if (skillDisplayPanel == null)
+            return null;
+        
+        // 获取第一个TMP_Text组件（包括子对象）
+        return skillDisplayPanel.GetComponentInChildren<TMP_Text>();
+    }
+    
+    /// <summary>
+    /// 获取技能显示面板GameObject
+    /// </summary>
+    public GameObject GetSkillDisplayPanel()
+    {
+        return skillDisplayPanel;
+    }
+    
+    /// <summary>
+    /// 获取敌人描述面板内的第一个TMP_Text组件
+    /// </summary>
+    public TMP_Text GetEnemyDescriptionText()
+    {
+        if (enemyDescriptionPanel == null)
+            return null;
+        
+        // 获取第一个TMP_Text组件（包括子对象）
+        return enemyDescriptionPanel.GetComponentInChildren<TMP_Text>();
+    }
+    
+    /// <summary>
+    /// 获取敌人描述面板GameObject
+    /// </summary>
+    public GameObject GetEnemyDescriptionPanel()
+    {
+        return enemyDescriptionPanel;
+    }
+    
+    /// <summary>
+    /// 获取随从描述面板内的第一个TMP_Text组件
+    /// </summary>
+    public TMP_Text GetAllyDescriptionText()
+    {
+        if (allyDescriptionPanel == null)
+            return null;
+        
+        // 获取第一个TMP_Text组件（包括子对象）
+        return allyDescriptionPanel.GetComponentInChildren<TMP_Text>();
+    }
+    
+    /// <summary>
+    /// 获取随从描述面板GameObject
+    /// </summary>
+    public GameObject GetAllyDescriptionPanel()
+    {
+        return allyDescriptionPanel;
     }
     
     private void OnDestroy()

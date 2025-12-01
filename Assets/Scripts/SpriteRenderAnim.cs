@@ -149,14 +149,27 @@ public class SpriteRenderAnim : MonoBehaviour
         string folderPath = $"enemy/{identifier}";
         Sprite[] hurtSprites = LoadSpritesBySuffix(folderPath, "hurt");
         
-        if (hurtSprites == null || hurtSprites.Length == 0)
+        Sprite hurtSprite = null;
+        if (hurtSprites != null && hurtSprites.Length > 0)
         {
-            return;
+            hurtSprite = hurtSprites[0];
+        }
+        else
+        {
+            // 如果没有hurt动画，使用当前sprite来执行闪烁效果
+            if (mainRender != null && mainRender.sprite != null)
+            {
+                hurtSprite = mainRender.sprite;
+            }
+            else
+            {
+                return; // 如果连当前sprite都没有，直接返回
+            }
         }
 
         StopCoroutine();
         // 播放hurt动画（只显示第一帧，保持两个switchTime，第二个switchTime期间flashRender显示颜色）
-        currentAnimCoroutine = StartCoroutine(PlayHurtAnimationCoroutine(hurtSprites[0]));
+        currentAnimCoroutine = StartCoroutine(PlayHurtAnimationCoroutine(hurtSprite));
     }
 
     void StopCoroutine()

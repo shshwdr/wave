@@ -170,6 +170,22 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5294632697670218804, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      propertyPath: m_Range
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5294632697670218804, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      propertyPath: m_Intensity
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5294632697712707791, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.24
+      objectReference: {fileID: 0}
+    - target: {fileID: 5294632697712707824, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 9209408494864702295, guid: 485624e70bc23c9429030a63ca0694b8, type: 3}
       propertyPath: m_Name
       value: ally
@@ -229,6 +245,7 @@ MonoBehaviour:
   spriteRenderer: {fileID: 6552842040611288382}
   allyCollider: {fileID: 1243472014778377813}
   healthBar: {fileID: 129616154678476666}
+  spriteRenderAnim: {fileID: 0}
 --- !u!114 &5129629786856447704
 MonoBehaviour:
   m_ObjectHideFlags: 0

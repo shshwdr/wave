@@ -159,6 +159,13 @@ public class Ally : Character
         // 显示伤害数字
         DamageNumber.CreateDamageNumber(damage, transform.position, false);
 
+        // 检查死亡
+        bool willDie = currentHealth <= 0;
+        
+        ShowHitEffect();
+        // 播放受伤动画（会自动切换到idle）
+        TryPlayHurtAnimation();
+
         // 更新血条
         if (healthBar != null)
         {
@@ -166,7 +173,7 @@ public class Ally : Character
         }
 
         // 检查死亡
-        if (currentHealth <= 0)
+        if (willDie)
         {
             Die();
         }
@@ -246,6 +253,22 @@ public class Ally : Character
         {
             spriteRenderAnim.SetIdentifier("Ally");
             spriteRenderAnim.PlayAtk();
+        }
+    }
+    
+    /// <summary>
+    /// 尝试播放受伤动画
+    /// </summary>
+    private void TryPlayHurtAnimation()
+    {
+        if (spriteRenderAnim != null)
+        {
+            // 如果有动画文件夹，设置identifier；否则使用当前sprite执行闪烁
+            if (SpriteRenderAnim.HasAnimationFolder("Ally"))
+            {
+                spriteRenderAnim.SetIdentifier("Ally");
+            }
+            spriteRenderAnim.PlayHurt();
         }
     }
 }

@@ -921,6 +921,8 @@ public class SkillSelectMenu : MenuBase
                 if (!string.IsNullOrEmpty(detailText))
                 {
                     skillDetailText.text = detailText;
+                    // 根据颜色索引设置panel背景色
+                    SetSkillPanelColorByIndex(skillDetailPanel, colorIndex);
                     skillDetailPanel.SetActive(true);
                 }
             }
@@ -1281,7 +1283,7 @@ public class SkillSelectMenu : MenuBase
     /// <summary>
     /// 显示技能详情（用于技能图标悬停）
     /// </summary>
-    public void ShowSkillDetail(string identifier)
+    public void ShowSkillDetail(string identifier, int colorIndex = -1)
     {
         if (skillDetailPanel == null || skillDetailText == null || SkillManager.Instance == null)
             return;
@@ -1290,7 +1292,114 @@ public class SkillSelectMenu : MenuBase
         if (!string.IsNullOrEmpty(description))
         {
             skillDetailText.text = description;
+            // 根据技能颜色或位置设置panel背景色
+            SetSkillPanelColor(skillDetailPanel, identifier, colorIndex);
             skillDetailPanel.SetActive(true);
+        }
+    }
+    
+    /// <summary>
+    /// 根据技能颜色设置panel背景色
+    /// </summary>
+    private void SetSkillPanelColor(GameObject panel, string skillIdentifier, int colorIndex = -1)
+    {
+        if (panel == null || string.IsNullOrEmpty(skillIdentifier))
+            return;
+        
+        // 获取panel的Image组件（背景）
+        Image bgImage = panel.GetComponent<Image>();
+        if (bgImage == null)
+            return;
+        
+        // 如果技能在背包中（colorIndex < 0 或 >= 4），使用#FFF0A7颜色
+        if (colorIndex < 0 || colorIndex >= 4)
+        {
+            bgImage.color = TileColorUtil.HexToColor("#FFF0A7");
+            return;
+        }
+        
+        // 优先使用colorIndex对应的颜色（技能实际在的颜色区域）
+        if (colorIndex >= 0 && colorIndex < 4)
+        {
+            TileColor tileColor = (TileColor)colorIndex;
+            Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+            bgImage.color = colorValue;
+            return;
+        }
+        
+        // 如果colorIndex无效，回退到使用CSV中的颜色
+        if (CSVLoader.Instance == null || !CSVLoader.Instance.cardInfoMap.ContainsKey(skillIdentifier))
+        {
+            // 如果没有找到技能信息，使用默认颜色（白色）
+            bgImage.color = Color.white;
+            return;
+        }
+        
+        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[skillIdentifier];
+        
+        // 如果技能有颜色，使用对应颜色；否则使用默认颜色（白色）
+        if (!string.IsNullOrEmpty(skillInfo.color))
+        {
+            // 将颜色字符串转换为TileColor
+            string colorLower = skillInfo.color.ToLower();
+            if (colorLower == "red" || colorLower == "yellow" || colorLower == "blue" || colorLower == "green")
+            {
+                TileColor tileColor = GetTileColorFromString(skillInfo.color);
+                Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+                bgImage.color = colorValue;
+            }
+            else
+            {
+                // 无效颜色，使用默认颜色（白色）
+                bgImage.color = Color.white;
+            }
+        }
+        else
+        {
+            // 没有颜色，使用默认颜色（白色）
+            bgImage.color = Color.white;
+        }
+    }
+    
+    /// <summary>
+    /// 根据颜色索引设置panel背景色（用于颜色区域悬停）
+    /// </summary>
+    private void SetSkillPanelColorByIndex(GameObject panel, int colorIndex)
+    {
+        if (panel == null)
+            return;
+        
+        // 获取panel的Image组件（背景）
+        Image bgImage = panel.GetComponent<Image>();
+        if (bgImage == null)
+            return;
+        
+        // 根据颜色索引设置颜色（0=红，1=黄，2=蓝，3=绿）
+        if (colorIndex >= 0 && colorIndex < 4)
+        {
+            TileColor tileColor = (TileColor)colorIndex;
+            Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+            bgImage.color = colorValue;
+        }
+        else
+        {
+            // 无效索引，使用默认颜色（白色）
+            bgImage.color = Color.white;
+        }
+    }
+    
+    /// <summary>
+    /// 将颜色字符串转换为TileColor
+    /// </summary>
+    private TileColor GetTileColorFromString(string colorStr)
+    {
+        switch (colorStr.ToLower())
+        {
+            case "red": return TileColor.Red;
+            case "yellow": return TileColor.Yellow;
+            case "blue": return TileColor.Blue;
+            case "green": return TileColor.Green;
+            default: return TileColor.Red;
         }
     }
 

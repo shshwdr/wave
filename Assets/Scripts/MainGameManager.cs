@@ -328,52 +328,12 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void InitSkillDisplayUI()
     {
-        if (skillDisplayPanel == null)
+        // 从BattleUI获取固定的UI元素
+        BattleUI battleUI = FindObjectOfType<BattleUI>();
+        if (battleUI != null)
         {
-            // 创建技能显示面板
-            GameObject canvasObj = GameObject.Find("Canvas");
-            if (canvasObj == null)
-            {
-                canvasObj = new GameObject("Canvas");
-                Canvas canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvasObj.AddComponent<CanvasScaler>();
-                canvasObj.AddComponent<GraphicRaycaster>();
-            }
-
-            skillDisplayPanel = new GameObject("SkillDisplayPanel");
-            skillDisplayPanel.transform.SetParent(canvasObj.transform);
-            RectTransform rectTransform = skillDisplayPanel.AddComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0, 1);
-            rectTransform.anchorMax = new Vector2(0, 1);
-            rectTransform.pivot = new Vector2(0, 1);
-            rectTransform.anchoredPosition = new Vector2(20, -20);
-            rectTransform.sizeDelta = new Vector2(400, 300);
-
-            // 添加背景
-            Image bg = skillDisplayPanel.AddComponent<Image>();
-            bg.color = new Color(0, 0, 0, 0.7f);
-
-            // 添加文本
-            GameObject textObj = new GameObject("SkillText");
-            textObj.transform.SetParent(skillDisplayPanel.transform);
-            RectTransform textRect = textObj.AddComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.sizeDelta = Vector2.zero;
-            textRect.anchoredPosition = Vector2.zero;
-            textRect.offsetMin = new Vector2(10, 10);
-            textRect.offsetMax = new Vector2(-10, -10);
-
-            skillDisplayText = textObj.AddComponent<TextMeshProUGUI>();
-            skillDisplayText.fontSize = 26;
-            skillDisplayText.color = Color.white;
-            skillDisplayText.alignment = TextAlignmentOptions.TopLeft;
-            // 从CSVLoader获取font
-            if (CSVLoader.Instance != null && CSVLoader.Instance.font != null)
-            {
-                skillDisplayText.font = CSVLoader.Instance.font;
-            }
+            skillDisplayPanel = battleUI.GetSkillDisplayPanel();
+            skillDisplayText = battleUI.GetSkillDisplayText();
         }
 
         if (skillDisplayPanel != null)
@@ -387,53 +347,12 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void InitEnemyDescriptionUI()
     {
-        if (enemyDescriptionPanel == null)
+        // 从BattleUI获取固定的UI元素
+        BattleUI battleUI = FindObjectOfType<BattleUI>();
+        if (battleUI != null)
         {
-            // 创建敌人描述显示面板
-            GameObject canvasObj = GameObject.Find("Canvas");
-            if (canvasObj == null)
-            {
-                canvasObj = new GameObject("Canvas");
-                Canvas canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvasObj.AddComponent<CanvasScaler>();
-                canvasObj.AddComponent<GraphicRaycaster>();
-            }
-
-            enemyDescriptionPanel = new GameObject("EnemyDescriptionPanel");
-            enemyDescriptionPanel.transform.SetParent(canvasObj.transform);
-            RectTransform rectTransform = enemyDescriptionPanel.AddComponent<RectTransform>();
-            // 右上角：anchorMin和anchorMax都是(1,1)，pivot是(1,1)
-            rectTransform.anchorMin = new Vector2(1, 1);
-            rectTransform.anchorMax = new Vector2(1, 1);
-            rectTransform.pivot = new Vector2(1, 1);
-            rectTransform.anchoredPosition = new Vector2(-20, -20); // 距离右上角20像素
-            rectTransform.sizeDelta = new Vector2(400, 300);
-
-            // 添加背景
-            Image bg = enemyDescriptionPanel.AddComponent<Image>();
-            bg.color = new Color(0, 0, 0, 0.7f);
-
-            // 添加文本
-            GameObject textObj = new GameObject("EnemyDescriptionText");
-            textObj.transform.SetParent(enemyDescriptionPanel.transform);
-            RectTransform textRect = textObj.AddComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.sizeDelta = Vector2.zero;
-            textRect.anchoredPosition = Vector2.zero;
-            textRect.offsetMin = new Vector2(10, 10);
-            textRect.offsetMax = new Vector2(-10, -10);
-
-            enemyDescriptionText = textObj.AddComponent<TextMeshProUGUI>();
-            enemyDescriptionText.fontSize = 26;
-            enemyDescriptionText.color = Color.white;
-            enemyDescriptionText.alignment = TextAlignmentOptions.TopLeft;
-            // 从CSVLoader获取font
-            if (CSVLoader.Instance != null && CSVLoader.Instance.font != null)
-            {
-                enemyDescriptionText.font = CSVLoader.Instance.font;
-            }
+            enemyDescriptionPanel = battleUI.GetEnemyDescriptionPanel();
+            enemyDescriptionText = battleUI.GetEnemyDescriptionText();
         }
 
         if (enemyDescriptionPanel != null)
@@ -447,53 +366,12 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void InitAllyDescriptionUI()
     {
-        if (allyDescriptionPanel == null)
+        // 从BattleUI获取固定的UI元素
+        BattleUI battleUI = FindObjectOfType<BattleUI>();
+        if (battleUI != null)
         {
-            // 创建随从描述显示面板
-            GameObject canvasObj = GameObject.Find("Canvas");
-            if (canvasObj == null)
-            {
-                canvasObj = new GameObject("Canvas");
-                Canvas canvas = canvasObj.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                canvasObj.AddComponent<CanvasScaler>();
-                canvasObj.AddComponent<GraphicRaycaster>();
-            }
-
-            allyDescriptionPanel = new GameObject("AllyDescriptionPanel");
-            allyDescriptionPanel.transform.SetParent(canvasObj.transform);
-            RectTransform rectTransform = allyDescriptionPanel.AddComponent<RectTransform>();
-            // 右上角：anchorMin和anchorMax都是(1,1)，pivot是(1,1)
-            rectTransform.anchorMin = new Vector2(1, 1);
-            rectTransform.anchorMax = new Vector2(1, 1);
-            rectTransform.pivot = new Vector2(1, 1);
-            rectTransform.anchoredPosition = new Vector2(-20, -20); // 距离右上角20像素
-            rectTransform.sizeDelta = new Vector2(400, 300);
-
-            // 添加背景
-            Image bg = allyDescriptionPanel.AddComponent<Image>();
-            bg.color = new Color(0, 0, 0, 0.7f);
-
-            // 添加文本
-            GameObject textObj = new GameObject("AllyDescriptionText");
-            textObj.transform.SetParent(allyDescriptionPanel.transform);
-            RectTransform textRect = textObj.AddComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.sizeDelta = Vector2.zero;
-            textRect.anchoredPosition = Vector2.zero;
-            textRect.offsetMin = new Vector2(10, 10);
-            textRect.offsetMax = new Vector2(-10, -10);
-
-            allyDescriptionText = textObj.AddComponent<TextMeshProUGUI>();
-            allyDescriptionText.fontSize = 26;
-            allyDescriptionText.color = Color.white;
-            allyDescriptionText.alignment = TextAlignmentOptions.TopLeft;
-            // 从CSVLoader获取font
-            if (CSVLoader.Instance != null && CSVLoader.Instance.font != null)
-            {
-                allyDescriptionText.font = CSVLoader.Instance.font;
-            }
+            allyDescriptionPanel = battleUI.GetAllyDescriptionPanel();
+            allyDescriptionText = battleUI.GetAllyDescriptionText();
         }
 
         if (allyDescriptionPanel != null)
@@ -1107,64 +985,54 @@ public class MainGameManager : Singleton<MainGameManager>
             return;
         }
 
-        // 首先检查是否悬停在敌人上
+        Vector2Int gridPos = GetMouseGridPosition();
+        bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(gridPos);
+        
+        // 检查是否悬停在敌人上
         Enemy hoveredEnemy = GetEnemyUnderMouse();
-        if (hoveredEnemy != null && !hoveredEnemy.IsDead && hoveredEnemy.EnemyInfo != null)
+        bool hasEnemy = hoveredEnemy != null && !hoveredEnemy.IsDead && hoveredEnemy.EnemyInfo != null;
+        
+        // 检查是否悬停在随从上
+        Ally hoveredAlly = GetAllyUnderMouse();
+        bool hasAlly = hoveredAlly != null && !hoveredAlly.IsDead;
+        
+        // 如果鼠标位置改变了，更新高亮（拖动时不更新高亮）
+        if (isValidGridPos && gridPos != lastHighlightPos && !waitingForSecondSwap && !isDragging)
         {
-            // 显示敌人描述
+            UpdateHighlightTiles(gridPos);
+            lastHighlightPos = gridPos;
+        }
+        
+        // 显示/隐藏敌人描述
+        if (hasEnemy)
+        {
             UpdateEnemyDescription(hoveredEnemy);
-            // 隐藏随从描述和技能显示
-            if (allyDescriptionPanel != null)
-            {
-                allyDescriptionPanel.SetActive(false);
-            }
-            if (skillDisplayPanel != null)
-            {
-                skillDisplayPanel.SetActive(false);
-            }
-            return;
         }
         else
         {
-            // 没有悬停在敌人上，隐藏敌人描述
             if (enemyDescriptionPanel != null)
             {
                 enemyDescriptionPanel.SetActive(false);
             }
         }
         
-        // 检查是否悬停在随从上
-        Ally hoveredAlly = GetAllyUnderMouse();
-        if (hoveredAlly != null && !hoveredAlly.IsDead)
+        // 显示/隐藏随从描述
+        if (hasAlly)
         {
-            // 显示随从描述
             UpdateAllyDescription(hoveredAlly);
-            // 隐藏技能显示
-            if (skillDisplayPanel != null)
-            {
-                skillDisplayPanel.SetActive(false);
-            }
-            return;
         }
         else
         {
-            // 没有悬停在随从上，隐藏随从描述
             if (allyDescriptionPanel != null)
             {
                 allyDescriptionPanel.SetActive(false);
             }
         }
         
-        Vector2Int gridPos = GetMouseGridPosition();
-        if (boardManager != null && boardManager.IsValidPosition(gridPos))
+        // 显示/隐藏技能显示（如果格子上有技能）
+        if (isValidGridPos)
         {
-            // 如果鼠标位置改变了，更新高亮和技能显示（拖动时不更新高亮）
-            if (gridPos != lastHighlightPos && !waitingForSecondSwap && !isDragging)
-            {
-                UpdateHighlightTiles(gridPos);
-                UpdateSkillDisplay(gridPos);
-                lastHighlightPos = gridPos;
-            }
+            UpdateSkillDisplay(gridPos);
         }
         else
         {
@@ -1258,29 +1126,52 @@ public class MainGameManager : Singleton<MainGameManager>
                 isTouching = true;
                 touchGridPos = gridPos;
                 
+                bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(gridPos);
+                
                 // 检查是否触摸到敌人
                 Enemy touchedEnemy = GetEnemyAtPosition(touchWorldPos);
-                if (touchedEnemy != null && !touchedEnemy.IsDead)
+                bool hasEnemy = touchedEnemy != null && !touchedEnemy.IsDead;
+                
+                // 检查是否触摸到随从
+                Ally touchedAlly = GetAllyAtPosition(touchWorldPos);
+                bool hasAlly = touchedAlly != null && !touchedAlly.IsDead;
+                
+                // 显示/隐藏敌人描述
+                if (hasEnemy)
                 {
                     UpdateEnemyDescription(touchedEnemy);
-                    // 隐藏随从描述
+                }
+                else
+                {
+                    if (enemyDescriptionPanel != null)
+                    {
+                        enemyDescriptionPanel.SetActive(false);
+                    }
+                }
+                
+                // 显示/隐藏随从描述
+                if (hasAlly)
+                {
+                    UpdateAllyDescription(touchedAlly);
+                }
+                else
+                {
                     if (allyDescriptionPanel != null)
                     {
                         allyDescriptionPanel.SetActive(false);
                     }
                 }
-                // 检查是否触摸到随从
+                
+                // 显示/隐藏技能显示（如果格子上有技能）
+                if (isValidGridPos)
+                {
+                    UpdateSkillDisplay(gridPos);
+                }
                 else
                 {
-                    Ally touchedAlly = GetAllyAtPosition(touchWorldPos);
-                    if (touchedAlly != null && !touchedAlly.IsDead)
+                    if (skillDisplayPanel != null)
                     {
-                        UpdateAllyDescription(touchedAlly);
-                    }
-                    // 检查是否触摸到tile
-                    else if (boardManager != null && boardManager.IsValidPosition(gridPos))
-                    {
-                        UpdateSkillDisplay(gridPos);
+                        skillDisplayPanel.SetActive(false);
                     }
                 }
             }
@@ -1311,29 +1202,52 @@ public class MainGameManager : Singleton<MainGameManager>
                 {
                     touchGridPos = newGridPos;
                     
+                    bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(newGridPos);
+                    
                     // 检查是否触摸到敌人
                     Enemy touchedEnemy = GetEnemyAtPosition(touchWorldPos);
-                    if (touchedEnemy != null && !touchedEnemy.IsDead)
+                    bool hasEnemy = touchedEnemy != null && !touchedEnemy.IsDead;
+                    
+                    // 检查是否触摸到随从
+                    Ally touchedAlly = GetAllyAtPosition(touchWorldPos);
+                    bool hasAlly = touchedAlly != null && !touchedAlly.IsDead;
+                    
+                    // 显示/隐藏敌人描述
+                    if (hasEnemy)
                     {
                         UpdateEnemyDescription(touchedEnemy);
-                        // 隐藏随从描述
+                    }
+                    else
+                    {
+                        if (enemyDescriptionPanel != null)
+                        {
+                            enemyDescriptionPanel.SetActive(false);
+                        }
+                    }
+                    
+                    // 显示/隐藏随从描述
+                    if (hasAlly)
+                    {
+                        UpdateAllyDescription(touchedAlly);
+                    }
+                    else
+                    {
                         if (allyDescriptionPanel != null)
                         {
                             allyDescriptionPanel.SetActive(false);
                         }
                     }
-                    // 检查是否触摸到随从
+                    
+                    // 显示/隐藏技能显示（如果格子上有技能）
+                    if (isValidGridPos)
+                    {
+                        UpdateSkillDisplay(newGridPos);
+                    }
                     else
                     {
-                        Ally touchedAlly = GetAllyAtPosition(touchWorldPos);
-                        if (touchedAlly != null && !touchedAlly.IsDead)
+                        if (skillDisplayPanel != null)
                         {
-                            UpdateAllyDescription(touchedAlly);
-                        }
-                        // 检查是否触摸到tile
-                        else if (boardManager != null && boardManager.IsValidPosition(newGridPos))
-                        {
-                            UpdateSkillDisplay(newGridPos);
+                            skillDisplayPanel.SetActive(false);
                         }
                     }
                 }
@@ -1561,7 +1475,7 @@ public class MainGameManager : Singleton<MainGameManager>
         
         // 基本信息
         sb.AppendLine($"<b>{enemy.EnemyInfo.name}</b>");
-        sb.AppendLine();
+        //sb.AppendLine();
         
         // 攻击力和血量
         int baseAttack = enemy.GetAttack();
@@ -1583,24 +1497,24 @@ public class MainGameManager : Singleton<MainGameManager>
             sb.AppendLine($"Attack: {displayAttack}");
         }
         sb.AppendLine($"HP: {enemy.CurrentHealth}/{enemy.MaxHealth}");
-        sb.AppendLine();
+        //sb.AppendLine();
         
-        // Buff/Debuff信息
-        int vulnerableStacks = enemy.GetVulnerableStacks();
-        if (vulnerableStacks > 0)
-        {
-            float damageIncrease = vulnerableStacks * 0.05f * 100f;
-            sb.AppendLine($"<color=yellow>Vulnerable: {vulnerableStacks}层</color>");
-            sb.AppendLine($"伤害提升: +{damageIncrease:F0}%");
-            sb.AppendLine();
-        }
+        // // Buff/Debuff信息
+        // int vulnerableStacks = enemy.GetVulnerableStacks();
+        // if (vulnerableStacks > 0)
+        // {
+        //     float damageIncrease = vulnerableStacks * 0.05f * 100f;
+        //     sb.AppendLine($"<color=yellow>Vulnerable: {vulnerableStacks}层</color>");
+        //     sb.AppendLine($"伤害提升: +{damageIncrease:F0}%");
+        //     //sb.AppendLine();
+        // }
         
-        // 显示敌人伤害加成（如果有）
-        if (PlayerManager.Instance != null && PlayerManager.Instance.EnemyDamageBonus > 0)
-        {
-            sb.AppendLine($"<color=red>Enemy Damage Bonus: +{PlayerManager.Instance.EnemyDamageBonus:F0}%</color>");
-            sb.AppendLine();
-        }
+        // // 显示敌人伤害加成（如果有）
+        // if (PlayerManager.Instance != null && PlayerManager.Instance.EnemyDamageBonus > 0)
+        // {
+        //     sb.AppendLine($"<color=red>Enemy Damage Bonus: +{PlayerManager.Instance.EnemyDamageBonus:F0}%</color>");
+        //     //sb.AppendLine();
+        // }
         
         // 描述
         if (!string.IsNullOrEmpty(enemy.EnemyInfo.description))
@@ -1640,10 +1554,15 @@ public class MainGameManager : Singleton<MainGameManager>
             {
                 // 显示技能描述
                 string skillText = "";
+                string firstSkillIdentifier = null;
                 foreach (var identifier in skillIdentifiers)
                 {
                     if (SkillManager.Instance.HasSkill(identifier))
                     {
+                        if (firstSkillIdentifier == null)
+                        {
+                            firstSkillIdentifier = identifier;
+                        }
                         string description = SkillManager.Instance.GetSkillDescription(identifier, false);
                         skillText += description + "\n";
                     }
@@ -1652,6 +1571,8 @@ public class MainGameManager : Singleton<MainGameManager>
                 if (!string.IsNullOrEmpty(skillText))
                 {
                     skillDisplayText.text = skillText;
+                    // 根据技能颜色设置panel背景色
+                    SetSkillPanelColor(skillDisplayPanel, firstSkillIdentifier);
                     skillDisplayPanel.SetActive(true);
                 }
                 else
@@ -1667,6 +1588,68 @@ public class MainGameManager : Singleton<MainGameManager>
         else
         {
             skillDisplayPanel.SetActive(false);
+        }
+    }
+    
+    /// <summary>
+    /// 根据技能颜色设置panel背景色
+    /// </summary>
+    private void SetSkillPanelColor(GameObject panel, string skillIdentifier)
+    {
+        if (panel == null || string.IsNullOrEmpty(skillIdentifier))
+            return;
+        
+        // 获取panel的Image组件（背景）
+        Image bgImage = panel.GetComponent<Image>();
+        if (bgImage == null)
+            return;
+        
+        // 获取技能信息
+        if (CSVLoader.Instance == null || !CSVLoader.Instance.cardInfoMap.ContainsKey(skillIdentifier))
+        {
+            // 如果没有找到技能信息，使用默认颜色（白色）
+            bgImage.color = Color.white;
+            return;
+        }
+        
+        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[skillIdentifier];
+        
+        // 如果技能有颜色，使用对应颜色；否则使用默认颜色（白色）
+        if (!string.IsNullOrEmpty(skillInfo.color))
+        {
+            // 将颜色字符串转换为TileColor
+            string colorLower = skillInfo.color.ToLower();
+            if (colorLower == "red" || colorLower == "yellow" || colorLower == "blue" || colorLower == "green")
+            {
+                TileColor tileColor = GetTileColorFromString(skillInfo.color);
+                Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+                bgImage.color = colorValue;
+            }
+            else
+            {
+                // 无效颜色，使用默认颜色（白色）
+                bgImage.color = Color.white;
+            }
+        }
+        else
+        {
+            // 没有颜色，使用默认颜色（白色）
+            bgImage.color = Color.white;
+        }
+    }
+    
+    /// <summary>
+    /// 将颜色字符串转换为TileColor
+    /// </summary>
+    private TileColor GetTileColorFromString(string colorStr)
+    {
+        switch (colorStr.ToLower())
+        {
+            case "red": return TileColor.Red;
+            case "yellow": return TileColor.Yellow;
+            case "blue": return TileColor.Blue;
+            case "green": return TileColor.Green;
+            default: return TileColor.Red;
         }
     }
 
@@ -4135,5 +4118,7 @@ public class MainGameManager : Singleton<MainGameManager>
         return true; // 所有tiles都已清除
     }
 }
+
+
 
 

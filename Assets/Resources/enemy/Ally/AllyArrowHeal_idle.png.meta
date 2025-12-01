@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: e084523b0439c0c41a2bf5a9edbd5729
+guid: d8cbdf6867f6b7242bedd9e355dc4d62
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -123,43 +123,43 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Range_idle_0
+      name: AllyArrowHeal_idle_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
         width: 128
         height: 128
-      alignment: 7
-      pivot: {x: 0.5, y: 0}
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 094abd6a48d517340bf0a482bb0b058e
-      internalID: 1730699359
+      spriteID: 7e58be8e113ad4e4cb583be9b1cc1770
+      internalID: 318433565
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Range_idle_1
+      name: AllyArrowHeal_idle_1
       rect:
         serializedVersion: 2
         x: 128
         y: 0
         width: 128
         height: 128
-      alignment: 7
-      pivot: {x: 0.5, y: 0}
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: da6f39845619e0d46b1221d50e53d017
-      internalID: -1118845470
+      spriteID: 581ef645689025a4ead1753ec406346b
+      internalID: 1673394557
       vertices: []
       indices: 
       edges: []
@@ -175,8 +175,8 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Range_idle_0: 1730699359
-      Range_idle_1: -1118845470
+      AllyArrowHeal_idle_0: 318433565
+      AllyArrowHeal_idle_1: 1673394557
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -10,6 +10,7 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
 {
     [Header("UI组件")]
     [SerializeField] private Image iconImage;
+    [SerializeField] private Image noteImage;
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private Image highlightImage; // 高亮图片
@@ -103,6 +104,9 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
                 Color colorValue = TileColorUtil.GetUnityColor(tileColor);
                 iconImage.color = colorValue;
             }
+
+            // 计算noteImage的颜色：取iconImage中最大的channel翻倍，其他两个channel/2
+            noteImage.color = CalculateDarkerColor(iconImage.color);
         }
 
         // TODO: 更新图标图片（如果有）
@@ -117,9 +121,15 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     /// </summary>
     public void OnBeginDrag(PointerEventData eventData)
     {
+        // 只有在SkillSelectMenu中才允许拖拽
         if (parentMenu != null)
         {
             parentMenu.StartDragSkill(this);
+        }
+        else
+        {
+            // 如果在StatisticsMenu中，不允许拖拽，直接返回
+            return;
         }
 
         // 设置透明度
@@ -138,6 +148,13 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     /// </summary>
     public void OnDrag(PointerEventData eventData)
     {
+        // 只有在SkillSelectMenu中才允许拖拽
+        if (parentMenu == null)
+        {
+            // 如果在StatisticsMenu中，不允许拖拽，直接返回
+            return;
+        }
+        
         if (rectTransform == null || canvas == null)
             return;
 
@@ -164,13 +181,15 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     /// </summary>
     public void OnEndDrag(PointerEventData eventData)
     {
-        // 如果是临时拖拽图标，由SkillSelectMenu处理
+        // 只有在SkillSelectMenu中才允许拖拽
         if (parentMenu == null)
         {
-            // 临时图标，需要通知SkillSelectMenu处理
+            // 如果在StatisticsMenu中，不允许拖拽，直接返回
+            // 检查是否是临时拖拽图标（在SkillSelectMenu中）
             SkillSelectMenu menu = GetComponentInParent<SkillSelectMenu>();
             if (menu != null)
             {
+                // 临时图标，需要通知SkillSelectMenu处理
                 menu.EndDragSkill(eventData);
             }
             return;
@@ -197,7 +216,7 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     {
         if (parentMenu != null)
         {
-            parentMenu.ShowSkillDetail(skillIdentifier);
+            parentMenu.ShowSkillDetail(skillIdentifier, colorIndex);
         }
         else
         {
@@ -278,6 +297,46 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         return -1;
     }
 
+    /// <summary>
+    /// 计算更深的颜色：取最大channel翻倍，其他两个channel/2
+    /// </summary>
+    private Color CalculateDarkerColor(Color originalColor)
+    {
+        float r = originalColor.r;
+        float g = originalColor.g;
+        float b = originalColor.b;
+        
+        // 找到最大的channel
+        float maxChannel = Mathf.Max(r, Mathf.Max(g, b));
+        var v = 1.3f;
+        // 确定哪个是最大channel
+        Color darkerColor = new Color();
+        if (maxChannel == r)
+        {
+            // R是最大的，翻倍R，G和B除以2
+            darkerColor.r = Mathf.Clamp01(r * v);
+            darkerColor.g = g / v;
+            darkerColor.b = b / v;
+        }
+        else if (maxChannel == g)
+        {
+            // G是最大的，翻倍G，R和B除以2
+            darkerColor.r = r / v;
+            darkerColor.g = Mathf.Clamp01(g * v);
+            darkerColor.b = b / v;
+        }
+        else
+        {
+            // B是最大的，翻倍B，R和G除以2
+            darkerColor.r = r / v;
+            darkerColor.g = g / v;
+            darkerColor.b = Mathf.Clamp01(b * v);
+        }
+        
+        darkerColor.a = originalColor.a;
+        return darkerColor;
+    }
+    
     /// <summary>
     /// 开始高亮动画（fade in and out）
     /// </summary>
