@@ -20,7 +20,7 @@ namespace EasyTextEffects.Samples
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
+            if ((Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)) && MainGameManager.Instance.useCheat)
             {
                 NextSlide();
             }

@@ -813,7 +813,7 @@ public class EnemyManager : MonoBehaviour
     private void Update()
     {
         // 按P键杀死所有敌人（作弊功能）
-        if (Input.GetKeyDown(KeyCode.P))
+        if (Input.GetKeyDown(KeyCode.P) && MainGameManager.Instance.useCheat)
         {
             KillAllEnemies();
         }

@@ -13,6 +13,7 @@ using FMOD.Studio;
 /// </summary>
 public class MainGameManager : Singleton<MainGameManager>
 {
+    public bool useCheat;
     [Header("引用")]
     [SerializeField] private BoardManager boardManager;
     [SerializeField] private EnemyManager enemyManager;
@@ -270,6 +271,9 @@ public class MainGameManager : Singleton<MainGameManager>
                 }
             }
         }
+#if !UNITY_EDITOR
+        useCheat = false;
+#endif
     }
     
     /// <summary>
@@ -467,6 +471,9 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void InitializeBattleAfterBanner()
     {
+        
+        // 初始化回合计数（用于奖励关卡）
+        currentTurn = 0;
         if (currentLevelInfo != null && enemyManager != null)
         {
             enemyManager.SpawnEnemiesFromLevel(currentLevelInfo);
@@ -497,8 +504,6 @@ public class MainGameManager : Singleton<MainGameManager>
             StatisticsManager.Instance.StartNewRound();
         }
 
-        // 初始化回合计数（用于奖励关卡）
-        currentTurn = 0;
         
         // 重置从chest获得的金钱计数
         goldFromChests = 0;
@@ -550,13 +555,13 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R) && MainGameManager.Instance.useCheat)
         {
             Restart();
         }
         
         // 清除全局标识（按H键清除hasWonGame和isInHardMode）
-        if (Input.GetKeyDown(KeyCode.H))
+        if (Input.GetKeyDown(KeyCode.H) && MainGameManager.Instance.useCheat)
         {
             if (GameDataManager.Instance != null)
             {
@@ -689,7 +694,7 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         // Shift + 鼠标左键 - 任意位置交换
-        if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+        if ((Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && MainGameManager.Instance.useCheat)
         {
             if (Input.GetMouseButtonDown(0))
             {
@@ -3739,25 +3744,25 @@ public class MainGameManager : Singleton<MainGameManager>
     private void HandleEditModeInput()
     {
         // X键：进入编辑模式
-        if (Input.GetKeyDown(KeyCode.X))
+        if (Input.GetKeyDown(KeyCode.X) && MainGameManager.Instance.useCheat)
         {
             EnterPuzzleEditMode();
         }
         
         // S键：保存当前puzzle
-        if (Input.GetKeyDown(KeyCode.S) && isPuzzleEditMode)
+        if (Input.GetKeyDown(KeyCode.S) && isPuzzleEditMode && MainGameManager.Instance.useCheat)
         {
             SaveCurrentPuzzle();
         }
         
         // L键：加载第一个puzzle
-        if (Input.GetKeyDown(KeyCode.L) && isPuzzleEditMode)
+        if (Input.GetKeyDown(KeyCode.L) && isPuzzleEditMode && MainGameManager.Instance.useCheat)
         {
             LoadFirstPuzzle();
         }
         
         // P键：进入puzzle游戏模式
-        if (Input.GetKeyDown(KeyCode.P) && isPuzzleEditMode)
+        if (Input.GetKeyDown(KeyCode.P) && isPuzzleEditMode && MainGameManager.Instance.useCheat)
         {
             EnterPuzzlePlayMode();
         }
@@ -3819,7 +3824,10 @@ public class MainGameManager : Singleton<MainGameManager>
         Vector2Int gridPos = GetMouseGridPosition();
         if (!boardManager.IsValidPosition(gridPos))
             return;
-        
+        if (!MainGameManager.Instance.useCheat)
+        {
+            return;
+        }
         // 检查是否按住数字键1-4
         int colorIndex = -1;
         if (Input.GetKey(KeyCode.Alpha1) || Input.GetKey(KeyCode.Keypad1))

@@ -136,7 +136,15 @@ public class Enemy : Character
         vulnerableStacks = 0;
         
         // 初始化首次行动标记
-        isFirstAction = true;
+        
+        if (isFirstAction && MainGameManager.Instance.IsFirstTurn())
+        {
+            isFirstAction = false;
+        }
+        else
+        {
+            isFirstAction = true;
+        }
         
         // 初始化技能系统
         if (enemyInfo != null)
@@ -207,10 +215,6 @@ public class Enemy : Character
             PerformDefense();
         }
         
-        if (isFirstAction && enemyInfo.identifier == "archer" && MainGameManager.Instance.IsFirstTurn())
-        {
-            isFirstAction = false;
-        }
     }
     
     /// <summary>
@@ -567,7 +571,12 @@ public class Enemy : Character
     {
         if (isDead || enemyInfo == null)
             return;
-
+// 如果是第一次行动，跳过并标记为已行动过
+        if (isFirstAction)
+        {
+            isFirstAction = false;
+            return;
+        }
         int speed = enemyInfo.speed;
         if (speed <= 0)
             speed = 1; // 默认移动1格
@@ -728,7 +737,7 @@ public class Enemy : Character
         
         
         // 如果是第一次行动，跳过并标记为已行动过
-        if (isFirstAction && enemyInfo.identifier == "archer")
+        if (isFirstAction)
         {
             isFirstAction = false;
             return;
@@ -1016,6 +1025,13 @@ public class Enemy : Character
     {
         if (string.IsNullOrEmpty(currentSkill))
             return false;
+        
+        // 如果是第一次行动，跳过并标记为已行动过
+        if (isFirstAction)
+        {
+            isFirstAction = false;
+            return false;
+        }
         
         bool skillUsed = false;
         

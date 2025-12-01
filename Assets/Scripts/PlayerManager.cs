@@ -353,13 +353,13 @@ public class PlayerManager : Singleton<PlayerManager>
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.I))
+        if (Input.GetKeyDown(KeyCode.I) && MainGameManager.Instance.useCheat)
         {
             TakeDamage(40);
         }
         
         // Cheat: 按 O 键杀死玩家
-        if (Input.GetKeyDown(KeyCode.O))
+        if (Input.GetKeyDown(KeyCode.O) && MainGameManager.Instance.useCheat)
         {
             currentHealth = 0;
             Debug.Log("Cheat: 玩家已死亡");

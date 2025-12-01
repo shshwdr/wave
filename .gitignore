@@ -6,6 +6,9 @@ Assets/StreamingAssets/build_info
 # .env
 .env
 
+windowsBuild/
+*.zip
+
 # Tools
 __tooltemp
 

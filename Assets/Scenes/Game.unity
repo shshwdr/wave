@@ -5966,7 +5966,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23bdc4accfebd054388d31297203fd89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  showTutorial: 1
+  showTutorial: 0
 --- !u!4 &794148596
 Transform:
   m_ObjectHideFlags: 0
@@ -7937,6 +7937,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 969f7ee0686c8744791c5ee3db369b4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  useCheat: 0
   boardManager: {fileID: 0}
   enemyManager: {fileID: 0}
   mainCamera: {fileID: 0}

@@ -5,9 +5,9 @@ start,You notice a few crumpled instruction notes stuck onto the DJ Deck:,,disab
 ,The wave will fly and smack those off-key monsters until they start questioning their life choices.,,,,,
 ,"After you act, it’s the monsters’ move -- stop them before they reach you!",,,,,
 ,Rule 2:,,,,,
-,Left-drag two Note Tiles to swap their positions.,,enableDrag|disableRightClick,dragTile,board,
-,"Swapping tiles doesn’t end your turn, but swaps are limited, so use them wisely.",,enableRightClick,,exchangeLeft,
-,"Once you blast every enemy off the stage with your sound waves, you win.",,,,enemiesLeft,1
+,Left-drag two Note Tiles to swap their positions.,upPos,enableDrag|disableRightClick,dragTile,board,
+,"Swapping tiles doesn’t end your turn, but swaps are limited, so use them wisely.",upPos,enableRightClick,,exchangeLeft,
+,"Once you blast every enemy off the stage with your sound waves, you win.",upPos,,,enemiesLeft,1
 shop,The DJ Deck suddenly pops out a new sticky note:,,disableShopClose|disableRefresh,,,
 ,Rule 3:,,,,,
 ,"Use gold to buy Effect Modules, make your waves extra shiny!",,,,,
