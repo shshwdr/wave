@@ -11,4 +11,4 @@
 ,"With it, you can tune the world and blast off-key monsters back on pitch.",showObjects_HeroPlay|hideObjects_Hero,,,
 ,You’ll restore harmony to the land and find the Princess to tell her --,showObjects_HeroPrincess|hideObjects_HeroPlay,,,
 ,Please… you’re really out of tune.,hideGroup_bk3|hideGroup_all,,,
-,,hideGroup_all|hideGroup_bk,,,1
+,,hideGroup_bk,,,1

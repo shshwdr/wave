@@ -207,6 +207,16 @@ public class TutorialManager : Singleton<TutorialManager>
                 Debug.Log("教程：启用右键点击");
                 break;
                 
+            case "showshopdrag":
+                ShowShopDrag();
+                Debug.Log("教程：显示商店拖动提示");
+                break;
+                
+            case "hideshopdrag":
+                HideShopDrag();
+                Debug.Log("教程：隐藏商店拖动提示");
+                break;
+                
             default:
                 Debug.LogWarning($"未知的action: {action}");
                 break;
@@ -234,6 +244,28 @@ public class TutorialManager : Singleton<TutorialManager>
         if (shopMenu != null)
         {
             shopMenu.SetRefreshButtonEnabled(enabled);
+        }
+    }
+    
+    /// <summary>
+    /// 显示商店拖动提示
+    /// </summary>
+    private void ShowShopDrag()
+    {
+        if (tutorialMenu != null)
+        {
+            tutorialMenu.ShowShopDrag();
+        }
+    }
+    
+    /// <summary>
+    /// 隐藏商店拖动提示
+    /// </summary>
+    private void HideShopDrag()
+    {
+        if (tutorialMenu != null)
+        {
+            tutorialMenu.HideShopDrag();
         }
     }
     
@@ -338,6 +370,7 @@ public class TutorialManager : Singleton<TutorialManager>
         rightClickEnabled = true;
         SetShopCloseButtonEnabled(true);
         SetShopRefreshButtonEnabled(true);
+        HideShopDrag();
         
         
         // 隐藏教程菜单

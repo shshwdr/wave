@@ -454,7 +454,7 @@ public class StartAnimManager : Singleton<StartAnimManager>
         // 延迟1秒后，将整个parent设为active=false
         if (parent != null)
         {
-            DOVirtual.DelayedCall(1f, () =>
+            DOVirtual.DelayedCall(0.1f, () =>
             {
                 if (parent != null)
                 {

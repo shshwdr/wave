@@ -14,6 +14,7 @@ public class TutorialMenu : MenuBase
     [SerializeField] private Image textBackground;
     [SerializeField] private Button tutorialButton; // 用于点击继续的按钮
     [SerializeField] private Transform normalPos; // 默认位置
+    [SerializeField] private GameObject shopDrag; // 商店拖动提示GameObject
     
     private bool isBlockingInput = false; // 是否拦截输入
     private System.Action onTutorialClicked; // 教程点击回调
@@ -195,5 +196,27 @@ public class TutorialMenu : MenuBase
     /// 是否正在拦截输入
     /// </summary>
     public bool IsBlockingInput => isBlockingInput && IsActive;
+    
+    /// <summary>
+    /// 显示商店拖动提示
+    /// </summary>
+    public void ShowShopDrag()
+    {
+        if (shopDrag != null)
+        {
+            shopDrag.SetActive(true);
+        }
+    }
+    
+    /// <summary>
+    /// 隐藏商店拖动提示
+    /// </summary>
+    public void HideShopDrag()
+    {
+        if (shopDrag != null)
+        {
+            shopDrag.SetActive(false);
+        }
+    }
 }
 
