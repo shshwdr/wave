@@ -1001,8 +1001,15 @@ public class MainGameManager : Singleton<MainGameManager>
         Ally hoveredAlly = GetAllyUnderMouse();
         bool hasAlly = hoveredAlly != null && !hoveredAlly.IsDead;
         
+        // 如果正在处理中（玩家操作到敌人移动结束），不显示tile高亮，但清除已有高亮
+        if (isProcessing)
+        {
+            // 清除高亮，但不更新
+            ClearHighlights();
+            lastHighlightPos = new Vector2Int(-1, -1); // 重置高亮位置
+        }
         // 如果鼠标位置改变了，更新高亮（拖动时不更新高亮）
-        if (isValidGridPos && gridPos != lastHighlightPos && !waitingForSecondSwap && !isDragging)
+        else if (isValidGridPos && gridPos != lastHighlightPos && !waitingForSecondSwap && !isDragging)
         {
             UpdateHighlightTiles(gridPos);
             lastHighlightPos = gridPos;
