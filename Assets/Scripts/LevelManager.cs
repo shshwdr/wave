@@ -82,6 +82,37 @@ public class LevelManager : Singleton<LevelManager>
     }
 
     /// <summary>
+    /// 按顺序获取关卡（0开始）
+    /// </summary>
+    public LevelInfo GetLevelByIndex(int levelIndex)
+    {
+        if (CSVLoader.Instance == null || CSVLoader.Instance.levelInfoMap == null || CSVLoader.Instance.levelInfoMap.Count == 0)
+        {
+            return null;
+        }
+
+        if (CSVLoader.Instance.levelInfoMap.TryGetValue(levelIndex, out LevelInfo levelInfo))
+        {
+            return levelInfo;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 获取关卡总数
+    /// </summary>
+    public int GetLevelCount()
+    {
+        if (CSVLoader.Instance == null || CSVLoader.Instance.levelInfoMap == null)
+        {
+            return 0;
+        }
+
+        return CSVLoader.Instance.levelInfoMap.Count;
+    }
+
+    /// <summary>
     /// 解析关卡敌人字符串
     /// 格式: identifier|数量|identifier|数量...
     /// </summary>
