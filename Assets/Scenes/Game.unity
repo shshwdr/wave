@@ -5437,7 +5437,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8fc86b94e57f11a4488a8b51ef454072, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enable: 0
+  enable: 1
   parent: {fileID: 1146564739}
   textComponent: {fileID: 892084911}
   textCanvasGroup: {fileID: 421403735}
@@ -8886,7 +8886,6 @@ MonoBehaviour:
   allyDescriptionPanel: {fileID: 0}
   allyDescriptionText: {fileID: 0}
   turnBanner: {fileID: 2101469291}
-  mapController: {fileID: 0}
   showShopAtBeginning: 0
   showEventAtBeginning: 0
   allyPrefab: {fileID: 1301853740920789355, guid: 3ae5e562d6ec64c44a24e6e76cced702, type: 3}
