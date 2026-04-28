@@ -18,7 +18,7 @@ public class GameOverDialog : DialogBase
     {
         // 检查是否在困难模式
         bool isInHardMode = GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode();
-        
+        isInHardMode = true;
         if (isInHardMode)
         {
             // 困难模式：显示"Back to Main Menu"而不是"Retry This Level"

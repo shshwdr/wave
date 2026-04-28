@@ -100,6 +100,11 @@ public class StartAnimManager : Singleton<StartAnimManager>
 
     private void Start()
     {
+        if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
+        {
+            enable = false;
+        }
+        
         // 如果不启用，直接隐藏
         if (!enable)
         {
@@ -111,11 +116,6 @@ public class StartAnimManager : Singleton<StartAnimManager>
             {
                 gameObject.SetActive(false);
             }
-            return;
-        }
-        
-        if (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode())
-        {
             return;
         }
         

@@ -76,7 +76,7 @@ Material:
     - _Reflectivity: 10
     - _ScaleRatioA: 0.9
     - _ScaleRatioB: 0.73125
-    - _ScaleRatioC: 0.4309075
+    - _ScaleRatioC: 0.49643582
     - _ScaleX: 1
     - _ScaleY: 1
     - _ShaderFlags: 0
@@ -89,10 +89,10 @@ Material:
     - _StencilWriteMask: 255
     - _TextureHeight: 1024
     - _TextureWidth: 1024
-    - _UnderlayDilate: 0.273
+    - _UnderlayDilate: 0.325
     - _UnderlayOffsetX: -0.496
     - _UnderlayOffsetY: -1
-    - _UnderlaySoftness: 0.424
+    - _UnderlaySoftness: 0.148
     - _VertexOffsetX: 0
     - _VertexOffsetY: 0
     - _WeightBold: 0.75
@@ -103,7 +103,7 @@ Material:
     - _FaceColor: {r: 1, g: 1, b: 1, a: 1}
     - _GlowColor: {r: 0, g: 1, b: 0, a: 0.5}
     - _MaskCoord: {r: 0, g: 0, b: 32767, a: 32767}
-    - _OutlineColor: {r: 0.37626222, g: 0.38642952, b: 0.8879232, a: 1}
+    - _OutlineColor: {r: 0.5149178, g: 0.5209957, b: 0.9646866, a: 1}
     - _ReflectFaceColor: {r: 0, g: 0, b: 0, a: 1}
     - _ReflectOutlineColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
