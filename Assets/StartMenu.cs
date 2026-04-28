@@ -15,6 +15,8 @@ public class StartMenu : MonoBehaviour
     [SerializeField] private GameObject hardModeDisableImage; // 困难模式按钮
     
     [SerializeField] private TMPro.TMP_Text startButtonText; // 开始按钮文本（用于修改文字）
+    [SerializeField] private TMPro.TMP_Text versionText; // 版本号文本
+    [SerializeField] private string versionPrefix = "Version "; // 版本号前缀
     
     [Header("设置")]
     [SerializeField] private float fadeInDuration = 0.5f; // fade in持续时间
@@ -80,6 +82,7 @@ public class StartMenu : MonoBehaviour
         
         // 更新按钮显示
         UpdateButtonDisplay();
+        UpdateVersionDisplay();
     }
     
     /// <summary>
@@ -117,6 +120,19 @@ public class StartMenu : MonoBehaviour
                 startButtonText.text = "Start";
             }
         }
+    }
+
+    /// <summary>
+    /// 更新版本号显示
+    /// </summary>
+    private void UpdateVersionDisplay()
+    {
+        if (versionText == null)
+        {
+            return;
+        }
+
+        versionText.text = versionPrefix + Application.version;
     }
     
     /// <summary>
