@@ -7,16 +7,17 @@ using UnityEngine.UI;
 /// </summary>
 public class MapNode : MonoBehaviour
 {
+    private const string MapNodeSpritePath = "mapNode/";
+
     [Header("节点配置")]
     [SerializeField] private string type = "battle";
     [SerializeField] private Image iconImage;
-    [SerializeField] private Sprite battleSprite;
-    [SerializeField] private Sprite eventSprite;
-    [SerializeField] private Sprite defaultSprite;
 
     private Button nodeButton;
+    private bool isBossNode;
 
     public string Type => type;
+    public bool IsBossNode => isBossNode;
     public Vector2 Position => ((RectTransform)transform).anchoredPosition;
     public bool IsInteractable => nodeButton != null && nodeButton.interactable;
 
@@ -41,12 +42,28 @@ public class MapNode : MonoBehaviour
         RefreshIcon();
     }
 
+    public void SetIsBossNode(bool value)
+    {
+        isBossNode = value;
+        RefreshIcon();
+    }
+
     public void SetInteractable(bool interactable)
     {
         if (nodeButton != null)
         {
             nodeButton.interactable = interactable;
         }
+    }
+
+    public void SetMapVisible(bool visible)
+    {
+        gameObject.SetActive(visible);
+    }
+
+    public void SetVisited(bool visited)
+    {
+        // 预留：可按 visited 调整节点外观
     }
 
     private void HandleClick()
@@ -61,17 +78,33 @@ public class MapNode : MonoBehaviour
             return;
         }
 
+        iconImage.sprite = LoadMapNodeSprite(GetIconResourceName());
+    }
+
+    private string GetIconResourceName()
+    {
+        if (isBossNode && string.Equals(type, "battle", StringComparison.OrdinalIgnoreCase))
+        {
+            return "boss";
+        }
+
         switch ((type ?? string.Empty).ToLower())
         {
             case "battle":
-                iconImage.sprite = battleSprite != null ? battleSprite : defaultSprite;
-                break;
+                return "battle";
             case "event":
-                iconImage.sprite = eventSprite != null ? eventSprite : defaultSprite;
-                break;
+                return "event";
+            case "shop":
+                return "shop";
+            case "heal":
+                return "heal";
             default:
-                iconImage.sprite = defaultSprite;
-                break;
+                return "battle";
         }
+    }
+
+    private static Sprite LoadMapNodeSprite(string resourceName)
+    {
+        return Resources.Load<Sprite>(MapNodeSpritePath + resourceName);
     }
 }

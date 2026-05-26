@@ -14,26 +14,34 @@ public class MapController : MonoBehaviour
 
     private readonly List<IslandController> islandControllers = new List<IslandController>();
     private IslandController currentIsland;
-    private int currentIslandIndex = 0;
+    private readonly HashSet<MapNode> usedShopNodes = new HashSet<MapNode>();
+    private bool revealAllNodesCheat;
 
-    private void Awake()
+    private void Update()
     {
-        CollectIslands();
-        if (mapRoot != null)
+        if (mapRoot != null && !mapRoot.activeInHierarchy)
         {
-            mapRoot.SetActive(false);
+            return;
         }
-        else
+
+        if (Input.GetKeyDown(KeyCode.M) && MainGameManager.Instance != null && MainGameManager.Instance.useCheat)
         {
-            gameObject.SetActive(false);
+            revealAllNodesCheat = !revealAllNodesCheat;
+            if (currentIsland != null)
+            {
+                currentIsland.SetRevealAllNodesCheat(revealAllNodesCheat);
+            }
         }
     }
 
     public void OpenMap()
     {
         InitMap();
-
         SetMapVisible(true);
+        if (currentIsland != null)
+        {
+            currentIsland.RefreshNodeInteraction();
+        }
         MovePlayerToCurrentIsland();
     }
 
@@ -51,19 +59,59 @@ public class MapController : MonoBehaviour
             return;
         }
 
-        currentIslandIndex = Mathf.Clamp(currentIslandIndex, 0, islandControllers.Count - 1);
-        currentIsland = islandControllers[currentIslandIndex];
+        int targetIslandId = GetCurrentLevelIslandId();
+        currentIsland = FindIslandController(targetIslandId);
+        if (currentIsland == null)
+        {
+            currentIsland = islandControllers[0];
+        }
 
         for (int i = 0; i < islandControllers.Count; i++)
         {
-            islandControllers[i].gameObject.SetActive(i == currentIslandIndex);
-            if (i == currentIslandIndex)
+            bool isActive = islandControllers[i] == currentIsland;
+            islandControllers[i].gameObject.SetActive(isActive);
+            if (isActive)
             {
+                islandControllers[i].SetRevealAllNodesCheat(revealAllNodesCheat);
                 islandControllers[i].Init(OnNodeClicked);
             }
         }
 
         MovePlayerToCurrentIsland();
+    }
+
+    private int GetCurrentLevelIslandId()
+    {
+        if (MainGameManager.Instance == null || LevelManager.Instance == null)
+        {
+            return 0;
+        }
+
+        LevelInfo levelInfo = LevelManager.Instance.GetLevelByIndex(MainGameManager.Instance.NextBattleLevelIndex);
+        if (levelInfo != null)
+        {
+            return levelInfo.island;
+        }
+
+        return 0;
+    }
+
+    private IslandController FindIslandController(int islandId)
+    {
+        foreach (IslandController island in islandControllers)
+        {
+            if (island.IslandId == islandId)
+            {
+                return island;
+            }
+        }
+
+        if (islandId >= 0 && islandId < islandControllers.Count)
+        {
+            return islandControllers[islandId];
+        }
+
+        return null;
     }
 
     private void OnNodeClicked(MapNode node)
@@ -73,27 +121,68 @@ public class MapController : MonoBehaviour
             return;
         }
 
-        currentIsland.DisableAllNodeInteraction();
-        currentIsland.MarkNodeCompleted(node);
-        CloseMap();
-
         string nodeType = (node.Type ?? string.Empty).ToLower();
-        if (nodeType == "event")
+
+        if (nodeType == "shop" && usedShopNodes.Contains(node))
         {
-            StartCoroutine(HandleEventNode());
             return;
         }
 
-        //MainGameManager.Instance.StartBattleFromMap();
+        CloseMap();
+
+        switch (nodeType)
+        {
+            case "event":
+                StartCoroutine(HandleEventNode(node));
+                return;
+            case "shop":
+                HandleShopNode(node);
+                return;
+            case "heal":
+                HandleHealNode(node);
+                return;
+            default:
+                currentIsland.MarkNodeCompleted(node);
+                MainGameManager.Instance.StartBattleFromMap(node);
+                return;
+        }
     }
 
-    private IEnumerator HandleEventNode()
+    private void HandleShopNode(MapNode node)
+    {
+        usedShopNodes.Add(node);
+        MainGameManager.Instance.ShowMapShop(() =>
+        {
+            currentIsland.MarkNodeCompleted(node);
+            MainGameManager.Instance.OpenMap();
+        });
+    }
+
+    private void HandleHealNode(MapNode node)
+    {
+        currentIsland.MarkNodeCompleted(node);
+
+        if (PlayerManager.Instance != null)
+        {
+            int healAmount = Mathf.Max(1, Mathf.RoundToInt(PlayerManager.Instance.MaxHealth * 0.3f));
+            PlayerManager.Instance.Heal(healAmount);
+            if (ToastManager.Instance != null)
+            {
+                ToastManager.Instance.ShowToast($"恢复了 {healAmount} 点生命（30%）");
+            }
+        }
+
+        MainGameManager.Instance.OpenMap();
+    }
+
+    private IEnumerator HandleEventNode(MapNode node)
     {
         EventMenu eventMenu = FindObjectOfType<EventMenu>();
         if (eventMenu == null)
         {
             Debug.LogWarning("MapController: 未找到EventMenu，事件节点结束后直接回地图");
-            OpenMap();
+            currentIsland.MarkNodeCompleted(node);
+            MainGameManager.Instance.OpenMap();
             yield break;
         }
 
@@ -105,23 +194,30 @@ public class MapController : MonoBehaviour
             yield return null;
         }
 
-        OpenMap();
+        currentIsland.MarkNodeCompleted(node);
+        MainGameManager.Instance.OpenMap();
     }
 
     private void MovePlayerToCurrentIsland()
     {
-        if (playerSprite == null || currentIsland == null || currentIsland.CharacterPos == null)
+        if (currentIsland == null)
         {
             return;
         }
 
-        playerSprite.anchoredPosition = currentIsland.CharacterPos.anchoredPosition;
+        if (playerSprite != null)
+        {
+            currentIsland.MovePlayerSpriteToCurrentNode(playerSprite);
+            if (currentIsland.CurrentNode == null && currentIsland.CharacterPos != null)
+            {
+                playerSprite.anchoredPosition = currentIsland.CharacterPos.anchoredPosition;
+            }
 
-        // 同步角色朝向（仅匹配X方向的正负）
-        Vector3 playerScale = playerSprite.localScale;
-        float targetDirection = currentIsland.CharacterPos.localScale.x < 0f ? -1f : 1f;
-        playerScale.x = Mathf.Abs(playerScale.x) * targetDirection;
-        playerSprite.localScale = playerScale;
+            Vector3 playerScale = playerSprite.localScale;
+            float targetDirection = currentIsland.CharacterPos != null && currentIsland.CharacterPos.localScale.x < 0f ? -1f : 1f;
+            playerScale.x = Mathf.Abs(playerScale.x) * targetDirection;
+            playerSprite.localScale = playerScale;
+        }
     }
 
     private void CollectIslands()

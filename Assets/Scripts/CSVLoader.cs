@@ -55,6 +55,18 @@ public class LevelInfo
     public string type;
     public string typeIdentifier;
     public string eventType;
+    public int island;
+}
+
+public class IslandInfo
+{
+    public int island;
+    public int battleCount;
+    public int eventCount;
+    public int shopCount;
+    public int healCount;
+
+    public int TotalNodeCount => battleCount + eventCount + shopCount + healCount;
 }
 
 public class EventInfo
@@ -103,6 +115,7 @@ public class CSVLoader : Singleton<CSVLoader>
     public Dictionary<string, SkillInfo> cardInfoMap = new Dictionary<string, SkillInfo>();
     public Dictionary<string, EnemyInfo> enemyInfoMap = new Dictionary<string, EnemyInfo>();
     public Dictionary<int, LevelInfo> levelInfoMap = new Dictionary<int, LevelInfo>();
+    public Dictionary<int, IslandInfo> islandInfoMap = new Dictionary<int, IslandInfo>();
     public Dictionary<string, EventInfo> eventInfoMap = new Dictionary<string, EventInfo>();
     public Dictionary<string, TutorialInfo> tutorialInfoMap = new Dictionary<string, TutorialInfo>();
     public List<TutorialInfo> tutorialInfoList = new List<TutorialInfo>(); // 保持CSV顺序的列表
@@ -128,6 +141,11 @@ public class CSVLoader : Singleton<CSVLoader>
             levelInfo.level = i;
             i++;
             levelInfoMap.Add(levelInfo.level, levelInfo);
+        }
+        var islandInfos = CsvUtil.LoadObjects<IslandInfo>("island");
+        foreach (var islandInfo in islandInfos)
+        {
+            islandInfoMap[islandInfo.island] = islandInfo;
         }
         var eventInfos = CsvUtil.LoadObjects<EventInfo>("event");
         foreach (var eventInfo in eventInfos)
@@ -198,5 +216,15 @@ public class CSVLoader : Singleton<CSVLoader>
                 startAnimInfoMap.Add(startAnimInfo.identifier, startAnimInfo);
             }
         }
+    }
+
+    public IslandInfo GetIslandInfo(int islandId)
+    {
+        if (islandInfoMap != null && islandInfoMap.TryGetValue(islandId, out IslandInfo info))
+        {
+            return info;
+        }
+
+        return null;
     }
 }

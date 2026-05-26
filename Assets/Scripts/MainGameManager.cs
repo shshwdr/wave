@@ -50,6 +50,10 @@ public class MainGameManager : Singleton<MainGameManager>
     
     [Header("回合横幅UI")]
     [SerializeField] private TurnBanner turnBanner;
+    [Header("地图UI")]
+    [SerializeField] private MapController mapController;
+
+    private GameObject alwaysForBattleAndUi;
 
     public bool showShopAtBeginning;
     public bool showEventAtBeginning;
@@ -98,9 +102,13 @@ public class MainGameManager : Singleton<MainGameManager>
     // 玩家等级（起始为0，打一场架升一级）
     private int playerLevel = 0;
     public int PlayerLevel => playerLevel;
+    private int nextBattleLevelIndex = 0;
+    public int NextBattleLevelIndex => nextBattleLevelIndex;
+    private bool battleFromBossMapNode;
     
     // 是否是第一次战斗（用于决定是否清除和生成格子）
     private bool isFirstBattle = true;
+    private bool isMapOpen = false;
     
     // 保存关卡开始时的血量（用于重试关卡）
     private int levelStartHealth = -1;
@@ -182,7 +190,8 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public void PlayerLevelUp()
     {
-        playerLevel++;
+        nextBattleLevelIndex++;
+        playerLevel = nextBattleLevelIndex;
         StartBattle();
     }
 
@@ -246,34 +255,113 @@ public class MainGameManager : Singleton<MainGameManager>
         // 初始化回合横幅UI
         InitTurnBanner();
 
-        // 如果需要在开始时显示事件，先显示事件
-        if (showEventAtBeginning)
+        GameObject battleDecor = GameObject.Find("always for battle and ui");
+        if (battleDecor != null)
         {
-            ShowEventAtStart();
+            alwaysForBattleAndUi = battleDecor;
         }
-        else
-        {
-            // 否则直接开始战斗
-            StartBattle();
 
-            if (showShopAtBeginning)
-            {
-                SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
-                if (skillMenu != null)
-                {
-                    skillMenu.ShowSkillSelection(
-                        () =>
-                        {
-                            // 确认按钮点击，进入下一关
-                            Debug.Log("确认配置，进入下一关");
-                        }
-                    );
-                }
-            }
-        }
+        StartCoroutine(OpenMapAfterTutorialFlow());
 #if !UNITY_EDITOR
         useCheat = false;
 #endif
+    }
+    
+    private IEnumerator OpenMapAfterTutorialFlow()
+    {
+        // 等一帧，避免和TutorialManager.Start执行顺序冲突
+        yield return null;
+
+        if (TutorialManager.Instance != null && TutorialManager.Instance.IsInTutorial)
+        {
+            while (TutorialManager.Instance != null && TutorialManager.Instance.IsInTutorial)
+            {
+                yield return null;
+            }
+        }
+
+        OpenMap();
+    }
+
+    public void StartBattleFromMap(MapNode node = null)
+    {
+        battleFromBossMapNode = node != null && node.IsBossNode;
+        StartBattle();
+    }
+
+    /// <summary>
+    /// 地图商店节点：可刷新、正常扣费
+    /// </summary>
+    public void ShowMapShop(System.Action onComplete)
+    {
+        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>(true);
+        if (skillMenu == null)
+        {
+            onComplete?.Invoke();
+            return;
+        }
+
+        skillMenu.ShowSkillSelection(onComplete, SkillSelectMenu.ShopMode.MapShop);
+    }
+
+    /// <summary>
+    /// 战斗胜利奖励商店：免费三选一、无刷新、选后隐藏其余
+    /// </summary>
+    public void ShowBattleRewardShop(System.Action onComplete)
+    {
+        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>(true);
+        if (skillMenu == null)
+        {
+            onComplete?.Invoke();
+            return;
+        }
+
+        skillMenu.ShowSkillSelection(onComplete, SkillSelectMenu.ShopMode.BattleReward);
+    }
+
+    public void OpenMap()
+    {
+        isMapOpen = true;
+        ClearHighlights();
+        SetBattleViewVisible(false);
+
+        if (mapController == null)
+        {
+            mapController = FindObjectOfType<MapController>(true);
+        }
+
+        if (mapController != null)
+        {
+            mapController.OpenMap();
+        }
+        else
+        {
+            Debug.LogWarning("MainGameManager: 未找到MapController，回退为直接开战");
+            StartBattle();
+        }
+    }
+
+    private void SetBattleViewVisible(bool visible)
+    {
+        BattleUI battleUI = FindObjectOfType<BattleUI>(true);
+        if (battleUI != null)
+        {
+            battleUI.gameObject.SetActive(visible);
+        }
+
+        if (boardManager == null)
+        {
+            boardManager = FindObjectOfType<BoardManager>();
+        }
+        if (boardManager != null)
+        {
+            boardManager.gameObject.SetActive(visible);
+        }
+
+        if (alwaysForBattleAndUi != null)
+        {
+            alwaysForBattleAndUi.SetActive(visible);
+        }
     }
 
     /// <summary>
@@ -413,6 +501,9 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public void StartBattle()
     {
+        isMapOpen = false;
+        SetBattleViewVisible(true);
+
         // 重置游戏状态
         isProcessing = false;
         currentState = GameState.PlayerTurn;
@@ -443,9 +534,9 @@ public class MainGameManager : Singleton<MainGameManager>
             isFirstBattle = false;
         }
 
-        // 进入战斗模式时载入敌人
-        // 从关卡管理器获取关卡信息并生成敌人
-        currentLevelInfo = LevelManager.Instance.GetNextLevel(playerLevel);
+        // 进入战斗模式时按顺序读取关卡
+        currentLevelInfo = LevelManager.Instance.GetLevelByIndex(nextBattleLevelIndex);
+        playerLevel = nextBattleLevelIndex;
         
         // 检查是否是boss战斗
         bool isBossFight = currentLevelInfo != null && !string.IsNullOrEmpty(currentLevelInfo.bossIdentifier);
@@ -497,6 +588,8 @@ public class MainGameManager : Singleton<MainGameManager>
             enemyManager.SpawnEnemiesRandomly();
             currentBoss = null;
         }
+
+        battleFromBossMapNode = false;
 
         // 开始新回合统计
         if (StatisticsManager.Instance != null)
@@ -599,8 +692,8 @@ public class MainGameManager : Singleton<MainGameManager>
             // Puzzle游戏模式：只能右键消除，禁用左键移动
             HandlePuzzlePlayInput();
         }
-        // 玩家回合 - 处理输入和鼠标悬停（只有在没有处理中时）
-        else if (currentState == GameState.PlayerTurn && !isProcessing)
+        // 玩家回合 - 处理输入和鼠标悬停（只有在没有处理中时，且不在地图界面）
+        else if (currentState == GameState.PlayerTurn && !isProcessing && !isMapOpen)
         {
             HandlePlayerInput();
             
@@ -991,7 +1084,8 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         Vector2Int gridPos = GetMouseGridPosition();
-        bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(gridPos);
+        bool isValidGridPos = boardManager != null && boardManager.IsBoardInitialized
+            && boardManager.IsValidPosition(gridPos);
         
         // 检查是否悬停在敌人上
         Enemy hoveredEnemy = GetEnemyUnderMouse();
@@ -1687,7 +1781,7 @@ public class MainGameManager : Singleton<MainGameManager>
     {
         ClearHighlights();
 
-        if (boardManager == null)
+        if (boardManager == null || !boardManager.IsBoardInitialized)
             return;
 
         // 获取所有连通的同色格子
@@ -3028,10 +3122,11 @@ public class MainGameManager : Singleton<MainGameManager>
         
         EnemyInfo bossInfo = CSVLoader.Instance.enemyInfoMap[bossIdentifier];
         
-        // Boss位置：y = boardHeight - 1.5（非整数位置），最右列再往右两格（x = boardWidth + 1）
+        // Boss位置：地图 Boss 节点战斗时生成在棋盘最右侧（离玩家最远）
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
-        Vector2Int bossGridPos = new Vector2Int(boardWidth , boardHeight - 2); // 用于创建显示图片的参考位置
+        int bossX = battleFromBossMapNode ? boardWidth + 1 : boardWidth;
+        Vector2Int bossGridPos = new Vector2Int(bossX, boardHeight - 2);
         Vector3 bossWorldPos = boardManager.GridToWorldPosition(bossGridPos);
         // 调整y坐标到 boardHeight - 1.5 的位置
         
@@ -3084,6 +3179,7 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         
         currentBoss = boss;
+        battleFromBossMapNode = false;
         Debug.Log($"Boss spawned: {bossIdentifier}, HP: {calculatedHP}");
     }
     
@@ -3244,92 +3340,22 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public void RetryLevel()
     {
-        // 如果玩家等级 > 0，回到这场战斗前的商店页面
-        // 如果玩家等级 == 0（第一关），重新开始这场战斗
-        if (playerLevel > 0)
+        // 重新开始当前战斗（地图系统下不再回退到商店）
+        if (PlayerManager.Instance != null)
         {
-            playerLevel--;
-            // 回到商店页面
-            // 先重置游戏状态
-            isProcessing = false;
-            currentState = GameState.PlayerTurn;
-            
-            // 清空棋盘（重试时需要重新开始）
-            if (boardManager != null)
+            if (levelStartHealth >= 0)
             {
-                boardManager.ClearBoard();
-                // 重新初始化棋盘，因为清空后需要重新生成tiles
-                boardManager.InitializeBoard();
-                boardManager.GenerateRandomColors();
+                PlayerManager.Instance.SetHealth(levelStartHealth);
             }
-            
-            // 清除战斗场景上的所有内容
-            ClearBattleScene();
-            
-            // 关闭技能显示和敌人描述显示
-            if (skillDisplayPanel != null)
+            if (levelStartGold >= 0)
             {
-                skillDisplayPanel.SetActive(false);
+                PlayerManager.Instance.SetGold(levelStartGold);
             }
-            if (enemyDescriptionPanel != null)
-            {
-                enemyDescriptionPanel.SetActive(false);
-            }
-            if (allyDescriptionPanel != null)
-            {
-                allyDescriptionPanel.SetActive(false);
-            }
+        }
 
-            if (PlayerManager.Instance != null)
-            {
-                if (levelStartHealth >= 0)
-                {
-                    PlayerManager.Instance.SetHealth(levelStartHealth);
-                }
-                if (levelStartGold >= 0)
-                {
-                    PlayerManager.Instance.SetGold(levelStartGold);
-                }
-            }
-            // 显示商店页面
-            SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
-            if (skillMenu != null)
-            {
-                skillMenu.ShowSkillSelection(
-                    () =>
-                    {
-                        // 确认按钮点击，进入下一关
-                        PlayerLevelUp(); // 调用PlayerLevelUp()来重新开始战斗
-                    }
-                );
-            }
-            else
-            {
-                Debug.LogWarning("SkillSelectMenu not found, cannot show shop");
-            }
-        }
-        else
-        {
-            // 第一关死亡，重新开始战斗
-            // 恢复血量和金币到关卡开始前
-            if (PlayerManager.Instance != null)
-            {
-                if (levelStartHealth >= 0)
-                {
-                    PlayerManager.Instance.SetHealth(levelStartHealth);
-                }
-                if (levelStartGold >= 0)
-                {
-                    PlayerManager.Instance.SetGold(levelStartGold);
-                }
-            }
-            
-            // 清除战斗场景上的所有内容
-            ClearBattleScene();
-            
-            // 重新开始当前关卡
-            StartBattle();
-        }
+        // 清除战斗场景上的所有内容
+        ClearBattleScene();
+        StartBattle();
     }
 
     /// <summary>
@@ -3412,44 +3438,15 @@ public class MainGameManager : Singleton<MainGameManager>
                     PlayerManager.Instance.EndBattle();
                 }
 
-                // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
-                bool isGameWin = false;
-                if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
+                nextBattleLevelIndex++;
+                playerLevel = nextBattleLevelIndex;
+
+                if (TryHandleGameWin())
                 {
-                    // 找到levelInfoMap中level值最大的那个
-                    int maxLevel = -1;
-                    foreach (var kvp in CSVLoader.Instance.levelInfoMap)
-                    {
-                        if (kvp.Value.level > maxLevel)
-                        {
-                            maxLevel = kvp.Value.level;
-                        }
-                    }
-                    
-                    // 如果当前玩家等级已经达到或超过最大level，说明战胜了最后一个level
-                    if (maxLevel >= 0 && playerLevel >= maxLevel)
-                    {
-                        isGameWin = true;
-                    }
+                    return;
                 }
-                
-                // 设置hasWonGame标识
-                if (isGameWin && GameDataManager.Instance != null)
-                {
-                    GameDataManager.Instance.SetHasWonGame(true);
-                }
-                
-                if (isGameWin)
-                {
-                    // 最终胜利：先显示最终event，然后显示统计菜单
-                    ShowFinalEventMenu();
-                }
-                else
-                {
-                    // 战斗-事件-商店-战斗的循环
-                    // 先显示事件，然后显示商店
-                    ShowEventMenu();
-                }                
+
+                OnBattleVictoryContinue();
             });
         }
         else
@@ -3466,48 +3463,58 @@ public class MainGameManager : Singleton<MainGameManager>
                     PlayerManager.Instance.EndBattle();
                 }
 
-                // 检查是否是最终胜利（战胜了levelInfo中的最后一个level）
-                bool isGameWin = false;
-                if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
+                nextBattleLevelIndex++;
+                playerLevel = nextBattleLevelIndex;
+
+                if (TryHandleGameWin())
                 {
-                    // 找到levelInfoMap中level值最大的那个
-                    int maxLevel = -1;
-                    foreach (var kvp in CSVLoader.Instance.levelInfoMap)
-                    {
-                        if (kvp.Value.level > maxLevel)
-                        {
-                            maxLevel = kvp.Value.level;
-                        }
-                    }
-                    
-                    // 如果当前玩家等级已经达到或超过最大level，说明战胜了最后一个level
-                    if (maxLevel >= 0 && playerLevel >= maxLevel)
-                    {
-                        isGameWin = true;
-                    }
+                    return;
                 }
-                
-                // 设置hasWonGame标识
-                if (isGameWin && GameDataManager.Instance != null)
-                {
-                    GameDataManager.Instance.SetHasWonGame(true);
-                }
-                
-                if (isGameWin)
-                {
-                    // 最终胜利：先显示最终event，然后显示统计菜单
-                    ShowFinalEventMenu();
-                }
-                else
-                {
-                    // 战斗-事件-商店-战斗的循环
-                    // 先显示事件，然后显示商店
-                    ShowEventMenu();
-                }
+
+                OnBattleVictoryContinue();
             });
         }
     }
     
+    private bool TryHandleGameWin()
+    {
+        bool isGameWin = false;
+        if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
+        {
+            int maxLevel = -1;
+            foreach (var kvp in CSVLoader.Instance.levelInfoMap)
+            {
+                if (kvp.Value.level > maxLevel)
+                {
+                    maxLevel = kvp.Value.level;
+                }
+            }
+
+            if (maxLevel >= 0 && nextBattleLevelIndex > maxLevel)
+            {
+                isGameWin = true;
+            }
+        }
+
+        if (isGameWin && GameDataManager.Instance != null)
+        {
+            GameDataManager.Instance.SetHasWonGame(true);
+        }
+
+        if (isGameWin)
+        {
+            ShowFinalEventMenu();
+            return true;
+        }
+
+        return false;
+    }
+
+    private void OnBattleVictoryContinue()
+    {
+        ShowBattleRewardShop(() => OpenMap());
+    }
+
     /// <summary>
     /// 显示事件菜单
     /// </summary>

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,9 +9,9 @@ using UnityEngine.UI;
 public class IslandController : MonoBehaviour
 {
     [Header("岛屿配置")]
+    [SerializeField] private int islandId;
     [SerializeField] private Transform mapNodeParent;
     [SerializeField] private RectTransform characterPos;
-    [SerializeField] private int nodeCount = 9;
     [SerializeField] private Image linePrefab;
     [SerializeField] private RectTransform lineParent;
 
@@ -18,10 +19,21 @@ public class IslandController : MonoBehaviour
     private readonly List<MapNode> activeNodes = new List<MapNode>();
     private readonly List<Image> spawnedLines = new List<Image>();
     private readonly Dictionary<MapNode, HashSet<MapNode>> graph = new Dictionary<MapNode, HashSet<MapNode>>();
-    private readonly HashSet<MapNode> completedNodes = new HashSet<MapNode>();
-    private readonly List<MapNode> unlockedNodes = new List<MapNode>();
+    private readonly HashSet<MapNode> unlockedNodes = new HashSet<MapNode>();
+    private readonly HashSet<MapNode> inaccessibleNodes = new HashSet<MapNode>();
+    private readonly HashSet<MapNode> visitedNodes = new HashSet<MapNode>();
 
+    private MapNode entryNode;
+    private MapNode currentNode;
+    private MapNode bossNode;
+    private bool mapInitialized;
+    private bool revealAllNodesCheat;
+    private Action<MapNode> nodeClickHandler;
+
+    public int IslandId => islandId;
     public RectTransform CharacterPos => characterPos;
+    public MapNode CurrentNode => currentNode;
+    public MapNode BossNode => bossNode;
     public IReadOnlyList<MapNode> ActiveNodes => activeNodes;
 
     private void Awake()
@@ -29,31 +41,47 @@ public class IslandController : MonoBehaviour
         CollectNodes();
     }
 
-    public void Init(System.Action<MapNode> onNodeClicked)
+    public void Init(Action<MapNode> onNodeClicked, bool forceReset = false)
     {
+        nodeClickHandler = onNodeClicked;
         CollectNodes();
-        ClearLines();
-        completedNodes.Clear();
-        unlockedNodes.Clear();
 
-        SelectActiveNodes();
-        BuildNodeTypes();
-        BuildConnections();
-
-        foreach (MapNode node in allNodes)
+        if (mapInitialized && !forceReset)
         {
-            bool active = activeNodes.Contains(node);
-            node.gameObject.SetActive(active);
-            node.OnNodeClicked -= onNodeClicked;
-            if (active)
-            {
-                node.OnNodeClicked += onNodeClicked;
-                node.SetInteractable(false);
-            }
+            RefreshMapState();
+            return;
         }
 
-        MapNode startNode = GetNearestNode(characterPos != null ? characterPos.anchoredPosition : Vector2.zero, activeNodes);
-        SetOnlyStartNodeInteractable(startNode);
+        mapInitialized = false;
+        revealAllNodesCheat = false;
+        ClearLines();
+        unlockedNodes.Clear();
+        inaccessibleNodes.Clear();
+        visitedNodes.Clear();
+        entryNode = null;
+        currentNode = null;
+        bossNode = null;
+
+        SelectActiveNodes();
+        BuildConnections();
+        BuildNodeTypes();
+
+        currentNode = null;
+        if (entryNode != null)
+        {
+            unlockedNodes.Add(entryNode);
+            visitedNodes.Add(entryNode);
+        }
+
+        mapInitialized = true;
+        BindNodes();
+        RefreshMapState();
+    }
+
+    public void SetRevealAllNodesCheat(bool reveal)
+    {
+        revealAllNodesCheat = reveal;
+        RefreshMapState();
     }
 
     public void MarkNodeCompleted(MapNode node)
@@ -63,16 +91,115 @@ public class IslandController : MonoBehaviour
             return;
         }
 
-        completedNodes.Add(node);
-        UnlockConnectedNodes(node);
-        node.SetInteractable(false);
+        currentNode = node;
+        visitedNodes.Add(node);
+        unlockedNodes.Add(node);
+
+        if (!IsShopNode(node))
+        {
+            inaccessibleNodes.Add(node);
+        }
+
+        UnlockAdjacentNodes(node);
+        RefreshMapState();
     }
 
-    public void DisableAllNodeInteraction()
+    public void RefreshNodeInteraction()
     {
-        foreach (MapNode node in activeNodes)
+        if (mapInitialized)
         {
-            node.SetInteractable(false);
+            RefreshMapState();
+        }
+    }
+
+    public void MovePlayerSpriteToCurrentNode(RectTransform playerSprite)
+    {
+        if (playerSprite == null || currentNode == null)
+        {
+            return;
+        }
+
+        playerSprite.anchoredPosition = currentNode.Position;
+    }
+
+    private void BindNodes()
+    {
+        foreach (MapNode node in allNodes)
+        {
+            bool active = activeNodes.Contains(node);
+            node.OnNodeClicked -= nodeClickHandler;
+            if (active)
+            {
+                node.OnNodeClicked += nodeClickHandler;
+            }
+        }
+    }
+
+    private void RefreshMapState()
+    {
+        HashSet<MapNode> visibleNodes = BuildVisibleNodeSet();
+
+        foreach (MapNode node in allNodes)
+        {
+            bool active = activeNodes.Contains(node);
+            if (!active)
+            {
+                node.SetMapVisible(false);
+                continue;
+            }
+
+            bool visible = visibleNodes.Contains(node);
+            node.SetMapVisible(visible);
+            if (!visible)
+            {
+                node.SetInteractable(false);
+                continue;
+            }
+
+            bool canClick = unlockedNodes.Contains(node) && !inaccessibleNodes.Contains(node);
+            node.SetInteractable(canClick);
+            node.SetVisited(visitedNodes.Contains(node));
+        }
+
+        RefreshLineVisibility(visibleNodes);
+    }
+
+    private HashSet<MapNode> BuildVisibleNodeSet()
+    {
+        HashSet<MapNode> visible = new HashSet<MapNode>();
+        if (revealAllNodesCheat)
+        {
+            foreach (MapNode node in activeNodes)
+            {
+                visible.Add(node);
+            }
+            return visible;
+        }
+
+        foreach (MapNode node in visitedNodes)
+        {
+            if (activeNodes.Contains(node))
+            {
+                visible.Add(node);
+            }
+        }
+
+        return visible;
+    }
+
+    private void RefreshLineVisibility(HashSet<MapNode> visibleNodes)
+    {
+        for (int i = 0; i < spawnedLines.Count; i++)
+        {
+            Image line = spawnedLines[i];
+            if (line == null)
+            {
+                continue;
+            }
+
+            MapNodeLineBinding binding = line.GetComponent<MapNodeLineBinding>();
+            bool show = binding == null || (visibleNodes.Contains(binding.NodeA) && visibleNodes.Contains(binding.NodeB));
+            line.gameObject.SetActive(show);
         }
     }
 
@@ -91,12 +218,14 @@ public class IslandController : MonoBehaviour
             return;
         }
 
-        int targetCount = Mathf.Clamp(nodeCount, 1, allNodes.Count);
-        List<MapNode> pool = new List<MapNode>(allNodes);
+        IslandInfo islandInfo = CSVLoader.Instance != null ? CSVLoader.Instance.GetIslandInfo(islandId) : null;
+        int targetCount = islandInfo != null ? islandInfo.TotalNodeCount : 9;
+        targetCount = Mathf.Clamp(targetCount, 1, allNodes.Count);
 
+        List<MapNode> pool = new List<MapNode>(allNodes);
         while (activeNodes.Count < targetCount && pool.Count > 0)
         {
-            int randomIndex = Random.Range(0, pool.Count);
+            int randomIndex = UnityEngine.Random.Range(0, pool.Count);
             activeNodes.Add(pool[randomIndex]);
             pool.RemoveAt(randomIndex);
         }
@@ -109,17 +238,61 @@ public class IslandController : MonoBehaviour
             return;
         }
 
-        MapNode startNode = GetNearestNode(characterPos != null ? characterPos.anchoredPosition : Vector2.zero, activeNodes);
-        List<MapNode> candidates = new List<MapNode>(activeNodes);
-        if (startNode != null)
+        IslandInfo islandInfo = CSVLoader.Instance != null ? CSVLoader.Instance.GetIslandInfo(islandId) : null;
+        int battleTotal = islandInfo != null ? islandInfo.battleCount : Mathf.Min(7, activeNodes.Count);
+        int eventTotal = islandInfo != null ? islandInfo.eventCount : Mathf.Min(2, Mathf.Max(0, activeNodes.Count - battleTotal));
+        int shopTotal = islandInfo != null ? islandInfo.shopCount : 0;
+        int healTotal = islandInfo != null ? islandInfo.healCount : 0;
+
+        int expectedTotal = battleTotal + eventTotal + shopTotal + healTotal;
+        if (expectedTotal != activeNodes.Count)
         {
-            startNode.SetType("battle");
-            candidates.Remove(startNode);
+            Debug.LogWarning($"Island {islandId}: island.csv 节点总数({expectedTotal})与选中节点数({activeNodes.Count})不一致，将按 CSV 配额分配并截断/补齐为 battle");
+            while (battleTotal + eventTotal + shopTotal + healTotal < activeNodes.Count)
+            {
+                battleTotal++;
+            }
+            while (battleTotal + eventTotal + shopTotal + healTotal > activeNodes.Count && battleTotal > 0)
+            {
+                battleTotal--;
+            }
         }
 
-        int battleTotal = Mathf.Min(7, activeNodes.Count);
-        int eventTotal = Mathf.Min(2, Mathf.Max(0, activeNodes.Count - battleTotal));
-        int assignedBattle = startNode != null ? 1 : 0;
+        Vector2 playerPos = characterPos != null ? characterPos.anchoredPosition : Vector2.zero;
+        entryNode = GetNearestNode(playerPos, activeNodes);
+        bossNode = GetFarthestNode(playerPos, activeNodes);
+
+        foreach (MapNode node in activeNodes)
+        {
+            node.SetIsBossNode(false);
+        }
+
+        List<MapNode> candidates = new List<MapNode>(activeNodes);
+        int assignedBattle = 0;
+
+        if (entryNode != null)
+        {
+            entryNode.SetType("battle");
+            candidates.Remove(entryNode);
+            assignedBattle++;
+        }
+
+        if (bossNode != null && bossNode != entryNode && battleTotal > assignedBattle)
+        {
+            bossNode.SetType("battle");
+            bossNode.SetIsBossNode(true);
+            candidates.Remove(bossNode);
+            assignedBattle++;
+        }
+        else if (bossNode != null && bossNode == entryNode)
+        {
+            bossNode.SetIsBossNode(true);
+        }
+
+        AssignBattleToInitialNeighbors(entryNode, candidates, ref assignedBattle);
+
+        // 起点邻接战斗节点可能超出 CSV 的 battleCount，以实际分配为准
+        battleTotal = Mathf.Max(battleTotal, assignedBattle);
 
         Shuffle(candidates);
         foreach (MapNode node in candidates)
@@ -138,8 +311,55 @@ public class IslandController : MonoBehaviour
                 continue;
             }
 
+            if (shopTotal > 0)
+            {
+                node.SetType("shop");
+                shopTotal--;
+                continue;
+            }
+
+            if (healTotal > 0)
+            {
+                node.SetType("heal");
+                healTotal--;
+                continue;
+            }
+
             node.SetType("battle");
         }
+    }
+
+    /// <summary>
+    /// 开局与起点相连、玩家最初能走到的节点一律为战斗
+    /// </summary>
+    private void AssignBattleToInitialNeighbors(MapNode startNode, List<MapNode> candidates, ref int assignedBattle)
+    {
+        if (startNode == null || !graph.TryGetValue(startNode, out HashSet<MapNode> neighbors))
+        {
+            return;
+        }
+
+        foreach (MapNode neighbor in neighbors)
+        {
+            if (!candidates.Contains(neighbor))
+            {
+                continue;
+            }
+
+            neighbor.SetType("battle");
+            candidates.Remove(neighbor);
+            assignedBattle++;
+        }
+    }
+
+    private Vector2 GetPlayerReferencePosition()
+    {
+        if (currentNode != null)
+        {
+            return currentNode.Position;
+        }
+
+        return characterPos != null ? characterPos.anchoredPosition : Vector2.zero;
     }
 
     private void BuildConnections()
@@ -150,7 +370,6 @@ public class IslandController : MonoBehaviour
             graph[node] = new HashSet<MapNode>();
         }
 
-        // 先按“最近距离+1.5倍阈值”连线
         foreach (MapNode node in activeNodes)
         {
             float nearestDistance = float.MaxValue;
@@ -192,7 +411,6 @@ public class IslandController : MonoBehaviour
             }
         }
 
-        // 再把不连通的组拼起来
         while (true)
         {
             List<List<MapNode>> groups = GetConnectedGroups();
@@ -274,40 +492,23 @@ public class IslandController : MonoBehaviour
         return groups;
     }
 
-    private void UnlockConnectedNodes(MapNode node)
+    private void UnlockAdjacentNodes(MapNode node)
     {
-        if (!graph.TryGetValue(node, out HashSet<MapNode> connected))
+        if (!graph.TryGetValue(node, out HashSet<MapNode> neighbors))
         {
             return;
         }
 
-        foreach (MapNode next in connected)
+        foreach (MapNode next in neighbors)
         {
-            if (completedNodes.Contains(next))
-            {
-                continue;
-            }
-
-            if (!unlockedNodes.Contains(next))
-            {
-                unlockedNodes.Add(next);
-            }
-
-            next.SetInteractable(false);
+            unlockedNodes.Add(next);
+            visitedNodes.Add(next);
         }
     }
 
-    private void SetOnlyStartNodeInteractable(MapNode startNode)
+    private static bool IsShopNode(MapNode node)
     {
-        foreach (MapNode node in activeNodes)
-        {
-            bool isStartNode = node == startNode;
-            node.SetInteractable(isStartNode);
-            if (isStartNode && !unlockedNodes.Contains(node))
-            {
-                unlockedNodes.Add(node);
-            }
-        }
+        return string.Equals(node?.Type, "shop", StringComparison.OrdinalIgnoreCase);
     }
 
     private void Connect(MapNode a, MapNode b)
@@ -340,16 +541,13 @@ public class IslandController : MonoBehaviour
                 {
                     if (graph[node].Count == 2)
                     {
-                        // 节点删到剩两条边时：30%继续检查，70%直接到下一个节点
-                        if (Random.value > 0.3f)
+                        if (UnityEngine.Random.value > 0.3f)
                         {
                             break;
                         }
                     }
 
                     MapNode other = neighbours[j];
-
-                    // 无向边仅处理一次
                     if (node.GetInstanceID() > other.GetInstanceID())
                     {
                         continue;
@@ -407,7 +605,6 @@ public class IslandController : MonoBehaviour
             MapNode node = activeNodes[i];
             foreach (MapNode other in graph[node])
             {
-                // 无向边仅生成一次
                 if (node.GetInstanceID() < other.GetInstanceID())
                 {
                     SpawnLine(node, other);
@@ -427,6 +624,14 @@ public class IslandController : MonoBehaviour
         Image line = Instantiate(linePrefab, parent);
         line.gameObject.SetActive(true);
         spawnedLines.Add(line);
+
+        MapNodeLineBinding binding = line.gameObject.GetComponent<MapNodeLineBinding>();
+        if (binding == null)
+        {
+            binding = line.gameObject.AddComponent<MapNodeLineBinding>();
+        }
+        binding.NodeA = a;
+        binding.NodeB = b;
 
         RectTransform lineRect = line.rectTransform;
         Vector2 from = a.Position;
@@ -468,14 +673,40 @@ public class IslandController : MonoBehaviour
         return nearest;
     }
 
+    private static MapNode GetFarthestNode(Vector2 position, List<MapNode> candidates)
+    {
+        MapNode farthest = null;
+        float best = float.MinValue;
+        foreach (MapNode node in candidates)
+        {
+            float distance = Vector2.Distance(position, node.Position);
+            if (distance > best)
+            {
+                best = distance;
+                farthest = node;
+            }
+        }
+
+        return farthest;
+    }
+
     private static void Shuffle<T>(IList<T> list)
     {
         for (int i = list.Count - 1; i > 0; i--)
         {
-            int j = Random.Range(0, i + 1);
+            int j = UnityEngine.Random.Range(0, i + 1);
             T temp = list[i];
             list[i] = list[j];
             list[j] = temp;
         }
     }
+}
+
+/// <summary>
+/// 地图连线与节点的绑定，用于按可见性隐藏连线
+/// </summary>
+public class MapNodeLineBinding : MonoBehaviour
+{
+    public MapNode NodeA;
+    public MapNode NodeB;
 }

@@ -39,6 +39,7 @@ public class BoardManager : MonoBehaviour
     public int Width => boardWidth;
     public int Height => boardHeight;
     public TileCell[,] Board => board;
+    public bool IsBoardInitialized => board != null;
 
     private void Awake()
     {
@@ -181,11 +182,11 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public TileCell GetTile(Vector2Int gridPos)
     {
-        if (IsValidPosition(gridPos))
+        if (board == null || !IsValidPosition(gridPos))
         {
-            return board[gridPos.x, gridPos.y];
+            return null;
         }
-        return null;
+        return board[gridPos.x, gridPos.y];
     }
     
     /// <summary>
@@ -193,11 +194,10 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public void SetTile(Vector2Int gridPos, TileCell tile)
     {
-        if (IsValidPosition(gridPos))
+        if (board != null && IsValidPosition(gridPos))
         {
             board[gridPos.x, gridPos.y] = tile;
         }
-
     }
     
     /// <summary>

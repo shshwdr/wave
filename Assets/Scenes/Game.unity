@@ -4289,7 +4289,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &545901390
 RectTransform:
   m_ObjectHideFlags: 0
@@ -8886,6 +8886,7 @@ MonoBehaviour:
   allyDescriptionPanel: {fileID: 0}
   allyDescriptionText: {fileID: 0}
   turnBanner: {fileID: 2101469291}
+  mapController: {fileID: 545901391}
   showShopAtBeginning: 0
   showEventAtBeginning: 0
   allyPrefab: {fileID: 1301853740920789355, guid: 3ae5e562d6ec64c44a24e6e76cced702, type: 3}

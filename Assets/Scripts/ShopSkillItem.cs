@@ -20,6 +20,7 @@ public class ShopSkillItem : MonoBehaviour
 
     private SkillInfo skillInfo;
     private SkillSelectMenu parentMenu;
+    private bool hidePrice;
     
     /// <summary>
     /// 获取技能identifier（用于外部访问）
@@ -29,10 +30,11 @@ public class ShopSkillItem : MonoBehaviour
     /// <summary>
     /// 初始化商店技能项
     /// </summary>
-    public void Init(SkillInfo info, SkillSelectMenu menu)
+    public void Init(SkillInfo info, SkillSelectMenu menu, bool freePurchase = false)
     {
         skillInfo = info;
         parentMenu = menu;
+        hidePrice = freePurchase;
 
         // 更新显示
         UpdateDisplay();
@@ -83,19 +85,29 @@ public class ShopSkillItem : MonoBehaviour
         //     priceText.text = $"{price}";
         // }
 
+        if (priceText != null)
+        {
+            priceText.gameObject.SetActive(!hidePrice);
+        }
+
         // 更新购买按钮状态
         if (buyButton != null)
         {
             bool isUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier);
             int price = isUpgrade ? skillInfo.upgradePrice : skillInfo.buyPrice;
             
-            // 检查金币是否足够
-            bool canAfford = PlayerManager.Instance != null && PlayerManager.Instance.Gold >= price;
+            bool canAfford = hidePrice || (PlayerManager.Instance != null && PlayerManager.Instance.Gold >= price);
             buyButton.interactable = canAfford;
             
-            // 更新按钮文本
-            priceText.text = price.ToString();
-            actionText.text = (isUpgrade ? "UPGRADE" : "BUY");
+            if (priceText != null && !hidePrice)
+            {
+                priceText.text = price.ToString();
+            }
+
+            if (actionText != null)
+            {
+                actionText.text = hidePrice ? "GET" : (isUpgrade ? "UPGRADE" : "BUY");
+            }
             // TMP_Text buttonText = buyButton.GetComponentInChildren<TMP_Text>();
             // if (buttonText != null)
             // {

@@ -12,6 +12,12 @@ using Random = UnityEngine.Random;
 /// </summary>
 public class SkillSelectMenu : MenuBase
 {
+    public enum ShopMode
+    {
+        MapShop,
+        BattleReward
+    }
+
     [Header("商店区域")]
     [SerializeField] private Transform shopParent; // 商店技能列表容器
     [SerializeField] private GameObject shopSkillItemPrefab; // 商店技能项Prefab（包含技能图标、价格、购买按钮）
@@ -45,6 +51,8 @@ public class SkillSelectMenu : MenuBase
     [SerializeField] private Button statisticsButton;
 
     private Action onConfirm; // 确认按钮的回调
+    private ShopMode currentShopMode = ShopMode.MapShop;
+    private bool battleRewardSkillChosen;
     private Dictionary<string, SkillIconUI> skillIconMap = new Dictionary<string, SkillIconUI>(); // 技能identifier -> UI实例
     private List<GameObject> shopSkillItems = new List<GameObject>(); // 商店技能项列表
     private int currentRefreshPrice = 1; // 当前刷新价格（每次进入商店重置为1）
@@ -139,12 +147,15 @@ public class SkillSelectMenu : MenuBase
     /// <summary>
     /// 显示技能商店界面
     /// </summary>
-    public void ShowSkillSelection(Action onConfirmCallback = null)
+    public void ShowSkillSelection(Action onConfirmCallback = null, ShopMode mode = ShopMode.MapShop)
     {
         onConfirm = onConfirmCallback;
+        currentShopMode = mode;
+        battleRewardSkillChosen = false;
 
         // 重置刷新价格为1
         currentRefreshPrice = 1;
+        ApplyShopModeUi();
         UpdateRefreshButton();
 
         // 如果有锁定的技能，保留它们；否则正常刷新
@@ -170,11 +181,26 @@ public class SkillSelectMenu : MenuBase
         shopFilter.start();
         
         // 开始shop教程
-        if (TutorialManager.Instance != null)
+        if (currentShopMode == ShopMode.MapShop && TutorialManager.Instance != null)
         {
             TutorialManager.Instance.StartTutorial("shop");
         }
     }
+
+    private void ApplyShopModeUi()
+    {
+        bool isBattleReward = currentShopMode == ShopMode.BattleReward;
+        if (refreshButton != null)
+        {
+            refreshButton.gameObject.SetActive(!isBattleReward);
+        }
+        if (lockButton != null)
+        {
+            lockButton.gameObject.SetActive(!isBattleReward);
+        }
+    }
+
+    private bool IsFreeShopMode => currentShopMode == ShopMode.BattleReward;
     
     /// <summary>
     /// 更新商店显示
@@ -207,10 +233,10 @@ public class SkillSelectMenu : MenuBase
                     {
                         SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
                         // 检查技能是否仍然可以购买或升级
-                        bool canBuy = !SkillManager.Instance.HasSkill(identifier) && skillInfo.buyPrice > 0;
+                        bool canBuy = !SkillManager.Instance.HasSkill(identifier) && (IsFreeShopMode || skillInfo.buyPrice > 0);
                         bool canUpgrade = SkillManager.Instance.HasSkill(identifier) && 
                                          SkillManager.Instance.CanUpgradeSkill(identifier) && 
-                                         skillInfo.upgradePrice > 0;
+                                         (IsFreeShopMode || skillInfo.upgradePrice > 0);
                         if (canBuy || canUpgrade)
                         {
                             shopSkills.Add(skillInfo);
@@ -306,10 +332,10 @@ public class SkillSelectMenu : MenuBase
             }
                 
             // 检查是否可以购买或升级
-            bool canBuy = !SkillManager.Instance.HasSkill(skillInfo.identifier) && skillInfo.buyPrice > 0;
+            bool canBuy = !SkillManager.Instance.HasSkill(skillInfo.identifier) && (IsFreeShopMode || skillInfo.buyPrice > 0);
             bool canUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier) && 
                              SkillManager.Instance.CanUpgradeSkill(skillInfo.identifier) && 
-                             skillInfo.upgradePrice > 0;
+                             (IsFreeShopMode || skillInfo.upgradePrice > 0);
             
             if (canBuy || canUpgrade)
             {
@@ -360,10 +386,10 @@ public class SkillSelectMenu : MenuBase
             shopItem = itemObj.AddComponent<ShopSkillItem>();
         }
         
-        shopItem.Init(skillInfo, this);
+        shopItem.Init(skillInfo, this, IsFreeShopMode);
         
         // 更新锁的显示状态
-        shopItem.SetLockVisible(isLocked);
+        shopItem.SetLockVisible(isLocked && !IsFreeShopMode);
     }
     
     /// <summary>
@@ -374,14 +400,21 @@ public class SkillSelectMenu : MenuBase
         if (PlayerManager.Instance == null || SkillManager.Instance == null)
             return;
 
+        if (IsFreeShopMode && battleRewardSkillChosen)
+        {
+            return;
+        }
+
         bool isUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier);
         int price = isUpgrade ? skillInfo.upgradePrice : skillInfo.buyPrice;
 
-        // 检查金币是否足够
-        if (!PlayerManager.Instance.ConsumeGold(price))
+        if (!IsFreeShopMode)
         {
-            Debug.LogWarning($"金币不足，无法购买技能: {skillInfo.identifier}");
-            return;
+            if (!PlayerManager.Instance.ConsumeGold(price))
+            {
+                Debug.LogWarning($"金币不足，无法购买技能: {skillInfo.identifier}");
+                return;
+            }
         }
 
         // 升级或获得技能
@@ -398,11 +431,16 @@ public class SkillSelectMenu : MenuBase
             HighlightSkill(skillInfo.identifier);
         }
 
-        // 隐藏该技能项（从商店中移除，直到刷新后才会重新出现）
-        RemoveShopSkillItem(skillInfo.identifier);
-        
-        // 更新其他商店技能项的状态（检查是否还能购买）
-        UpdateShopSkillItemsState();
+        if (IsFreeShopMode)
+        {
+            battleRewardSkillChosen = true;
+            HideAllShopSkills();
+        }
+        else
+        {
+            RemoveShopSkillItem(skillInfo.identifier);
+            UpdateShopSkillItemsState();
+        }
         
         UpdateColorAreas();
         UpdateBackpack();
@@ -435,6 +473,19 @@ public class SkillSelectMenu : MenuBase
         }
     }
     
+    private void HideAllShopSkills()
+    {
+        foreach (var item in shopSkillItems)
+        {
+            if (item != null)
+            {
+                Destroy(item);
+            }
+        }
+
+        shopSkillItems.Clear();
+    }
+
     /// <summary>
     /// 从商店中移除指定的技能项
     /// </summary>
@@ -511,10 +562,10 @@ public class SkillSelectMenu : MenuBase
                     {
                         SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
                         // 检查技能是否仍然可以购买或升级
-                        bool canBuy = !SkillManager.Instance.HasSkill(identifier) && skillInfo.buyPrice > 0;
+                        bool canBuy = !SkillManager.Instance.HasSkill(identifier) && (IsFreeShopMode || skillInfo.buyPrice > 0);
                         bool canUpgrade = SkillManager.Instance.HasSkill(identifier) && 
                                          SkillManager.Instance.CanUpgradeSkill(identifier) && 
-                                         skillInfo.upgradePrice > 0;
+                                         (IsFreeShopMode || skillInfo.upgradePrice > 0);
                         if (canBuy || canUpgrade)
                         {
                             lockedSkills.Add(skillInfo);
