@@ -79,6 +79,19 @@ public class MapController : MonoBehaviour
         MovePlayerToCurrentIsland();
     }
 
+    /// <summary>
+    /// 当前地图所在岛屿（优先用已激活的岛屿，否则按下一关进度推断）
+    /// </summary>
+    public int GetCurrentIslandId()
+    {
+        if (currentIsland != null)
+        {
+            return currentIsland.IslandId;
+        }
+
+        return GetCurrentLevelIslandId();
+    }
+
     private int GetCurrentLevelIslandId()
     {
         if (MainGameManager.Instance == null || LevelManager.Instance == null)
@@ -122,6 +135,11 @@ public class MapController : MonoBehaviour
 
         string nodeType = (node.Type ?? string.Empty).ToLower();
 
+        if (node.IsUsed && nodeType != "shop")
+        {
+            return;
+        }
+
         CloseMap();
 
         switch (nodeType)
@@ -133,7 +151,7 @@ public class MapController : MonoBehaviour
                 HandleShopNode(node);
                 return;
             case "heal":
-                HandleHealNode(node);
+                StartCoroutine(HandleHealNode(node));
                 return;
             default:
                 currentIsland.MarkNodeCompleted(node);
@@ -151,20 +169,26 @@ public class MapController : MonoBehaviour
         });
     }
 
-    private void HandleHealNode(MapNode node)
+    private IEnumerator HandleHealNode(MapNode node)
     {
-        currentIsland.MarkNodeCompleted(node);
-
-        if (PlayerManager.Instance != null)
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu == null)
         {
-            int healAmount = Mathf.Max(1, Mathf.RoundToInt(PlayerManager.Instance.MaxHealth * 0.3f));
-            PlayerManager.Instance.Heal(healAmount);
-            if (ToastManager.Instance != null)
-            {
-                ToastManager.Instance.ShowToast($"恢复了 {healAmount} 点生命（30%）");
-            }
+            Debug.LogWarning("MapController: 未找到EventMenu，回血节点结束后直接回地图");
+            currentIsland.MarkNodeCompleted(node);
+            MainGameManager.Instance.OpenMap();
+            yield break;
         }
 
+        bool healEventCompleted = false;
+        eventMenu.ShowRestHealEvent(() => { healEventCompleted = true; });
+
+        while (!healEventCompleted)
+        {
+            yield return null;
+        }
+
+        currentIsland.MarkNodeCompleted(node);
         MainGameManager.Instance.OpenMap();
     }
 

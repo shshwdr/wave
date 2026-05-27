@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -62,7 +63,7 @@ public class LevelManager : Singleton<LevelManager>
         // 如果找到匹配的关卡，随机选择一个
         if (matchingLevels.Count > 0)
         {
-            int randomIndex = Random.Range(0, matchingLevels.Count);
+            int randomIndex = UnityEngine.Random.Range(0, matchingLevels.Count);
             return matchingLevels[randomIndex];
         }
 
@@ -79,6 +80,42 @@ public class LevelManager : Singleton<LevelManager>
         }
 
         return highestLevel;
+    }
+
+    /// <summary>
+    /// 是否为 Boss 关卡（type == boss）
+    /// </summary>
+    public static bool IsBossLevel(LevelInfo levelInfo)
+    {
+        return levelInfo != null
+            && levelInfo.type != null
+            && levelInfo.type.Equals("boss", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 获取指定岛屿的 Boss 关卡（地图 Boss 节点用）
+    /// </summary>
+    public bool TryGetBossLevelForIsland(int islandId, out LevelInfo levelInfo, out int levelIndex)
+    {
+        levelInfo = null;
+        levelIndex = -1;
+
+        if (CSVLoader.Instance == null || CSVLoader.Instance.levelInfoMap == null)
+        {
+            return false;
+        }
+
+        foreach (var kvp in CSVLoader.Instance.levelInfoMap)
+        {
+            if (kvp.Value.island == islandId && IsBossLevel(kvp.Value))
+            {
+                levelInfo = kvp.Value;
+                levelIndex = kvp.Key;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

@@ -106,6 +106,8 @@ public class MainGameManager : Singleton<MainGameManager>
     private int nextBattleLevelIndex = 0;
     public int NextBattleLevelIndex => nextBattleLevelIndex;
     private bool battleFromBossMapNode;
+    private bool activeBattleFromBossMapNode;
+    private int activeBattleLevelIndex = -1;
     
     // 是否是第一次战斗（用于决定是否清除和生成格子）
     private bool isFirstBattle = true;
@@ -548,12 +550,29 @@ public class MainGameManager : Singleton<MainGameManager>
             isFirstBattle = false;
         }
 
-        // 进入战斗模式时按顺序读取关卡
-        currentLevelInfo = LevelManager.Instance.GetLevelByIndex(nextBattleLevelIndex);
-        playerLevel = nextBattleLevelIndex;
-        
-        // 检查是否是boss战斗
-        bool isBossFight = currentLevelInfo != null && !string.IsNullOrEmpty(currentLevelInfo.bossIdentifier);
+        // 进入战斗：普通节点按进度顺序；地图 Boss 节点强制使用当前岛屿的 type=boss 关卡
+        activeBattleFromBossMapNode = battleFromBossMapNode;
+        int levelIndex = nextBattleLevelIndex;
+        currentLevelInfo = LevelManager.Instance.GetLevelByIndex(levelIndex);
+
+        if (battleFromBossMapNode)
+        {
+            int islandId = GetBattleIslandId();
+            if (LevelManager.Instance.TryGetBossLevelForIsland(islandId, out LevelInfo bossLevel, out int bossLevelIndex))
+            {
+                currentLevelInfo = bossLevel;
+                levelIndex = bossLevelIndex;
+            }
+            else
+            {
+                Debug.LogWarning($"Boss 地图节点但岛屿 {islandId} 未配置 type=boss 的关卡，回退为顺序关卡 index={levelIndex}");
+            }
+        }
+
+        activeBattleLevelIndex = levelIndex;
+        playerLevel = levelIndex;
+
+        bool isBossFight = LevelManager.IsBossLevel(currentLevelInfo);
         
         // 如果是boss战斗，先显示"Boss Fight!"横幅
         if (isBossFight && turnBanner != null)
@@ -583,8 +602,8 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             enemyManager.SpawnEnemiesFromLevel(currentLevelInfo);
             
-            // 检查是否有boss
-            if (!string.IsNullOrEmpty(currentLevelInfo.bossIdentifier))
+            // Boss 关卡：生成 Boss 实体
+            if (LevelManager.IsBossLevel(currentLevelInfo) && !string.IsNullOrEmpty(currentLevelInfo.bossIdentifier))
             {
                 SpawnBoss(currentLevelInfo.bossIdentifier);
                 // 初始化boss战敌人列表
@@ -3139,7 +3158,7 @@ public class MainGameManager : Singleton<MainGameManager>
         // Boss位置：地图 Boss 节点战斗时生成在棋盘最右侧（离玩家最远）
         int boardWidth = boardManager.Width;
         int boardHeight = boardManager.Height;
-        int bossX = battleFromBossMapNode ? boardWidth + 1 : boardWidth;
+        int bossX = activeBattleFromBossMapNode ? boardWidth + 1 : boardWidth;
         Vector2Int bossGridPos = new Vector2Int(bossX, boardHeight - 2);
         Vector3 bossWorldPos = boardManager.GridToWorldPosition(bossGridPos);
         // 调整y坐标到 boardHeight - 1.5 的位置
@@ -3193,7 +3212,6 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         
         currentBoss = boss;
-        battleFromBossMapNode = false;
         Debug.Log($"Boss spawned: {bossIdentifier}, HP: {calculatedHP}");
     }
     
@@ -3369,6 +3387,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
         // 清除战斗场景上的所有内容
         ClearBattleScene();
+        battleFromBossMapNode = activeBattleFromBossMapNode;
         StartBattle();
     }
 
@@ -3452,8 +3471,7 @@ public class MainGameManager : Singleton<MainGameManager>
                     PlayerManager.Instance.EndBattle();
                 }
 
-                nextBattleLevelIndex++;
-                playerLevel = nextBattleLevelIndex;
+                AdvanceBattleLevelProgress();
 
                 if (TryHandleGameWin())
                 {
@@ -3477,8 +3495,7 @@ public class MainGameManager : Singleton<MainGameManager>
                     PlayerManager.Instance.EndBattle();
                 }
 
-                nextBattleLevelIndex++;
-                playerLevel = nextBattleLevelIndex;
+                AdvanceBattleLevelProgress();
 
                 if (TryHandleGameWin())
                 {
@@ -3490,6 +3507,34 @@ public class MainGameManager : Singleton<MainGameManager>
         }
     }
     
+    private int GetBattleIslandId()
+    {
+        if (mapController != null)
+        {
+            return mapController.GetCurrentIslandId();
+        }
+
+        LevelInfo nextLevel = LevelManager.Instance.GetLevelByIndex(nextBattleLevelIndex);
+        return nextLevel != null ? nextLevel.island : 0;
+    }
+
+    /// <summary>
+    /// 战斗胜利后推进关卡进度（Boss 关可能早于顺序 index，需跳过以免重复）
+    /// </summary>
+    private void AdvanceBattleLevelProgress()
+    {
+        int completedIndex = activeBattleLevelIndex >= 0 ? activeBattleLevelIndex : nextBattleLevelIndex;
+        nextBattleLevelIndex++;
+        if (LevelManager.IsBossLevel(currentLevelInfo) && nextBattleLevelIndex <= completedIndex)
+        {
+            nextBattleLevelIndex = completedIndex + 1;
+        }
+
+        playerLevel = nextBattleLevelIndex;
+        activeBattleLevelIndex = -1;
+        activeBattleFromBossMapNode = false;
+    }
+
     private bool TryHandleGameWin()
     {
         bool isGameWin = false;

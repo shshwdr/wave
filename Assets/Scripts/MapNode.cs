@@ -15,9 +15,11 @@ public class MapNode : MonoBehaviour
 
     private Button nodeButton;
     private bool isBossNode;
+    private bool used;
 
     public string Type => type;
     public bool IsBossNode => isBossNode;
+    public bool IsUsed => used;
     public Vector2 Position => ((RectTransform)transform).anchoredPosition;
     public bool IsInteractable => nodeButton != null && nodeButton.interactable;
 
@@ -59,6 +61,11 @@ public class MapNode : MonoBehaviour
     public void SetMapVisible(bool visible)
     {
         gameObject.SetActive(visible);
+    }
+
+    public void SetUsed(bool value)
+    {
+        used = value;
     }
 
     public void SetVisited(bool visited)

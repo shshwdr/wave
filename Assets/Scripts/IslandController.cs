@@ -20,7 +20,6 @@ public class IslandController : MonoBehaviour
     private readonly List<Image> spawnedLines = new List<Image>();
     private readonly Dictionary<MapNode, HashSet<MapNode>> graph = new Dictionary<MapNode, HashSet<MapNode>>();
     private readonly HashSet<MapNode> unlockedNodes = new HashSet<MapNode>();
-    private readonly HashSet<MapNode> inaccessibleNodes = new HashSet<MapNode>();
     private readonly HashSet<MapNode> visitedNodes = new HashSet<MapNode>();
 
     private MapNode entryNode;
@@ -56,8 +55,11 @@ public class IslandController : MonoBehaviour
         revealAllNodesCheat = false;
         ClearLines();
         unlockedNodes.Clear();
-        inaccessibleNodes.Clear();
         visitedNodes.Clear();
+        foreach (MapNode node in allNodes)
+        {
+            node.SetUsed(false);
+        }
         entryNode = null;
         currentNode = null;
         bossNode = null;
@@ -97,7 +99,7 @@ public class IslandController : MonoBehaviour
 
         if (!IsShopNode(node))
         {
-            inaccessibleNodes.Add(node);
+            node.SetUsed(true);
         }
 
         UnlockAdjacentNodes(node);
@@ -156,10 +158,10 @@ public class IslandController : MonoBehaviour
                 continue;
             }
 
-            // Cheat 模式下：允许点击所有可见节点（不受“已解锁/不可进入”限制）。
+            // Cheat 模式下：允许点击所有可见节点（不受“已解锁/已使用”限制）。
             bool canClick = revealAllNodesCheat
                 ? true
-                : (unlockedNodes.Contains(node) && !inaccessibleNodes.Contains(node));
+                : (unlockedNodes.Contains(node) && !node.IsUsed);
             node.SetInteractable(canClick);
             node.SetVisited(visitedNodes.Contains(node));
         }

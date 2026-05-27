@@ -35,6 +35,10 @@ public class EventMenu : MenuBase
     private TMP_Text nextButtonText; // nextButton的文本组件
     private static HashSet<string> usedEventIdentifiers = new HashSet<string>(); // 已使用的事件标识符
     private bool isProcessingNext = false; // 是否正在处理next按钮点击（防止重复点击）
+    private bool isRestHealEvent = false;
+    private int restHealAmount;
+    private const int RestMaxHpBonus = 10;
+    private const float RestHealPercentOfMax = 0.2f;
 
     /// <summary>
     /// 检查事件是否已被使用
@@ -98,6 +102,7 @@ public class EventMenu : MenuBase
     {
         // 重置状态
         isProcessingNext = false;
+        isRestHealEvent = false;
         onEventComplete = onComplete;
         
         // 随机选择一个未使用的事件
@@ -121,12 +126,75 @@ public class EventMenu : MenuBase
     }
     
     /// <summary>
+    /// 地图回血节点：休息选择（恢复血量或增加最大血量）
+    /// </summary>
+    public void ShowRestHealEvent(Action onComplete = null)
+    {
+        isProcessingNext = false;
+        isRestHealEvent = true;
+        isFinalEvent = false;
+        currentEvent = null;
+        onEventComplete = onComplete;
+        selectedOptionIndex = -1;
+
+        int maxHp = PlayerManager.Instance != null ? PlayerManager.Instance.MaxHealth : 100;
+        restHealAmount = Mathf.Max(1, Mathf.RoundToInt(maxHp * RestHealPercentOfMax));
+
+        if (eventNameText != null)
+        {
+            eventNameText.text = "Rest";
+        }
+        if (eventDescriptionText != null)
+        {
+            eventDescriptionText.text = "You've arrived at a place where you can relax and rest.";
+        }
+
+        if (option0Button != null)
+        {
+            option0Button.gameObject.SetActive(true);
+            if (option0Text != null)
+            {
+                option0Text.text = $"Restore 30% ({restHealAmount} HP)";
+            }
+        }
+        if (option1Button != null)
+        {
+            option1Button.gameObject.SetActive(true);
+            if (option1Text != null)
+            {
+                option1Text.text = $"Max HP +{RestMaxHpBonus}";
+            }
+        }
+        if (option2Button != null)
+        {
+            option2Button.gameObject.SetActive(false);
+        }
+
+        if (resultInfoText != null)
+        {
+            resultInfoText.gameObject.SetActive(false);
+        }
+        if (resultPanel != null)
+        {
+            resultPanel.SetActive(false);
+        }
+        if (nextButton != null)
+        {
+            nextButton.gameObject.SetActive(false);
+        }
+
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_show_event");
+        Show();
+    }
+
+    /// <summary>
     /// 根据eventType显示事件菜单
     /// </summary>
     public void ShowEventByType(string eventType, Action onComplete = null, bool isFinal = false)
     {
         // 重置状态
         isProcessingNext = false;
+        isRestHealEvent = false;
         onEventComplete = onComplete;
         isFinalEvent = isFinal;
         
@@ -322,6 +390,12 @@ public class EventMenu : MenuBase
     /// </summary>
     private void OnOptionSelected(int optionIndex)
     {
+        if (isRestHealEvent)
+        {
+            OnRestHealOptionSelected(optionIndex);
+            return;
+        }
+
         if (currentEvent == null)
             return;
         
@@ -386,6 +460,61 @@ public class EventMenu : MenuBase
         }
     }
     
+    private void OnRestHealOptionSelected(int optionIndex)
+    {
+        selectedOptionIndex = optionIndex;
+
+        if (option0Button != null) option0Button.gameObject.SetActive(false);
+        if (option1Button != null) option1Button.gameObject.SetActive(false);
+        if (option2Button != null) option2Button.gameObject.SetActive(false);
+
+        string resultInfo;
+        if (optionIndex == 0)
+        {
+            if (PlayerManager.Instance != null)
+            {
+                PlayerManager.Instance.Heal(restHealAmount);
+            }
+            resultInfo = $"You restored {restHealAmount} HP.";
+            if (eventDescriptionText != null)
+            {
+                eventDescriptionText.text = "You take a moment to catch your breath.";
+            }
+        }
+        else
+        {
+            if (PlayerManager.Instance != null)
+            {
+                PlayerManager.Instance.AddMaxHealth(RestMaxHpBonus);
+            }
+            resultInfo = $"Max HP increased by {RestMaxHpBonus}.";
+            if (eventDescriptionText != null)
+            {
+                eventDescriptionText.text = "You feel stronger than before.";
+            }
+        }
+
+        if (resultInfoText != null)
+        {
+            resultInfoText.text = resultInfo;
+            resultInfoText.gameObject.SetActive(true);
+        }
+        if (resultPanel != null)
+        {
+            resultPanel.SetActive(true);
+        }
+        if (nextButton != null)
+        {
+            nextButton.gameObject.SetActive(true);
+            if (nextButtonText != null)
+            {
+                nextButtonText.text = "Continue";
+            }
+        }
+
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
+    }
+
     /// <summary>
     /// 处理结果并返回显示信息
     /// </summary>
@@ -581,6 +710,7 @@ public class EventMenu : MenuBase
         // 保存回调，因为Hide()可能会清空onEventComplete
         Action callback = onEventComplete;
         onEventComplete = null; // 清空回调，防止重复调用
+        isRestHealEvent = false;
         
         Hide();
         callback?.Invoke();
