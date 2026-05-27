@@ -14,7 +14,6 @@ public class MapController : MonoBehaviour
 
     private readonly List<IslandController> islandControllers = new List<IslandController>();
     private IslandController currentIsland;
-    private readonly HashSet<MapNode> usedShopNodes = new HashSet<MapNode>();
     private bool revealAllNodesCheat;
 
     private void Update()
@@ -123,11 +122,6 @@ public class MapController : MonoBehaviour
 
         string nodeType = (node.Type ?? string.Empty).ToLower();
 
-        if (nodeType == "shop" && usedShopNodes.Contains(node))
-        {
-            return;
-        }
-
         CloseMap();
 
         switch (nodeType)
@@ -150,7 +144,6 @@ public class MapController : MonoBehaviour
 
     private void HandleShopNode(MapNode node)
     {
-        usedShopNodes.Add(node);
         MainGameManager.Instance.ShowMapShop(() =>
         {
             currentIsland.MarkNodeCompleted(node);
@@ -237,4 +230,5 @@ public class MapController : MonoBehaviour
 
         gameObject.SetActive(visible);
     }
+
 }

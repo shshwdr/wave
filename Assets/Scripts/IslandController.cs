@@ -156,7 +156,10 @@ public class IslandController : MonoBehaviour
                 continue;
             }
 
-            bool canClick = unlockedNodes.Contains(node) && !inaccessibleNodes.Contains(node);
+            // Cheat 模式下：允许点击所有可见节点（不受“已解锁/不可进入”限制）。
+            bool canClick = revealAllNodesCheat
+                ? true
+                : (unlockedNodes.Contains(node) && !inaccessibleNodes.Contains(node));
             node.SetInteractable(canClick);
             node.SetVisited(visitedNodes.Contains(node));
         }

@@ -64,35 +64,48 @@ public class EnemyHealthBar : MonoBehaviour
     }
 
     /// <summary>
-    /// 初始化血条
+    /// 初始化血条（敌人）
     /// </summary>
     public void Init(Enemy targetEnemy, int maxHealth)
     {
         enemy = targetEnemy;
+        followEnemy = true;
+        InitHealthValues(maxHealth, maxHealth);
+        UpdateHealthBar(maxHealth, maxHealth);
+    }
+
+    /// <summary>
+    /// 初始化血条（玩家/地图等，不跟随目标）
+    /// </summary>
+    public void InitStandalone(int currentHealth, int maxHealth)
+    {
+        enemy = null;
+        followEnemy = false;
+        InitHealthValues(currentHealth, maxHealth);
+        UpdateHealthBar(currentHealth, maxHealth);
+    }
+
+    private void InitHealthValues(int currentHealth, int maxHealth)
+    {
         this.maxHealth = maxHealth;
-        this.currentHealth = maxHealth;
-        
-        // 初始化动画相关变量
-        lastHealth = maxHealth;
-        currentDisplayHealth = maxHealth;
-        currentDisplayHealthInt = maxHealth;
-        targetHealth = maxHealth;
-        
+        this.currentHealth = currentHealth;
+        lastHealth = currentHealth;
+        currentDisplayHealth = currentHealth;
+        currentDisplayHealthInt = currentHealth;
+        targetHealth = currentHealth;
+
         if (fillImage != null)
         {
             fillImage.type = Image.Type.Filled;
             fillImage.fillMethod = Image.FillMethod.Horizontal;
-            fillImage.fillAmount = 1f;
+            float fill = maxHealth > 0 ? (float)currentHealth / maxHealth : 0f;
+            fillImage.fillAmount = Mathf.Clamp01(fill);
         }
-        
-        // 如果没有healthText，创建一个
+
         if (healthText == null)
         {
             CreateHealthText();
         }
-
-        UpdateHealthBar(maxHealth, maxHealth);
-        
     }
     
     /// <summary>

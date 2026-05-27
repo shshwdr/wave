@@ -87,6 +87,8 @@ public class SkillSelectMenu : MenuBase
         {
             lockButton.onClick.AddListener(OnLockClicked);
             UpdateLockButtonText();
+            // 不再在商店显示锁定按钮
+            lockButton.gameObject.SetActive(false);
         }
 
         // 初始化颜色区域的详情按钮和颜色图片
@@ -196,7 +198,8 @@ public class SkillSelectMenu : MenuBase
         }
         if (lockButton != null)
         {
-            lockButton.gameObject.SetActive(!isBattleReward);
+            // 不再在商店显示锁定按钮
+            lockButton.gameObject.SetActive(false);
         }
     }
 

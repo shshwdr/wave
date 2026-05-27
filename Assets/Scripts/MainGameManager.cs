@@ -54,6 +54,7 @@ public class MainGameManager : Singleton<MainGameManager>
     [SerializeField] private MapController mapController;
 
     private GameObject alwaysForBattleAndUi;
+    private AlwaysBattleAndUiController alwaysBattleAndUiController;
 
     public bool showShopAtBeginning;
     public bool showEventAtBeginning;
@@ -259,6 +260,11 @@ public class MainGameManager : Singleton<MainGameManager>
         if (battleDecor != null)
         {
             alwaysForBattleAndUi = battleDecor;
+            alwaysBattleAndUiController = battleDecor.GetComponent<AlwaysBattleAndUiController>();
+            if (alwaysBattleAndUiController == null)
+            {
+                alwaysBattleAndUiController = battleDecor.AddComponent<AlwaysBattleAndUiController>();
+            }
         }
 
         StartCoroutine(OpenMapAfterTutorialFlow());
@@ -339,6 +345,8 @@ public class MainGameManager : Singleton<MainGameManager>
             Debug.LogWarning("MainGameManager: 未找到MapController，回退为直接开战");
             StartBattle();
         }
+
+        RefreshAlwaysBattleAndUi();
     }
 
     private void SetBattleViewVisible(bool visible)
@@ -357,11 +365,16 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             boardManager.gameObject.SetActive(visible);
         }
+    }
 
-        if (alwaysForBattleAndUi != null)
+    private void RefreshAlwaysBattleAndUi()
+    {
+        if (alwaysForBattleAndUi != null && !alwaysForBattleAndUi.activeSelf)
         {
-            alwaysForBattleAndUi.SetActive(visible);
+            alwaysForBattleAndUi.SetActive(true);
         }
+
+        alwaysBattleAndUiController?.RefreshDisplay();
     }
 
     /// <summary>
@@ -503,6 +516,7 @@ public class MainGameManager : Singleton<MainGameManager>
     {
         isMapOpen = false;
         SetBattleViewVisible(true);
+        RefreshAlwaysBattleAndUi();
 
         // 重置游戏状态
         isProcessing = false;
