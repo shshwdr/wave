@@ -108,6 +108,9 @@ public class MainGameManager : Singleton<MainGameManager>
     private bool battleFromBossMapNode;
     private bool activeBattleFromBossMapNode;
     private int activeBattleLevelIndex = -1;
+    private bool waitingForNextIslandSelection;
+    private int waitingIslandId = -1;
+    private int waitingNextIslandId = -1;
     
     // 是否是第一次战斗（用于决定是否清除和生成格子）
     private bool isFirstBattle = true;
@@ -340,6 +343,14 @@ public class MainGameManager : Singleton<MainGameManager>
 
         if (mapController != null)
         {
+            if (waitingForNextIslandSelection && waitingIslandId >= 0)
+            {
+                mapController.SetForcedIsland(waitingIslandId);
+            }
+            else
+            {
+                mapController.ClearForcedIsland();
+            }
             mapController.OpenMap();
         }
         else
@@ -3455,6 +3466,10 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_win_level");
+        bool defeatedBossLevel = LevelManager.IsBossLevel(currentLevelInfo);
+        bool defeatedFinalBoss = defeatedBossLevel
+            && !string.IsNullOrEmpty(currentLevelInfo?.bossIdentifier)
+            && currentLevelInfo.bossIdentifier.Equals("boss", System.StringComparison.OrdinalIgnoreCase);
         // 显示Victory横幅，停留2秒，期间不可操作
         if (turnBanner != null)
         {
@@ -3472,6 +3487,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 }
 
                 AdvanceBattleLevelProgress();
+                CacheNextIslandTransitionState(defeatedBossLevel, defeatedFinalBoss);
 
                 if (TryHandleGameWin())
                 {
@@ -3496,6 +3512,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 }
 
                 AdvanceBattleLevelProgress();
+                CacheNextIslandTransitionState(defeatedBossLevel, defeatedFinalBoss);
 
                 if (TryHandleGameWin())
                 {
@@ -3537,6 +3554,18 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private bool TryHandleGameWin()
     {
+        if (LevelManager.IsBossLevel(currentLevelInfo)
+            && !string.IsNullOrEmpty(currentLevelInfo?.bossIdentifier)
+            && currentLevelInfo.bossIdentifier.Equals("boss", System.StringComparison.OrdinalIgnoreCase))
+        {
+            if (GameDataManager.Instance != null)
+            {
+                GameDataManager.Instance.SetHasWonGame(true);
+            }
+            ShowFinalEventMenu();
+            return true;
+        }
+
         bool isGameWin = false;
         if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
         {
@@ -3572,6 +3601,48 @@ public class MainGameManager : Singleton<MainGameManager>
     private void OnBattleVictoryContinue()
     {
         ShowBattleRewardShop(() => OpenMap());
+    }
+
+    private void CacheNextIslandTransitionState(bool defeatedBossLevel, bool defeatedFinalBoss)
+    {
+        if (!defeatedBossLevel || defeatedFinalBoss || currentLevelInfo == null)
+        {
+            waitingForNextIslandSelection = false;
+            waitingIslandId = -1;
+            waitingNextIslandId = -1;
+            return;
+        }
+
+        waitingForNextIslandSelection = true;
+        waitingIslandId = currentLevelInfo.island;
+
+        LevelInfo nextLevel = LevelManager.Instance != null
+            ? LevelManager.Instance.GetLevelByIndex(nextBattleLevelIndex)
+            : null;
+        waitingNextIslandId = nextLevel != null ? nextLevel.island : waitingIslandId + 1;
+    }
+
+    public bool ShouldShowNextIslandButton(int currentIslandId)
+    {
+        return waitingForNextIslandSelection
+            && waitingIslandId >= 0
+            && currentIslandId == waitingIslandId;
+    }
+
+    public void OnNextIslandButtonClicked()
+    {
+        if (!waitingForNextIslandSelection || mapController == null)
+        {
+            return;
+        }
+
+        int targetIslandId = waitingNextIslandId >= 0 ? waitingNextIslandId : waitingIslandId + 1;
+        waitingForNextIslandSelection = false;
+        waitingIslandId = -1;
+        waitingNextIslandId = -1;
+
+        mapController.ClearForcedIsland();
+        mapController.EnterIslandAndReset(targetIslandId);
     }
 
     /// <summary>

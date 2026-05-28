@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// 地图总控制（纯UI）
@@ -11,10 +12,22 @@ public class MapController : MonoBehaviour
     [SerializeField] private GameObject mapRoot;
     [SerializeField] private Transform islandsParent;
     [SerializeField] private RectTransform playerSprite;
+    [SerializeField] private Button nextIslandButton;
 
     private readonly List<IslandController> islandControllers = new List<IslandController>();
     private IslandController currentIsland;
     private bool revealAllNodesCheat;
+    private int forcedIslandId = -1;
+
+    private void Awake()
+    {
+        if (nextIslandButton != null)
+        {
+            nextIslandButton.onClick.RemoveListener(OnNextIslandButtonClicked);
+            nextIslandButton.onClick.AddListener(OnNextIslandButtonClicked);
+            nextIslandButton.gameObject.SetActive(false);
+        }
+    }
 
     private void Update()
     {
@@ -42,6 +55,7 @@ public class MapController : MonoBehaviour
             currentIsland.RefreshNodeInteraction();
         }
         MovePlayerToCurrentIsland();
+        RefreshNextIslandButton();
     }
 
     public void CloseMap()
@@ -49,7 +63,7 @@ public class MapController : MonoBehaviour
         SetMapVisible(false);
     }
 
-    public void InitMap()
+    public void InitMap(bool forceResetCurrentIsland = false)
     {
         CollectIslands();
         if (islandControllers.Count == 0)
@@ -58,7 +72,7 @@ public class MapController : MonoBehaviour
             return;
         }
 
-        int targetIslandId = GetCurrentLevelIslandId();
+        int targetIslandId = forcedIslandId >= 0 ? forcedIslandId : GetCurrentLevelIslandId();
         currentIsland = FindIslandController(targetIslandId);
         if (currentIsland == null)
         {
@@ -72,11 +86,35 @@ public class MapController : MonoBehaviour
             if (isActive)
             {
                 islandControllers[i].SetRevealAllNodesCheat(revealAllNodesCheat);
-                islandControllers[i].Init(OnNodeClicked);
+                islandControllers[i].Init(OnNodeClicked, forceResetCurrentIsland);
             }
         }
 
         MovePlayerToCurrentIsland();
+        RefreshNextIslandButton();
+    }
+
+    public void SetForcedIsland(int islandId)
+    {
+        forcedIslandId = islandId;
+    }
+
+    public void ClearForcedIsland()
+    {
+        forcedIslandId = -1;
+    }
+
+    public void EnterIslandAndReset(int islandId)
+    {
+        forcedIslandId = islandId;
+        InitMap(true);
+        SetMapVisible(true);
+        if (currentIsland != null)
+        {
+            currentIsland.RefreshNodeInteraction();
+        }
+        MovePlayerToCurrentIsland();
+        RefreshNextIslandButton();
     }
 
     /// <summary>
@@ -253,6 +291,24 @@ public class MapController : MonoBehaviour
         }
 
         gameObject.SetActive(visible);
+    }
+
+    private void RefreshNextIslandButton()
+    {
+        if (nextIslandButton == null)
+        {
+            return;
+        }
+
+        bool show = MainGameManager.Instance != null
+            && MainGameManager.Instance.ShouldShowNextIslandButton(GetCurrentIslandId());
+        nextIslandButton.gameObject.SetActive(show);
+    }
+
+    private void OnNextIslandButtonClicked()
+    {
+        MainGameManager.Instance?.OnNextIslandButtonClicked();
+        RefreshNextIslandButton();
     }
 
 }
