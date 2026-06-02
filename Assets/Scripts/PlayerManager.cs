@@ -17,6 +17,7 @@ public class PlayerManager : Singleton<PlayerManager>
     public SpriteRenderAnim anim; // 玩家动画组件
 
     private int currentHealth;
+    private int currentShield;
     private int currentSwapCount;
     private int gold = 0; // 金币
     public int startGold = 3;
@@ -36,6 +37,7 @@ public class PlayerManager : Singleton<PlayerManager>
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
+    public int CurrentShield => currentShield;
     public int CurrentSwapCount => currentSwapCount;
     public int MaxSwapCount
     {
@@ -115,6 +117,7 @@ public class PlayerManager : Singleton<PlayerManager>
     {
         maxHealth = health > 0 ? health : maxHealth;
         currentHealth = maxHealth;
+        currentShield = 0;
         
         // 根据困难模式选择基础交换次数
         int baseSwapCount = (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode()) 
@@ -230,6 +233,7 @@ public class PlayerManager : Singleton<PlayerManager>
         tempWaveDamageBonus = 0f;
         bossDamageReduction = 0f;
         enemyDamageBonus = 0f;
+        ClearShield();
         // 战斗结束时恢复exchange到最大值（根据困难模式）
         currentSwapCount = MaxSwapCount;
     }
@@ -329,14 +333,63 @@ public class PlayerManager : Singleton<PlayerManager>
     /// </summary>
     public void TakeDamage(int damage)
     {
-        currentHealth -= damage;
+        if (damage <= 0)
+            return;
+
+        int remaining = damage;
+        if (currentShield > 0)
+        {
+            int absorbed = Mathf.Min(currentShield, remaining);
+            currentShield -= absorbed;
+            remaining -= absorbed;
+        }
+
+        if (remaining <= 0)
+        {
+            Debug.Log($"护盾抵挡 {damage} 伤害，剩余护盾: {currentShield}");
+            return;
+        }
+
+        currentHealth -= remaining;
         currentHealth = Mathf.Max(0, currentHealth);
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/PlayerStatus/sfx_player_hurt");
 
         // 播放受伤动画
         TryPlayHurtAnimation();
 
-        Debug.Log($"玩家受到 {damage} 伤害，当前血量: {currentHealth}/{maxHealth}");
+        Debug.Log($"玩家受到 {remaining} 伤害（护盾抵消 {damage - remaining}），当前血量: {currentHealth}/{maxHealth}，护盾: {currentShield}");
+    }
+
+    /// <summary>
+    /// 获得护盾（可叠加，战斗结束时清零）
+    /// </summary>
+    public void AddShield(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        currentShield += amount;
+        Debug.Log($"获得 {amount} 护盾，当前护盾: {currentShield}");
+    }
+
+    /// <summary>
+    /// 清空护盾（战斗结束时调用）
+    /// </summary>
+    public void ClearShield()
+    {
+        currentShield = 0;
+    }
+
+    /// <summary>
+    /// 玩家回合开始时护盾减半（向下取整）
+    /// </summary>
+    public void DecayShieldAtTurnStart()
+    {
+        if (currentShield <= 0)
+            return;
+
+        currentShield = currentShield / 2;
+        Debug.Log($"回合开始护盾衰减，当前护盾: {currentShield}");
     }
     
     /// <summary>
@@ -351,19 +404,10 @@ public class PlayerManager : Singleton<PlayerManager>
         }
     }
 
-    private void Update()
+    public void CheatKill()
     {
-        if (Input.GetKeyDown(KeyCode.I) && MainGameManager.Instance.useCheat)
-        {
-            TakeDamage(40);
-        }
-        
-        // Cheat: 按 O 键杀死玩家
-        if (Input.GetKeyDown(KeyCode.O) && MainGameManager.Instance.useCheat)
-        {
-            currentHealth = 0;
-            Debug.Log("Cheat: 玩家已死亡");
-        }
+        currentHealth = 0;
+        Debug.Log("Cheat: 玩家已死亡");
     }
 
     /// <summary>

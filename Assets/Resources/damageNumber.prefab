@@ -119,7 +119,8 @@ MonoBehaviour:
   jumpHeight: 0.8
   duration: 1.5
   damageColor: {r: 1, g: 0, b: 0, a: 1}
-  healColor: {r: 0, g: 1, b: 0, a: 1}
+  zeroDamageColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  healColor: {r: 0.59748423, g: 0.59748423, b: 0.59748423, a: 1}
 --- !u!1001 &1926186504330623743
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -807,18 +807,8 @@ public class EnemyManager : MonoBehaviour
         return availableY[Random.Range(0, availableY.Count)];
     }
     
-    /// <summary>
-    /// 更新方法：检测作弊按键
-    /// </summary>
-    private void Update()
-    {
-        // 按P键杀死所有敌人（作弊功能）
-        if (Input.GetKeyDown(KeyCode.P) && MainGameManager.Instance.useCheat)
-        {
-            KillAllEnemies();
-        }
-    }
-    
+    public void CheatKillAllEnemies() => KillAllEnemies();
+
     /// <summary>
     /// 杀死所有敌人（作弊功能）
     /// </summary>

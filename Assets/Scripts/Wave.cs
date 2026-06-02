@@ -32,6 +32,10 @@ public class Wave : MonoBehaviour
     private int knockbackTiles = 0; // 击退格子数
     private bool hasHealWhenHit = false; // 是否有击中回血技能
     private int healAmount = 0; // 回血量
+    private bool hasShieldWhenHit = false; // 是否有击中获得护盾技能
+    private int shieldWhenHitValue = 0; // shieldWhenHit的值
+    private bool hasShieldWhenPass = false; // 是否有shieldWhenPass技能
+    private int shieldWhenPassValue = 0; // shieldWhenPass的值
     private bool hasDamageBottom = false; // 是否有damageBottom技能
     private bool damageBottomTriggered = false; // damageBottom是否已触发
     private Vector2Int spawnGridPos; // 波浪生成的网格位置
@@ -63,7 +67,7 @@ public class Wave : MonoBehaviour
     private bool hasHitAddColor = false; // 是否有hitAddColor技能
     private bool hasFocus = false; // 是否有focus技能
     private int focusValue = 0; // focus的值
-    private bool hasPassedSameColorTile = false; // 是否已经经过同色tile（用于healWhenPass和addDamageWhenPass）
+    private bool hasPassedSameColorTile = false; // 是否已经经过同色tile（用于healWhenPass、shieldWhenPass和addDamageWhenPass）
     private bool hasTarget = false; // 是否有target技能
     private int targetValue = 0; // target的值
     private float waveStartTime = 0f; // 波动开始时间
@@ -290,7 +294,7 @@ public class Wave : MonoBehaviour
             // 如果wave在tile的范围内（考虑tile大小和wave大小）
             if (distanceX <= tileSize * 0.5f && distanceY <= tileSize * 0.5f)
             {
-                // 检查是否经过同色tile（用于healWhenPass和addDamageWhenPass）
+                // 检查是否经过同色tile（用于healWhenPass、shieldWhenPass和addDamageWhenPass）
                 if (tile.Color == waveColor && !hasPassedSameColorTile)
                 {
                     hasPassedSameColorTile = true;
@@ -303,6 +307,15 @@ public class Wave : MonoBehaviour
                         PlayerManager.Instance.Heal(healValue);
                         DamageNumber.CreateDamageNumber(healValue, transform.position, true);
                         // 回血效果已在PlayerManager.Heal()中创建
+                    }
+
+                    // 应用shieldWhenPass技能
+                    if (hasShieldWhenPass && PlayerManager.Instance != null)
+                    {
+                        int maxHealth = PlayerManager.Instance.MaxHealth;
+                        int shieldValue = (int)(maxHealth * shieldWhenPassValue / 100f);
+                        PlayerManager.Instance.AddShield(shieldValue);
+                        DamageNumber.CreateDamageNumber(shieldValue, transform.position, true);
                     }
                     
                     // 应用addDamageWhenPass技能（整个wave group共享）
@@ -486,6 +499,11 @@ public class Wave : MonoBehaviour
                     hasHealWhenHit = true;
                     healAmount = value;
                     break;
+
+                case "shieldWhenHit":
+                    hasShieldWhenHit = true;
+                    shieldWhenHitValue = value;
+                    break;
                     
                 case "damageBottom":
                     // 最右列爆炸（由外部传入标志控制）
@@ -539,6 +557,11 @@ public class Wave : MonoBehaviour
                     // 经过同色tile时恢复血量
                     hasHealWhenPass = true;
                     healWhenPassValue = value;
+                    break;
+
+                case "shieldWhenPass":
+                    hasShieldWhenPass = true;
+                    shieldWhenPassValue = value;
                     break;
                     
                 case "healWhenSpawn":
@@ -868,6 +891,14 @@ public class Wave : MonoBehaviour
                     PlayerManager.Instance.Heal(healValue);
                     DamageNumber.CreateDamageNumber(healValue, transform.position, true);
                     // 回血效果已在PlayerManager.Heal()中创建
+                }
+
+                // 击中获得护盾
+                if (hasShieldWhenHit && PlayerManager.Instance != null)
+                {
+                    int shieldValue = (int)(finalDamage * shieldWhenHitValue / 100f);
+                    PlayerManager.Instance.AddShield(shieldValue);
+                    DamageNumber.CreateDamageNumber(shieldValue, transform.position, true);
                 }
                 
                 // 应用hitAddColor技能（击中敌人时改变场上tile颜色）

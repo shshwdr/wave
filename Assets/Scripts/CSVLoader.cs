@@ -127,7 +127,7 @@ public class CSVLoader : Singleton<CSVLoader>
         var cardInfos = CsvUtil.LoadObjects<SkillInfo>("skill");
         foreach (var cardInfo in cardInfos)
         {
-            cardInfoMap.Add(cardInfo.identifier, cardInfo);
+            cardInfoMap[cardInfo.identifier] = cardInfo;
         }
         var enemyInfos = CsvUtil.LoadObjects<EnemyInfo>("enemy");
         foreach (var enemyInfo in enemyInfos)

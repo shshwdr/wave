@@ -1,1 +1,13 @@
-﻿identifier,name,description,descriptionMore,color,isStart,effect,values,maxLevel,available,buyPrice,upgradePrice,unlock,unlockLevel
+﻿identifier,name,description,descriptionMore,isStart,effect,values,available,buyPrice,unlock,unlockLevel,synergy
+hitTakeDamage,Impact Crash,Collided foes take {0}% wave damage.,,,hitTakeDamage,100,1,10,,击退,
+damageIncreaseAll,Amplify,All wave damage increase {0}% ,,,damageIncreaseAll,20,1,10,,,
+shopVIPCard,VIP card,All item in shop get {0}% discount,,,shopCheaper,20,1,10,,,
+closerMoreDamage,,enemy on the leftmost 2 column take {0}% extra damage,,,closerMoreDamage,50,,,,换血,
+hitKeepMove,,push back will push until hit collider,,,,,,,,击退,
+keepShieldValue,,Shield value would not half when turn starts,,,,,,,,护盾,
+ShieldDamage,,"When enemy hit player when she has shield, the enemy takes {0}% damage back",,,,100,,,,护盾,
+SafeDistance,,"When there is no enemy in leftmost 3 columns, all wave damage increase {0}%",,,,50,,,,击退,
+PushToBoss,,"If an enemy push back to the right border, do {0}% damage to the boss",,,,,,,,,
+ExplodeAlly,,"When an ally dies, it explodes dealing {0} damage to adjacent enemies.",,,,,,,,,
+,,随从受到致死伤害时，有 {0}% 几率保留 1 点血不灭，并立刻向前走 1 格。,,,,,,,,,
+,,当敌人进行移动后，你自动对最前排的敌人发射一个不带任何技能的 1 格基础波浪。,,,,,,,,,

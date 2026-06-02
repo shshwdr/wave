@@ -29,20 +29,12 @@ public class MapController : MonoBehaviour
         }
     }
 
-    private void Update()
+    public void ToggleRevealAllNodesCheat()
     {
-        if (mapRoot != null && !mapRoot.activeInHierarchy)
+        revealAllNodesCheat = !revealAllNodesCheat;
+        if (currentIsland != null)
         {
-            return;
-        }
-
-        if (Input.GetKeyDown(KeyCode.M) && MainGameManager.Instance != null && MainGameManager.Instance.useCheat)
-        {
-            revealAllNodesCheat = !revealAllNodesCheat;
-            if (currentIsland != null)
-            {
-                currentIsland.SetRevealAllNodesCheat(revealAllNodesCheat);
-            }
+            currentIsland.SetRevealAllNodesCheat(revealAllNodesCheat);
         }
     }
 

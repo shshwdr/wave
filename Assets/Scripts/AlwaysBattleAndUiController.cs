@@ -8,9 +8,13 @@ public class AlwaysBattleAndUiController : MonoBehaviour
 {
     [SerializeField] private TMP_Text goldText;
     [SerializeField] private EnemyHealthBar playerHealthBar;
+    [SerializeField] private EnemyHealthBar playerShieldHealthBar;
+    [SerializeField] private float shieldBarOffsetY = -35f;
 
     private int lastGold = -1;
     private bool playerHealthBarInitialized;
+    private bool playerShieldBarInitialized;
+    private int shieldBarDisplayMax;
 
     private void Awake()
     {
@@ -23,6 +27,8 @@ public class AlwaysBattleAndUiController : MonoBehaviour
         {
             playerHealthBar = GetComponentInChildren<EnemyHealthBar>(true);
         }
+
+        EnsureShieldHealthBar();
     }
 
     private void Update()
@@ -34,6 +40,7 @@ public class AlwaysBattleAndUiController : MonoBehaviour
 
         UpdateGoldDisplay();
         UpdateHealthBarDisplay();
+        UpdateShieldBarDisplay();
     }
 
     public void RefreshDisplay()
@@ -45,6 +52,33 @@ public class AlwaysBattleAndUiController : MonoBehaviour
 
         UpdateGoldDisplay();
         UpdateHealthBarDisplay();
+        UpdateShieldBarDisplay();
+    }
+
+    private void EnsureShieldHealthBar()
+    {
+        if (playerShieldHealthBar != null)
+            return;
+
+        if (playerHealthBar == null)
+            return;
+
+        GameObject shieldBarObject = Instantiate(playerHealthBar.gameObject, playerHealthBar.transform.parent);
+        shieldBarObject.name = "ShieldBar";
+
+        RectTransform shieldRect = shieldBarObject.GetComponent<RectTransform>();
+        RectTransform healthRect = playerHealthBar.GetComponent<RectTransform>();
+        if (shieldRect != null && healthRect != null)
+        {
+            shieldRect.anchorMin = healthRect.anchorMin;
+            shieldRect.anchorMax = healthRect.anchorMax;
+            shieldRect.pivot = healthRect.pivot;
+            shieldRect.sizeDelta = healthRect.sizeDelta;
+            shieldRect.anchoredPosition = healthRect.anchoredPosition + new Vector2(0f, shieldBarOffsetY);
+        }
+
+        playerShieldHealthBar = shieldBarObject.GetComponent<EnemyHealthBar>();
+        shieldBarObject.SetActive(false);
     }
 
     private void UpdateGoldDisplay()
@@ -77,6 +111,49 @@ public class AlwaysBattleAndUiController : MonoBehaviour
         else
         {
             playerHealthBar.UpdateHealthBar(currentHealth, maxHealth);
+        }
+    }
+
+    private void UpdateShieldBarDisplay()
+    {
+        EnsureShieldHealthBar();
+
+        if (playerShieldHealthBar == null)
+        {
+            return;
+        }
+
+        int currentShield = PlayerManager.Instance.CurrentShield;
+        int maxHealth = PlayerManager.Instance.MaxHealth;
+
+        if (currentShield <= 0)
+        {
+            if (playerShieldHealthBar.gameObject.activeSelf)
+            {
+                playerShieldHealthBar.SetVisible(false);
+            }
+
+            playerShieldBarInitialized = false;
+            shieldBarDisplayMax = maxHealth;
+            return;
+        }
+
+        if (!playerShieldHealthBar.gameObject.activeSelf)
+        {
+            playerShieldHealthBar.SetVisible(true);
+        }
+
+        shieldBarDisplayMax = Mathf.Max(shieldBarDisplayMax, currentShield, maxHealth, 1);
+        int shieldMax = shieldBarDisplayMax;
+
+        if (!playerShieldBarInitialized)
+        {
+            playerShieldHealthBar.InitStandalone(currentShield, shieldMax);
+            playerShieldBarInitialized = true;
+        }
+        else
+        {
+            playerShieldHealthBar.UpdateHealthBar(currentShield, shieldMax);
         }
     }
 }

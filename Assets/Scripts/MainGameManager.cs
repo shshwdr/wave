@@ -13,7 +13,6 @@ using FMOD.Studio;
 /// </summary>
 public class MainGameManager : Singleton<MainGameManager>
 {
-    public bool useCheat;
     [Header("引用")]
     [SerializeField] private BoardManager boardManager;
     [SerializeField] private EnemyManager enemyManager;
@@ -273,10 +272,10 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         StartCoroutine(OpenMapAfterTutorialFlow());
-#if !UNITY_EDITOR
-        useCheat = false;
-#endif
     }
+
+    public bool IsInPuzzleEditMode => isPuzzleEditMode;
+    public bool IsPublishMode => isPublish;
     
     private IEnumerator OpenMapAfterTutorialFlow()
     {
@@ -692,30 +691,8 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.R) && MainGameManager.Instance.useCheat)
-        {
-            Restart();
-        }
-        
-        // 清除全局标识（按H键清除hasWonGame和isInHardMode）
-        if (Input.GetKeyDown(KeyCode.H) && MainGameManager.Instance.useCheat)
-        {
-            if (GameDataManager.Instance != null)
-            {
-                GameDataManager.Instance.SetHasWonGame(false);
-                GameDataManager.Instance.SetIsInHardMode(false);
-                Debug.Log("已清除全局标识：hasWonGame 和 isInHardMode");
-            }
-        }
-        
         if (currentState == GameState.GameOver)
             return;
-
-        // 处理编辑模式快捷键（只在非发布模式下）
-        if (!isPublish)
-        {
-            HandleEditModeInput();
-        }
 
         // 敌人攻击逻辑现在由Enemy.TakeAction()处理，不再需要在这里检查
 
@@ -727,11 +704,7 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         // 编辑模式或puzzle游戏模式
-        if (currentState == GameState.PuzzleEdit)
-        {
-            HandlePuzzleEditInput();
-        }
-        else if (currentState == GameState.PuzzlePlay)
+        if (currentState == GameState.PuzzlePlay)
         {
             // Puzzle游戏模式：只能右键消除，禁用左键移动
             HandlePuzzlePlayInput();
@@ -831,7 +804,7 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         // Shift + 鼠标左键 - 任意位置交换
-        if ((Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && MainGameManager.Instance.useCheat)
+        if (CheatManager.Instance != null && CheatManager.Instance.IsShiftSwapActive)
         {
             if (Input.GetMouseButtonDown(0))
             {
@@ -2135,6 +2108,9 @@ public class MainGameManager : Singleton<MainGameManager>
         // 应用soloHeal技能（如果生成来自只有一个tile，恢复失去血量的value%）
         ApplySoloHealForWaveGroup(waveColor, tilesUsed, firstTilePos);
 
+        ApplyShieldWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
+        ApplySoloShieldForWaveGroup(waveColor, tilesUsed, firstTilePos);
+
         // 立即应用重力（与波浪移动同时进行）
         // 等待一小段时间让消除动画完成，然后开始重力
         // puzzle模式不生成新tiles
@@ -2288,6 +2264,89 @@ public class MainGameManager : Singleton<MainGameManager>
             Vector3 firstWavePos = boardManager.GridToWorldPosition(firstTilePos);
             DamageNumber.CreateDamageNumber(totalHeal, firstWavePos, true);
             // 回血效果已在PlayerManager.Heal()中创建
+        }
+    }
+
+    /// <summary>
+    /// 应用shieldWhenSpawn技能（整个wave group只获得一次护盾）
+    /// </summary>
+    private void ApplyShieldWhenSpawnForWaveGroup(TileColor waveColor, int tilesUsed, Vector2Int firstTilePos)
+    {
+        if (PlayerManager.Instance == null || SkillManager.Instance == null)
+            return;
+
+        int colorIndex = (int)waveColor;
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+
+        bool hasShieldWhenSpawn = false;
+        int shieldWhenSpawnValue = 0;
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (SkillManager.Instance.HasSkill(identifier))
+            {
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "shieldWhenSpawn")
+                {
+                    hasShieldWhenSpawn = true;
+                    shieldWhenSpawnValue = SkillManager.Instance.GetSkillValue(identifier);
+                    break;
+                }
+            }
+        }
+
+        if (!hasShieldWhenSpawn)
+            return;
+
+        int maxHealth = PlayerManager.Instance.MaxHealth;
+        int totalShield = (int)(maxHealth * shieldWhenSpawnValue / 100f * tilesUsed);
+        if (totalShield > 0)
+        {
+            PlayerManager.Instance.AddShield(totalShield);
+            Vector3 firstWavePos = boardManager.GridToWorldPosition(firstTilePos);
+            DamageNumber.CreateDamageNumber(totalShield, firstWavePos, true);
+        }
+    }
+
+    /// <summary>
+    /// 应用soloShield技能（单格波获得最大生命值 value% 的护盾）
+    /// </summary>
+    private void ApplySoloShieldForWaveGroup(TileColor waveColor, int tilesUsed, Vector2Int firstTilePos)
+    {
+        if (tilesUsed != 1)
+            return;
+
+        if (PlayerManager.Instance == null || SkillManager.Instance == null)
+            return;
+
+        int colorIndex = (int)waveColor;
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+
+        bool hasSoloShield = false;
+        int soloShieldValue = 0;
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (SkillManager.Instance.HasSkill(identifier))
+            {
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "soloShield")
+                {
+                    hasSoloShield = true;
+                    soloShieldValue = SkillManager.Instance.GetSkillValue(identifier);
+                    break;
+                }
+            }
+        }
+
+        if (!hasSoloShield)
+            return;
+
+        int maxHealth = PlayerManager.Instance.MaxHealth;
+        int totalShield = (int)(maxHealth * soloShieldValue / 100f);
+        if (totalShield > 0)
+        {
+            PlayerManager.Instance.AddShield(totalShield);
+            Vector3 firstWavePos = boardManager.GridToWorldPosition(firstTilePos);
+            DamageNumber.CreateDamageNumber(totalShield, firstWavePos, true);
         }
     }
     
@@ -3130,6 +3189,11 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         // 每回合开始时恢复所有shield敌人的盾牌
         ResetAllEnemyShields();
+
+        if (PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.DecayShieldAtTurnStart();
+        }
         
         // 显示"Player Turn" banner
         // if (turnBanner != null)
@@ -3882,36 +3946,11 @@ public class MainGameManager : Singleton<MainGameManager>
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
     
-    /// <summary>
-    /// 处理编辑模式快捷键输入（x进入编辑，s保存，l加载，p进入puzzle游戏）
-    /// </summary>
-    private void HandleEditModeInput()
-    {
-        // X键：进入编辑模式
-        if (Input.GetKeyDown(KeyCode.X) && MainGameManager.Instance.useCheat)
-        {
-            EnterPuzzleEditMode();
-        }
-        
-        // S键：保存当前puzzle
-        if (Input.GetKeyDown(KeyCode.S) && isPuzzleEditMode && MainGameManager.Instance.useCheat)
-        {
-            SaveCurrentPuzzle();
-        }
-        
-        // L键：加载第一个puzzle
-        if (Input.GetKeyDown(KeyCode.L) && isPuzzleEditMode && MainGameManager.Instance.useCheat)
-        {
-            LoadFirstPuzzle();
-        }
-        
-        // P键：进入puzzle游戏模式
-        if (Input.GetKeyDown(KeyCode.P) && isPuzzleEditMode && MainGameManager.Instance.useCheat)
-        {
-            EnterPuzzlePlayMode();
-        }
-    }
-    
+    public void CheatEnterPuzzleEditMode() => EnterPuzzleEditMode();
+    public void CheatSaveCurrentPuzzle() => SaveCurrentPuzzle();
+    public void CheatLoadFirstPuzzle() => LoadFirstPuzzle();
+    public void CheatEnterPuzzlePlayMode() => EnterPuzzlePlayMode();
+
     /// <summary>
     /// 进入puzzle编辑模式
     /// </summary>
@@ -3958,9 +3997,9 @@ public class MainGameManager : Singleton<MainGameManager>
     }
     
     /// <summary>
-    /// 处理puzzle编辑模式输入
+    /// Puzzle 编辑模式作弊输入（1-4 + 鼠标）
     /// </summary>
-    private void HandlePuzzleEditInput()
+    public void CheatProcessPuzzleEditInput()
     {
         if (boardManager == null || currentPuzzleData == null)
             return;
@@ -3968,10 +4007,6 @@ public class MainGameManager : Singleton<MainGameManager>
         Vector2Int gridPos = GetMouseGridPosition();
         if (!boardManager.IsValidPosition(gridPos))
             return;
-        if (!MainGameManager.Instance.useCheat)
-        {
-            return;
-        }
         // 检查是否按住数字键1-4
         int colorIndex = -1;
         if (Input.GetKey(KeyCode.Alpha1) || Input.GetKey(KeyCode.Keypad1))
