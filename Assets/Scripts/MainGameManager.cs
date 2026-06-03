@@ -215,6 +215,9 @@ public class MainGameManager : Singleton<MainGameManager>
     // addDamageWhenPass技能管理 - 跟踪每个wave group的伤害加成
     private static Dictionary<int, float> waveGroupAddDamageWhenPass = new Dictionary<int, float>();
     
+    // 经过同色tile效果：每个 wave group 内每格只触发一次
+    private static Dictionary<int, HashSet<Vector2Int>> waveGroupPassedSameColorTiles = new Dictionary<int, HashSet<Vector2Int>>();
+    
     // noAttackNoCost技能管理 - 跟踪每个wave group是否造成伤害
     private static Dictionary<int, bool> waveGroupHasDamage = new Dictionary<int, bool>();
     private static bool noAttackNoCostTriggeredThisTurn = false; // 一个回合只会触发一次
@@ -1992,6 +1995,7 @@ public class MainGameManager : Singleton<MainGameManager>
             waveGroupColor[currentWaveGroupId] = waveColor;
             waveGroupAddDamageWhenPass[currentWaveGroupId] = 0f; // 初始化addDamageWhenPass
             waveGroupHasDamage[currentWaveGroupId] = false; // 初始化伤害标志
+            waveGroupPassedSameColorTiles[currentWaveGroupId] = new HashSet<Vector2Int>();
             pendingWaveGroups.Add(currentWaveGroupId); // 添加到待结算列表
         }
 
@@ -2102,6 +2106,9 @@ public class MainGameManager : Singleton<MainGameManager>
             waveIndex++;
         }
         
+        // shieldExplosion 先于生成护盾类技能，使用生成波前的护盾
+        ApplyShieldExplosionForWaveGroup(waveColor, firstTilePos);
+
         // 应用healWhenSpawn技能（整个wave group只回一次血）
         ApplyHealWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
         
@@ -2156,6 +2163,73 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue, tilesUsed, backward);
+    }
+
+    /// <summary>
+    /// 应用shieldExplosion技能（生成波时对全体敌人造成护盾×value%伤害并清空护盾）
+    /// </summary>
+    private void ApplyShieldExplosionForWaveGroup(TileColor waveColor, Vector2Int firstTilePos)
+    {
+        if (PlayerManager.Instance == null || SkillManager.Instance == null || enemyManager == null)
+            return;
+
+        int colorIndex = (int)waveColor;
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+
+        bool hasShieldExplosion = false;
+        int shieldExplosionValue = 0;
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (SkillManager.Instance.HasSkill(identifier))
+            {
+                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                if (skillInfo != null && skillInfo.effect == "shieldExplosion")
+                {
+                    hasShieldExplosion = true;
+                    shieldExplosionValue = SkillManager.Instance.GetSkillValue(identifier);
+                    break;
+                }
+            }
+        }
+
+        if (!hasShieldExplosion)
+            return;
+
+        int shield = PlayerManager.Instance.CurrentShield;
+        if (shield <= 0)
+            return;
+
+        int damagePerEnemy = (int)(shield * shieldExplosionValue / 100f);
+        if (damagePerEnemy <= 0)
+            return;
+
+        PlayerManager.Instance.ClearShield();
+
+        float totalDamage = 0f;
+        Vector3 damageNumberPos = boardManager != null
+            ? boardManager.GridToWorldPosition(firstTilePos)
+            : Vector3.zero;
+
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy == null || enemy.IsDead)
+                continue;
+
+            enemy.TakeDamage(damagePerEnemy, Vector3.right, false, 0, damagePerEnemy);
+            totalDamage += damagePerEnemy;
+        }
+
+        if (currentBoss != null && !currentBoss.IsDead)
+        {
+            currentBoss.TakeDamage(damagePerEnemy, Vector3.right, false, 0, damagePerEnemy);
+            totalDamage += damagePerEnemy;
+        }
+
+        if (totalDamage > 0)
+        {
+            RecordWaveDamage(currentWaveGroupId, totalDamage);
+            DamageNumber.CreateDamageNumber(damagePerEnemy, damageNumberPos, false);
+        }
     }
 
     /// <summary>
@@ -2481,15 +2555,27 @@ public class MainGameManager : Singleton<MainGameManager>
     }
 
     /// <summary>
-    /// 设置addDamageWhenPass技能的值（整个wave group共享）
+    /// 登记 wave group 首次经过的格子（同色经过类技能）。返回 true 表示本格首次经过，可触发效果。
     /// </summary>
-    public static void SetAddDamageWhenPass(int waveGroupId, float value)
+    public static bool TryRegisterPassTileForWaveGroup(int waveGroupId, Vector2Int gridPos)
+    {
+        if (!waveGroupPassedSameColorTiles.ContainsKey(waveGroupId))
+        {
+            waveGroupPassedSameColorTiles[waveGroupId] = new HashSet<Vector2Int>();
+        }
+        return waveGroupPassedSameColorTiles[waveGroupId].Add(gridPos);
+    }
+
+    /// <summary>
+    /// 累加addDamageWhenPass（每经过一个同色tile增加 value%）
+    /// </summary>
+    public static void AddAddDamageWhenPass(int waveGroupId, float value)
     {
         if (!waveGroupAddDamageWhenPass.ContainsKey(waveGroupId))
         {
             waveGroupAddDamageWhenPass[waveGroupId] = 0f;
         }
-        waveGroupAddDamageWhenPass[waveGroupId] = value;
+        waveGroupAddDamageWhenPass[waveGroupId] += value;
     }
     
     /// <summary>
@@ -2539,15 +2625,18 @@ public class MainGameManager : Singleton<MainGameManager>
             
         waveGroupActiveWaveCount[waveGroupId]--;
         
-        // 清理addDamageWhenPass数据（wave group完成后）
-        if (waveGroupAddDamageWhenPass.ContainsKey(waveGroupId))
-        {
-            waveGroupAddDamageWhenPass.Remove(waveGroupId);
-        }
-        
         // 如果这个wave group的所有wave都完成了，记录wave group伤害并检查spawnAlly技能
         if (waveGroupActiveWaveCount[waveGroupId] <= 0)
         {
+            if (waveGroupAddDamageWhenPass.ContainsKey(waveGroupId))
+            {
+                waveGroupAddDamageWhenPass.Remove(waveGroupId);
+            }
+            if (waveGroupPassedSameColorTiles.ContainsKey(waveGroupId))
+            {
+                waveGroupPassedSameColorTiles.Remove(waveGroupId);
+            }
+            
             // 记录wave group的总伤害
             if (waveGroupTotalDamage.ContainsKey(waveGroupId) && waveGroupColor.ContainsKey(waveGroupId))
             {

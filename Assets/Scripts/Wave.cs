@@ -67,7 +67,6 @@ public class Wave : MonoBehaviour
     private bool hasHitAddColor = false; // 是否有hitAddColor技能
     private bool hasFocus = false; // 是否有focus技能
     private int focusValue = 0; // focus的值
-    private bool hasPassedSameColorTile = false; // 是否已经经过同色tile（用于healWhenPass、shieldWhenPass和addDamageWhenPass）
     private bool hasTarget = false; // 是否有target技能
     private int targetValue = 0; // target的值
     private float waveStartTime = 0f; // 波动开始时间
@@ -147,7 +146,6 @@ public class Wave : MonoBehaviour
         damageMultiplier = damageMult;
         hasPure = hasPureFlag;
         pureValue = pureValueParam;
-        hasPassedSameColorTile = false; // 重置经过同色tile标志
         hitEnemyCount = 0; // 重置击中敌人计数
         hasTarget = false; // 重置target技能
         targetValue = 0;
@@ -294,11 +292,9 @@ public class Wave : MonoBehaviour
             // 如果wave在tile的范围内（考虑tile大小和wave大小）
             if (distanceX <= tileSize * 0.5f && distanceY <= tileSize * 0.5f)
             {
-                // 检查是否经过同色tile（用于healWhenPass、shieldWhenPass和addDamageWhenPass）
-                if (tile.Color == waveColor && !hasPassedSameColorTile)
+                // 每经过一个同色tile触发一次；同一 wave group 内每格只触发一次
+                if (tile.Color == waveColor && MainGameManager.TryRegisterPassTileForWaveGroup(waveGroupId, currentGridPos))
                 {
-                    hasPassedSameColorTile = true;
-                    
                     // 应用healWhenPass技能
                     if (hasHealWhenPass && PlayerManager.Instance != null)
                     {
@@ -306,7 +302,6 @@ public class Wave : MonoBehaviour
                         int healValue = (int)(maxHealth * healWhenPassValue / 100f);
                         PlayerManager.Instance.Heal(healValue);
                         DamageNumber.CreateDamageNumber(healValue, transform.position, true);
-                        // 回血效果已在PlayerManager.Heal()中创建
                     }
 
                     // 应用shieldWhenPass技能
@@ -318,7 +313,7 @@ public class Wave : MonoBehaviour
                         DamageNumber.CreateDamageNumber(shieldValue, transform.position, true);
                     }
                     
-                    // 应用addDamageWhenPass技能（整个wave group共享）
+                    // 应用addDamageWhenPass技能（整个wave group共享，每格累加）
                     if (PlayerManager.Instance != null && SkillManager.Instance != null)
                     {
                         int colorIndex = (int)waveColor;
@@ -331,7 +326,7 @@ public class Wave : MonoBehaviour
                                 if (skillInfo != null && skillInfo.effect == "addDamageWhenPass")
                                 {
                                     int value = SkillManager.Instance.GetSkillValue(identifier);
-                                    MainGameManager.SetAddDamageWhenPass(waveGroupId, value);
+                                    MainGameManager.AddAddDamageWhenPass(waveGroupId, value);
                                     break;
                                 }
                             }
@@ -661,6 +656,25 @@ public class Wave : MonoBehaviour
             else
             {
                 damage = damage * 0.5f; // 伤害减少50%
+            }
+        }
+
+        // shieldBuff：按当前护盾值增加伤害（护盾值 × value%）
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (!SkillManager.Instance.HasSkill(identifier))
+                continue;
+
+            SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+            if (skillInfo != null && skillInfo.effect == "shieldBuff")
+            {
+                int shield = PlayerManager.Instance.CurrentShield;
+                if (shield > 0)
+                {
+                    int value = SkillManager.Instance.GetSkillValue(identifier);
+                    damage += shield * value / 100f;
+                }
+                break;
             }
         }
     }
