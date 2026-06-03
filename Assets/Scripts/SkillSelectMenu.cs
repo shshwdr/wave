@@ -22,6 +22,11 @@ public class SkillSelectMenu : MenuBase
     [SerializeField] private Transform shopParent; // 商店技能列表容器
     [SerializeField] private GameObject shopSkillItemPrefab; // 商店技能项Prefab（包含技能图标、价格、购买按钮）
 
+    [Header("符文商店")]
+    [SerializeField] private Transform shopRuneParent;
+    [SerializeField] private GameObject shopRuneItemPrefab;
+    [SerializeField] private Button shopSectionToggleButton;
+
     [Header("颜色区域")]
     [SerializeField] public ColorArea[] colorArea = new ColorArea[4]; // 0=红，1=黄，2=蓝，3=绿
 
@@ -55,6 +60,10 @@ public class SkillSelectMenu : MenuBase
     private bool battleRewardSkillChosen;
     private Dictionary<string, SkillIconUI> skillIconMap = new Dictionary<string, SkillIconUI>(); // 技能identifier -> UI实例
     private List<GameObject> shopSkillItems = new List<GameObject>(); // 商店技能项列表
+    private List<GameObject> shopRuneItems = new List<GameObject>();
+    private List<RuneInfo> cachedShopRunes = new List<RuneInfo>();
+    private List<SkillInfo> cachedShopSkills = new List<SkillInfo>();
+    private bool isShopRuneSection = false;
     private int currentRefreshPrice = 1; // 当前刷新价格（每次进入商店重置为1）
     private bool isLocked = false; // 锁定状态
     private HashSet<string> lockedSkillIdentifiers = new HashSet<string>(); // 锁定的技能identifier列表
@@ -144,6 +153,11 @@ public class SkillSelectMenu : MenuBase
         {
             statisticsButton.onClick.AddListener(OnStatisticsClicked);
         }
+
+        if (shopSectionToggleButton != null)
+        {
+            shopSectionToggleButton.onClick.AddListener(OnShopSectionToggleClicked);
+        }
     }
 
     /// <summary>
@@ -170,8 +184,20 @@ public class SkillSelectMenu : MenuBase
             UpdateLockButtonText();
         }
 
-        // 更新商店显示
-        UpdateShop(hadLockedSkills);
+        if (currentShopMode == ShopMode.MapShop)
+        {
+            isShopRuneSection = false;
+            cachedShopRunes = GetShopRunes(3);
+            cachedShopSkills = BuildShopSkillList(hadLockedSkills);
+            ApplyShopSectionUi();
+            DisplayCurrentShopSection();
+        }
+        else
+        {
+            isShopRuneSection = false;
+            ApplyShopSectionUi();
+            UpdateShop(hadLockedSkills);
+        }
 
         // 更新颜色区域和背包
         UpdateColorAreas();
@@ -201,6 +227,121 @@ public class SkillSelectMenu : MenuBase
             // 不再在商店显示锁定按钮
             lockButton.gameObject.SetActive(false);
         }
+        if (shopSectionToggleButton != null)
+        {
+            shopSectionToggleButton.gameObject.SetActive(!isBattleReward);
+        }
+    }
+
+    private void OnShopSectionToggleClicked()
+    {
+        if (currentShopMode != ShopMode.MapShop)
+            return;
+
+        isShopRuneSection = !isShopRuneSection;
+        ApplyShopSectionUi();
+        DisplayCurrentShopSection();
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
+    }
+
+    private void ApplyShopSectionUi()
+    {
+        bool isMapShop = currentShopMode == ShopMode.MapShop;
+        bool showRunes = isMapShop && isShopRuneSection;
+
+        if (shopRuneParent != null)
+            shopRuneParent.gameObject.SetActive(showRunes);
+        if (shopParent != null)
+            shopParent.gameObject.SetActive(!isMapShop || !isShopRuneSection);
+
+        if (shopSectionToggleButton != null)
+        {
+            TMP_Text toggleText = shopSectionToggleButton.GetComponentInChildren<TMP_Text>();
+            if (toggleText != null)
+                toggleText.text = isShopRuneSection ? "Skill" : "Rune";
+        }
+
+        UpdateRefreshButton();
+    }
+
+    private void DisplayCurrentShopSection()
+    {
+        if (currentShopMode == ShopMode.MapShop && isShopRuneSection)
+            DisplayShopRunesFromCache();
+        else if (currentShopMode == ShopMode.MapShop)
+            DisplayShopSkillsFromCache();
+        else
+            UpdateShop(false);
+
+        UpdateGoldDisplay();
+    }
+
+    private void DisplayShopRunesFromCache()
+    {
+        ClearShopRuneItems();
+        foreach (var runeInfo in cachedShopRunes)
+            CreateShopRuneItem(runeInfo);
+    }
+
+    private void DisplayShopSkillsFromCache()
+    {
+        ClearShopSkillItems();
+        foreach (var skillInfo in cachedShopSkills)
+            CreateShopSkillItem(skillInfo);
+    }
+
+    private void ClearShopSkillItems()
+    {
+        foreach (var item in shopSkillItems)
+        {
+            if (item != null)
+                Destroy(item);
+        }
+        shopSkillItems.Clear();
+    }
+
+    private void ClearShopRuneItems()
+    {
+        foreach (var item in shopRuneItems)
+        {
+            if (item != null)
+                Destroy(item);
+        }
+        shopRuneItems.Clear();
+    }
+
+    private List<SkillInfo> BuildShopSkillList(bool useLockedSkills = false)
+    {
+        List<SkillInfo> shopSkills = new List<SkillInfo>();
+
+        if (useLockedSkills && lockedSkillIdentifiers.Count > 0)
+        {
+            if (CSVLoader.Instance != null && CSVLoader.Instance.cardInfoMap != null)
+            {
+                foreach (var identifier in lockedSkillIdentifiers)
+                {
+                    if (CSVLoader.Instance.cardInfoMap.ContainsKey(identifier))
+                    {
+                        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                        bool canBuy = !SkillManager.Instance.HasSkill(identifier) && (IsFreeShopMode || skillInfo.buyPrice > 0);
+                        bool canUpgrade = SkillManager.Instance.HasSkill(identifier) &&
+                                         SkillManager.Instance.CanUpgradeSkill(identifier) &&
+                                         (IsFreeShopMode || skillInfo.upgradePrice > 0);
+                        if (canBuy || canUpgrade)
+                            shopSkills.Add(skillInfo);
+                    }
+                }
+            }
+            lockedSkillIdentifiers.Clear();
+        }
+
+        if (shopSkills.Count < 3)
+        {
+            int needCount = 3 - shopSkills.Count;
+            shopSkills.AddRange(GetShopSkills(needCount, shopSkills));
+        }
+
+        return shopSkills;
     }
 
     private bool IsFreeShopMode => currentShopMode == ShopMode.BattleReward;
@@ -213,59 +354,11 @@ public class SkillSelectMenu : MenuBase
         if (shopParent == null)
             return;
 
-        // 清除旧的商店技能项
-        foreach (var item in shopSkillItems)
-        {
-            if (item != null)
-            {
-                Destroy(item);
-            }
-        }
-        shopSkillItems.Clear();
-
-        List<SkillInfo> shopSkills = new List<SkillInfo>();
-
-        // 如果有锁定的技能，先添加锁定的技能
-        if (useLockedSkills && lockedSkillIdentifiers.Count > 0)
-        {
-            if (CSVLoader.Instance != null && CSVLoader.Instance.cardInfoMap != null)
-            {
-                foreach (var identifier in lockedSkillIdentifiers)
-                {
-                    if (CSVLoader.Instance.cardInfoMap.ContainsKey(identifier))
-                    {
-                        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
-                        // 检查技能是否仍然可以购买或升级
-                        bool canBuy = !SkillManager.Instance.HasSkill(identifier) && (IsFreeShopMode || skillInfo.buyPrice > 0);
-                        bool canUpgrade = SkillManager.Instance.HasSkill(identifier) && 
-                                         SkillManager.Instance.CanUpgradeSkill(identifier) && 
-                                         (IsFreeShopMode || skillInfo.upgradePrice > 0);
-                        if (canBuy || canUpgrade)
-                        {
-                            shopSkills.Add(skillInfo);
-                        }
-                    }
-                }
-            }
-            // 清除锁定状态（锁会移除）
-            lockedSkillIdentifiers.Clear();
-        }
-
-        // 如果技能数量不足3个，补充新技能
-        if (shopSkills.Count < 3)
-        {
-            int needCount = 3 - shopSkills.Count;
-            List<SkillInfo> newSkills = GetShopSkills(needCount, shopSkills);
-            shopSkills.AddRange(newSkills);
-        }
-
-        // 创建商店技能项
+        ClearShopSkillItems();
+        List<SkillInfo> shopSkills = BuildShopSkillList(useLockedSkills);
         foreach (var skillInfo in shopSkills)
-        {
             CreateShopSkillItem(skillInfo);
-        }
-        
-        // 更新金币显示
+
         UpdateGoldDisplay();
     }
     
@@ -368,6 +461,176 @@ public class SkillSelectMenu : MenuBase
 
         return result;
     }
+
+    private List<RuneInfo> GetShopRunes(int count = 3, List<RuneInfo> excludeRunes = null)
+    {
+        List<RuneInfo> allAvailableRunes = new List<RuneInfo>();
+
+        if (CSVLoader.Instance == null || CSVLoader.Instance.runeInfoMap == null || RuneManager.Instance == null)
+            return new List<RuneInfo>();
+
+        HashSet<string> excludeIdentifiers = new HashSet<string>();
+        foreach (string ownedId in RuneManager.Instance.GetOwnedRuneIdentifiers())
+            excludeIdentifiers.Add(ownedId);
+
+        if (excludeRunes != null)
+        {
+            foreach (var rune in excludeRunes)
+            {
+                if (rune != null && !string.IsNullOrEmpty(rune.identifier))
+                    excludeIdentifiers.Add(rune.identifier);
+            }
+        }
+
+        int currentLevel = 1;
+        if (LevelManager.Instance != null)
+            currentLevel = LevelManager.Instance.CurrentLevel;
+
+        foreach (var runeInfo in CSVLoader.Instance.runeInfoMap.Values)
+        {
+            if (excludeIdentifiers.Contains(runeInfo.identifier))
+                continue;
+
+            if (!runeInfo.available)
+                continue;
+
+            if (runeInfo.unlockLevel > 0 && currentLevel < runeInfo.unlockLevel)
+                continue;
+
+            if (runeInfo.unlock != null && runeInfo.unlock.Count > 0)
+            {
+                bool allUnlocked = true;
+                foreach (var unlockIdentifier in runeInfo.unlock)
+                {
+                    if (string.IsNullOrEmpty(unlockIdentifier))
+                        continue;
+
+                    if (!RuneManager.Instance.HasRune(unlockIdentifier))
+                    {
+                        allUnlocked = false;
+                        break;
+                    }
+                }
+
+                if (!allUnlocked)
+                    continue;
+            }
+
+            bool canBuy = !RuneManager.Instance.HasRune(runeInfo.identifier) && runeInfo.buyPrice > 0;
+            if (canBuy)
+                allAvailableRunes.Add(runeInfo);
+        }
+
+        List<RuneInfo> result = new List<RuneInfo>();
+        if (allAvailableRunes.Count == 0)
+            return result;
+
+        HashSet<string> pickedIdentifiers = new HashSet<string>();
+        List<RuneInfo> tempList = new List<RuneInfo>(allAvailableRunes);
+
+        while (result.Count < count && tempList.Count > 0)
+        {
+            int randomIndex = Random.Range(0, tempList.Count);
+            RuneInfo picked = tempList[randomIndex];
+            tempList.RemoveAt(randomIndex);
+
+            if (picked == null || string.IsNullOrEmpty(picked.identifier))
+                continue;
+
+            if (pickedIdentifiers.Contains(picked.identifier))
+                continue;
+
+            pickedIdentifiers.Add(picked.identifier);
+            result.Add(picked);
+        }
+
+        return result;
+    }
+
+    private void CreateShopRuneItem(RuneInfo runeInfo)
+    {
+        if (shopRuneItemPrefab == null || shopRuneParent == null)
+            return;
+
+        GameObject itemObj = Instantiate(shopRuneItemPrefab, shopRuneParent);
+        shopRuneItems.Add(itemObj);
+
+        ShopRuneItem shopItem = itemObj.GetComponent<ShopRuneItem>();
+        if (shopItem == null)
+            shopItem = itemObj.AddComponent<ShopRuneItem>();
+
+        shopItem.Init(runeInfo, this);
+    }
+
+    public void BuyRune(RuneInfo runeInfo)
+    {
+        if (PlayerManager.Instance == null || RuneManager.Instance == null || runeInfo == null)
+            return;
+
+        if (RuneManager.Instance.HasRune(runeInfo.identifier))
+            return;
+
+        if (!PlayerManager.Instance.ConsumeGold(runeInfo.buyPrice))
+        {
+            Debug.LogWarning($"金币不足，无法购买符文: {runeInfo.identifier}");
+            return;
+        }
+
+        RuneManager.Instance.AddRune(runeInfo.identifier);
+
+        RuneMenu runeMenu = FindObjectOfType<RuneMenu>(true);
+        if (runeMenu != null)
+            runeMenu.RefreshRunes();
+
+        cachedShopRunes.RemoveAll(r => r.identifier == runeInfo.identifier);
+        RemoveShopRuneItem(runeInfo.identifier);
+        UpdateShopRuneItemsState();
+        UpdateGoldDisplay();
+        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
+    }
+
+    private void UpdateShopRuneItemsState()
+    {
+        foreach (var item in shopRuneItems)
+        {
+            if (item != null)
+            {
+                ShopRuneItem shopItem = item.GetComponent<ShopRuneItem>();
+                if (shopItem != null)
+                    shopItem.UpdateState();
+            }
+        }
+    }
+
+    private void RemoveShopRuneItem(string identifier)
+    {
+        GameObject itemToRemove = null;
+        foreach (var item in shopRuneItems)
+        {
+            if (item == null)
+                continue;
+
+            ShopRuneItem shopItem = item.GetComponent<ShopRuneItem>();
+            if (shopItem != null && shopItem.RuneIdentifier == identifier)
+            {
+                itemToRemove = item;
+                break;
+            }
+        }
+
+        if (itemToRemove != null)
+        {
+            shopRuneItems.Remove(itemToRemove);
+            Destroy(itemToRemove);
+        }
+    }
+
+    private void RefreshShopRunes()
+    {
+        cachedShopRunes = GetShopRunes(3, cachedShopRunes);
+        DisplayShopRunesFromCache();
+        UpdateGoldDisplay();
+    }
     
     /// <summary>
     /// 创建商店技能项
@@ -441,6 +704,7 @@ public class SkillSelectMenu : MenuBase
         }
         else
         {
+            cachedShopSkills.RemoveAll(s => s.identifier == skillInfo.identifier);
             RemoveShopSkillItem(skillInfo.identifier);
             UpdateShopSkillItemsState();
         }
@@ -538,8 +802,15 @@ public class SkillSelectMenu : MenuBase
             currentRefreshPrice++;
         }
 
-        // 刷新商店（保留锁定的技能，只刷新未锁定的技能）
-        RefreshShop();
+        if (currentShopMode == ShopMode.MapShop && isShopRuneSection)
+        {
+            RefreshShopRunes();
+        }
+        else
+        {
+            RefreshShop();
+        }
+
         UpdateGoldDisplay();
         UpdateRefreshButton();
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_hold_skill_color");
@@ -593,25 +864,24 @@ public class SkillSelectMenu : MenuBase
         }
         foreach (var item in itemsToRemove)
         {
+            ShopSkillItem shopItem = item.GetComponent<ShopSkillItem>();
+            if (shopItem != null)
+                cachedShopSkills.RemoveAll(s => s.identifier == shopItem.SkillIdentifier);
             shopSkillItems.Remove(item);
             Destroy(item);
         }
 
-        // 计算需要补充的技能数量
-        int lockedCount = shopSkillItems.Count;
-        int needCount = 3 - lockedCount;
-
-        // 如果技能数量不足3个，补充新技能
+        int needCount = 3 - shopSkillItems.Count;
         if (needCount > 0)
         {
             List<SkillInfo> newSkills = GetShopSkills(needCount, lockedSkills);
             foreach (var skillInfo in newSkills)
             {
+                cachedShopSkills.Add(skillInfo);
                 CreateShopSkillItem(skillInfo);
             }
         }
-        
-        // 更新金币显示
+
         UpdateGoldDisplay();
     }
 
@@ -697,11 +967,9 @@ public class SkillSelectMenu : MenuBase
             }
 
             // 更新按钮可交互状态（检查金币是否足够）
-            // 如果有锁定的技能，仍然可以刷新（只刷新未锁定的技能）
-            // 但如果所有技能都被锁定（3个），则禁用刷新按钮
             if (PlayerManager.Instance != null)
             {
-                bool allLocked = lockedSkillIdentifiers.Count >= 3;
+                bool allLocked = !isShopRuneSection && lockedSkillIdentifiers.Count >= 3;
                 bool canRefresh = PlayerManager.Instance.Gold >= currentRefreshPrice && !allLocked;
                 refreshButton.interactable = canRefresh;
             }
