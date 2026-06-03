@@ -109,6 +109,22 @@ public class StartAnimInfo
     public StartAnimInfo nextInfo; // 下一个动画的引用（从CSV顺序推断，只有不是isEnding的才有next）
 }
 
+public class RuneInfo
+{
+    public string identifier;
+    public string name;
+    public string description;
+    public string descriptionMore;
+    public bool isStart;
+    public string effect;
+    public int values;
+    public bool available;
+    public int buyPrice;
+    public List<string> unlock;
+    public int unlockLevel;
+    public string synergy;
+}
+
 public class CSVLoader : Singleton<CSVLoader>
 {
     public TMP_FontAsset font;
@@ -121,6 +137,8 @@ public class CSVLoader : Singleton<CSVLoader>
     public List<TutorialInfo> tutorialInfoList = new List<TutorialInfo>(); // 保持CSV顺序的列表
     public Dictionary<string, StartAnimInfo> startAnimInfoMap = new Dictionary<string, StartAnimInfo>();
     public List<StartAnimInfo> startAnimInfoList = new List<StartAnimInfo>(); // 保持CSV顺序的列表
+    public Dictionary<string, RuneInfo> runeInfoMap = new Dictionary<string, RuneInfo>();
+    public List<RuneInfo> runeInfoList = new List<RuneInfo>();
     // Start is called before the first frame update
     public void Init()
     {
@@ -215,6 +233,17 @@ public class CSVLoader : Singleton<CSVLoader>
             {
                 startAnimInfoMap.Add(startAnimInfo.identifier, startAnimInfo);
             }
+        }
+
+        var runeInfos = CsvUtil.LoadObjects<RuneInfo>("rune");
+        runeInfoList = new List<RuneInfo>(runeInfos);
+        runeInfoMap.Clear();
+        foreach (var runeInfo in runeInfoList)
+        {
+            if (string.IsNullOrEmpty(runeInfo.identifier))
+                continue;
+
+            runeInfoMap[runeInfo.identifier] = runeInfo;
         }
     }
 

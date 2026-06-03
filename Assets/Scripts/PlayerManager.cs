@@ -388,6 +388,12 @@ public class PlayerManager : Singleton<PlayerManager>
         if (currentShield <= 0)
             return;
 
+        if (RuneManager.Instance != null && RuneManager.Instance.ShouldKeepShieldAtTurnStart())
+        {
+            Debug.Log("符文 keepShieldValue：回合开始护盾不衰减");
+            return;
+        }
+
         currentShield = currentShield / 2;
         Debug.Log($"回合开始护盾衰减，当前护盾: {currentShield}");
     }

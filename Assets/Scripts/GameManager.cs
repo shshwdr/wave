@@ -37,6 +37,11 @@ public class GameManager : Singleton<GameManager>
         {
             SkillManager.Instance.Init();
         }
+
+        if (RuneManager.Instance != null)
+        {
+            RuneManager.Instance.Init();
+        }
         
         // 初始化关卡管理器
         if (LevelManager.Instance != null)

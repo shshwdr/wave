@@ -562,6 +562,12 @@ public class Enemy : Character
                 }
             }
         }
+
+        if (RuneManager.Instance != null)
+        {
+            RuneManager.Instance.TryApplyHitTakeDamageOnCollision(
+                this, collidedEnemy, collidedAlly, redWaveDamage, hasCollision);
+        }
     }
 
     /// <summary>
@@ -810,6 +816,9 @@ public class Enemy : Character
             }
             else
             {
+                if (RuneManager.Instance != null)
+                    RuneManager.Instance.TryApplyShieldDamageReflection(this, damage);
+
                 // 近战攻击，直接造成伤害
                 PlayerManager.Instance.TakeDamage(damage);
                 // 显示伤害数字
@@ -943,6 +952,9 @@ public class Enemy : Character
                 // 到达目标后造成伤害
                 if (PlayerManager.Instance != null)
                 {
+                    if (RuneManager.Instance != null)
+                        RuneManager.Instance.TryApplyShieldDamageReflection(this, damage);
+
                     PlayerManager.Instance.TakeDamage(damage);
                     // 显示伤害数字
                     DamageNumber.CreateDamageNumber(damage, targetPos, false);
