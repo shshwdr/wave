@@ -49,7 +49,7 @@ public class ShopRuneItem : MonoBehaviour
             descriptionText.text = RuneManager.Instance.GetRuneDescription(runeInfo.identifier);
 
         bool alreadyOwned = RuneManager.Instance.HasRune(runeInfo.identifier);
-        int price = runeInfo.buyPrice;
+        int price = RuneManager.Instance.GetDiscountedShopPrice(runeInfo.buyPrice);
         bool canAfford = !alreadyOwned
             && PlayerManager.Instance != null
             && PlayerManager.Instance.Gold >= price;

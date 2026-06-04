@@ -190,6 +190,9 @@ public class Ally : Character
 
         isDead = true;
 
+        if (RuneManager.Instance != null)
+            RuneManager.Instance.TryExplodeAllyOnDeath(this);
+
         // 隐藏血条
         if (healthBar != null)
         {

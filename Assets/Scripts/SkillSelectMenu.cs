@@ -570,7 +570,8 @@ public class SkillSelectMenu : MenuBase
         if (RuneManager.Instance.HasRune(runeInfo.identifier))
             return;
 
-        if (!PlayerManager.Instance.ConsumeGold(runeInfo.buyPrice))
+        int price = RuneManager.Instance.GetDiscountedShopPrice(runeInfo.buyPrice);
+        if (!PlayerManager.Instance.ConsumeGold(price))
         {
             Debug.LogWarning($"金币不足，无法购买符文: {runeInfo.identifier}");
             return;
@@ -673,6 +674,8 @@ public class SkillSelectMenu : MenuBase
 
         bool isUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier);
         int price = isUpgrade ? skillInfo.upgradePrice : skillInfo.buyPrice;
+        if (RuneManager.Instance != null)
+            price = RuneManager.Instance.GetDiscountedShopPrice(price);
 
         if (!IsFreeShopMode)
         {

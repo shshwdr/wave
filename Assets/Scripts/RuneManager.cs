@@ -178,4 +178,144 @@ public class RuneManager : Singleton<RuneManager>
         if (collidedEnemy != null && !collidedEnemy.IsDead)
             collidedEnemy.TakeDamage(damage, Vector3.left, false, 0, 0f);
     }
+
+    /// <summary>
+    /// 商店折扣后的价格（shopCheaper）
+    /// </summary>
+    public int GetDiscountedShopPrice(int originalPrice)
+    {
+        if (originalPrice <= 0 || !HasEffect("shopCheaper"))
+            return originalPrice;
+
+        int percent = GetValueByEffect("shopCheaper");
+        if (percent <= 0)
+            return originalPrice;
+
+        return Mathf.Max(1, Mathf.RoundToInt(originalPrice * (1f - percent / 100f)));
+    }
+
+    /// <summary>
+    /// 符文提供的全局波浪伤害倍率（damageIncreaseAll + SafeDistance）
+    /// </summary>
+    public float GetWaveDamageMultiplier()
+    {
+        float multiplier = 1f;
+
+        if (HasEffect("damageIncreaseAll"))
+        {
+            int percent = GetValueByEffect("damageIncreaseAll");
+            if (percent > 0)
+                multiplier *= 1f + percent / 100f;
+        }
+
+        if (HasEffect("SafeDistance") && IsLeftmostColumnsClear(3))
+        {
+            int percent = GetValueByEffect("SafeDistance");
+            if (percent > 0)
+                multiplier *= 1f + percent / 100f;
+        }
+
+        return multiplier;
+    }
+
+    /// <summary>
+    /// 最左侧若干列是否没有存活敌人
+    /// </summary>
+    public bool IsLeftmostColumnsClear(int columnCount)
+    {
+        EnemyManager enemyManager = Object.FindObjectOfType<EnemyManager>();
+        if (enemyManager == null || columnCount <= 0)
+            return false;
+
+        foreach (var enemy in enemyManager.ActiveEnemies)
+        {
+            if (enemy == null || enemy.IsDead)
+                continue;
+
+            if (enemy.GridPosition.x < columnCount)
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 敌人位于最左侧若干列时的额外伤害倍率（closerMoreDamage）
+    /// </summary>
+    public float GetCloserMoreDamageMultiplier(int enemyGridX)
+    {
+        if (!HasEffect("closerMoreDamage") || enemyGridX >= 2)
+            return 1f;
+
+        int percent = GetValueByEffect("closerMoreDamage");
+        if (percent <= 0)
+            return 1f;
+
+        return 1f + percent / 100f;
+    }
+
+    public bool ShouldHitKeepMove()
+    {
+        return HasEffect("hitKeepMove");
+    }
+
+    /// <summary>
+    /// 敌人被击退到右边界时对 Boss 造成百分比伤害（PushToBoss）
+    /// </summary>
+    public void TryApplyPushToBoss(float referenceDamage)
+    {
+        if (!HasEffect("PushToBoss") || referenceDamage <= 0)
+            return;
+
+        Boss boss = MainGameManager.GetCurrentBoss();
+        if (boss == null || boss.IsDead)
+            return;
+
+        int percent = GetValueByEffect("PushToBoss");
+        if (percent <= 0)
+            return;
+
+        int bossDamage = Mathf.RoundToInt(referenceDamage * (percent / 100f));
+        if (bossDamage <= 0)
+            return;
+
+        boss.TakeDamage(bossDamage, Vector3.left, false, 0, 0f);
+    }
+
+    /// <summary>
+    /// 随从死亡时对四向相邻敌人造成固定伤害（ExplodeAlly）
+    /// </summary>
+    public void TryExplodeAllyOnDeath(Ally ally)
+    {
+        if (ally == null || !HasEffect("ExplodeAlly"))
+            return;
+
+        int damage = GetValueByEffect("ExplodeAlly");
+        if (damage <= 0)
+            return;
+
+        EnemyManager enemyManager = Object.FindObjectOfType<EnemyManager>();
+        if (enemyManager == null)
+            return;
+
+        Vector2Int center = ally.GridPosition;
+        Vector2Int[] adjacentPositions =
+        {
+            new Vector2Int(center.x, center.y + 1),
+            new Vector2Int(center.x, center.y - 1),
+            new Vector2Int(center.x - 1, center.y),
+            new Vector2Int(center.x + 1, center.y)
+        };
+
+        foreach (var pos in adjacentPositions)
+        {
+            foreach (var enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy == null || enemy.IsDead || enemy.GridPosition != pos)
+                    continue;
+
+                enemy.TakeDamage(damage, Vector3.zero, false, 0, 0f);
+            }
+        }
+    }
 }

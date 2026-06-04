@@ -392,6 +392,8 @@ public class Enemy : Character
         
         // 确定击退方向（根据direction的x分量）
         bool knockbackRight = direction.x > 0;
+        bool hitKeepMove = RuneManager.Instance != null && RuneManager.Instance.ShouldHitKeepMove();
+        int maxSteps = hitKeepMove ? boardManager.Width : tiles;
         
         // 逐步检查每个格子，如果遇到敌人、随从或边界则停止
         Vector2Int currentPos = gridPosition;
@@ -399,7 +401,8 @@ public class Enemy : Character
         Enemy collidedEnemy = null;
         Ally collidedAlly = null;
         bool hasCollision = false;
-        for (int i = 1; i <= tiles; i++)
+        bool hitRightBorder = false;
+        for (int i = 1; i <= maxSteps; i++)
         {
             Vector2Int checkPos = gridPosition;
             if (knockbackRight)
@@ -416,6 +419,7 @@ public class Enemy : Character
             {
                 if (checkPos.x >= boardManager.Width)
                 {
+                    hitRightBorder = true;
                     hasCollision = true;
                     break; // 到达右边界，停止
                 }
@@ -467,11 +471,14 @@ public class Enemy : Character
             finalPos = checkPos;
         }
         
-        // 如果有碰撞（包括碰撞随从），敌人不应该移动
-        if (hasCollision)
+        // 如果有碰撞（包括碰撞随从），默认不移动；hitKeepMove 时滑到碰撞前一格
+        if (hasCollision && !hitKeepMove)
         {
             finalPos = currentPos; // 保持原位置
         }
+
+        if (hitRightBorder && RuneManager.Instance != null)
+            RuneManager.Instance.TryApplyPushToBoss(redWaveDamage);
         
         // 计算世界坐标
         Vector3 targetWorldPos = boardManager.GridToWorldPosition(finalPos);

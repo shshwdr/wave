@@ -95,6 +95,8 @@ public class ShopSkillItem : MonoBehaviour
         {
             bool isUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier);
             int price = isUpgrade ? skillInfo.upgradePrice : skillInfo.buyPrice;
+            if (RuneManager.Instance != null)
+                price = RuneManager.Instance.GetDiscountedShopPrice(price);
             
             bool canAfford = hidePrice || (PlayerManager.Instance != null && PlayerManager.Instance.Gold >= price);
             buyButton.interactable = canAfford;

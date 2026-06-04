@@ -677,6 +677,9 @@ public class Wave : MonoBehaviour
                 break;
             }
         }
+
+        if (RuneManager.Instance != null)
+            damage *= RuneManager.Instance.GetWaveDamageMultiplier();
     }
     
     /// <summary>
@@ -829,6 +832,9 @@ public class Wave : MonoBehaviour
                 
                 // 应用击中时的技能效果
                 ApplyHitSkillEffects(enemy, ref finalDamage, direction);
+
+                if (RuneManager.Instance != null && enemy != null)
+                    finalDamage *= RuneManager.Instance.GetCloserMoreDamageMultiplier(enemy.GridPosition.x);
                 
                 // 应用target技能（给敌人添加vulnerable debuff）
                 if (hasTarget && enemy != null)
