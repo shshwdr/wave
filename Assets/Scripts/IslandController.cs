@@ -643,9 +643,19 @@ public class IslandController : MonoBehaviour
         Vector2 to = b.Position;
         Vector2 dir = to - from;
         float length = dir.magnitude;
+        float thickness = lineRect.sizeDelta.y;
+
+        MapCurvedLine curvedLine = line as MapCurvedLine;
+        if (curvedLine != null && length > 0.01f)
+        {
+            float sign = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+            float curveOffset = length * UnityEngine.Random.Range(0.06f, 0.18f) * sign;
+            curvedLine.Setup(from, to, curveOffset, thickness);
+            return;
+        }
 
         lineRect.anchoredPosition = (from + to) * 0.5f;
-        lineRect.sizeDelta = new Vector2(length, lineRect.sizeDelta.y);
+        lineRect.sizeDelta = new Vector2(length, thickness);
         lineRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
     }
 

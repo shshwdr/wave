@@ -2,11 +2,11 @@
 keepShieldValue,keepShieldValue,Shield value would not half when turn starts,,keepShieldValue,50,,1,10,,,护盾
 ShieldDamage,ShieldDamage,"When enemy hit player when she has shield, the enemy takes {0}% damage back",,ShieldDamage,50,,1,10,,,护盾
 hitTakeDamage,Impact Crash,Collided foes take {0}% wave damage.,,hitTakeDamage,100,,1,10,,,击退
-damageIncreaseAll,Amplify,All wave damage increase {0}% ,,damageIncreaseAll,20,1,1,10,,,
-shopVIPCard,VIP card,All item in shop get {0}% discount,,shopCheaper,50,1,1,10,,,
+damageIncreaseAll,Amplify,All wave damage increase {0}% ,,damageIncreaseAll,20,,1,10,,,
+shopVIPCard,VIP card,All item in shop get {0}% discount,,shopCheaper,50,,1,10,,,
 closerMoreDamage,,enemy on the leftmost 2 column take {0}% extra damage,,closerMoreDamage,50,1,,,,,换血
 hitKeepMove,,push back will push until hit collider,,hitKeepMove,50,1,,,,,击退
-SafeDistance,,"When there is no enemy in leftmost 3 columns, all wave damage increase {0}%",,SafeDistance,50,1,,,,,击退
+SafeDistance,,"When there is no enemy in leftmost 3 columns, all wave damage increase {0}%",,SafeDistance,50,,,,,,击退
 PushToBoss,,"If an enemy push back to the right border, do {0}% damage to the boss",,PushToBoss,50,1,,,,,
 ExplodeAlly,,"When an ally dies, it explodes, dealing {0} damage to adjacent enemies.",,ExplodeAlly,50,1,,,,,
 t,,随从受到致死伤害时，有 {0}% 几率保留 1 点血不灭，并立刻向前走 1 格。,,,50,,,,,,
