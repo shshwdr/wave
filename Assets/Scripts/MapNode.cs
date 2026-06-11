@@ -16,6 +16,8 @@ public class MapNode : MonoBehaviour
     private Button nodeButton;
     private bool isBossNode;
     private bool used;
+    private bool visited;
+    private Color normalIconColor = Color.white;
 
     public string Type => type;
     public bool IsBossNode => isBossNode;
@@ -35,6 +37,12 @@ public class MapNode : MonoBehaviour
 
         nodeButton.onClick.RemoveAllListeners();
         nodeButton.onClick.AddListener(HandleClick);
+
+        if (iconImage != null)
+        {
+            normalIconColor = iconImage.color;
+        }
+
         RefreshIcon();
     }
 
@@ -56,6 +64,8 @@ public class MapNode : MonoBehaviour
         {
             nodeButton.interactable = interactable;
         }
+
+        RefreshIconColor();
     }
 
     public void SetMapVisible(bool visible)
@@ -70,7 +80,8 @@ public class MapNode : MonoBehaviour
 
     public void SetVisited(bool visited)
     {
-        // 预留：可按 visited 调整节点外观
+        this.visited = visited;
+        RefreshIconColor();
     }
 
     private void HandleClick()
@@ -86,6 +97,25 @@ public class MapNode : MonoBehaviour
         }
 
         iconImage.sprite = LoadMapNodeSprite(GetIconResourceName());
+        RefreshIconColor();
+    }
+
+    private void RefreshIconColor()
+    {
+        if (iconImage == null)
+        {
+            return;
+        }
+
+        bool showDisabledLook = visited && (nodeButton == null || !nodeButton.interactable);
+        if (showDisabledLook && nodeButton != null)
+        {
+            iconImage.color = normalIconColor * nodeButton.colors.disabledColor;
+        }
+        else
+        {
+            iconImage.color = normalIconColor;
+        }
     }
 
     private string GetIconResourceName()
