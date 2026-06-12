@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -27,6 +28,7 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
 
     private ConsumableView parentView;
     private string identifier;
+    private Coroutine refreshLayoutCoroutine;
 
     public string Identifier => identifier;
     public bool HasConsumable => !string.IsNullOrEmpty(identifier);
@@ -136,18 +138,28 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
         parentView?.NotifyPanelOpened(this);
         interactivePanel.SetActive(true);
         UpdatePanelContent();
+        SchedulePanelLayoutRefresh();
     }
 
     public void HidePanel()
     {
+        if (refreshLayoutCoroutine != null)
+        {
+            StopCoroutine(refreshLayoutCoroutine);
+            refreshLayoutCoroutine = null;
+        }
+
         if (interactivePanel != null)
             interactivePanel.SetActive(false);
     }
 
     public void RefreshPanelIfOpen()
     {
-        if (IsPanelOpen)
-            UpdatePanelContent();
+        if (!IsPanelOpen)
+            return;
+
+        UpdatePanelContent();
+        SchedulePanelLayoutRefresh();
     }
 
     public bool IsPointerOver()
@@ -190,10 +202,65 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
             useButton.gameObject.SetActive(canUse);
 
         if (sellButton != null)
+        {
             sellButton.gameObject.SetActive(count > 0);
+            if (count > 0 && info != null)
+                SetButtonLabel(sellButton, $"Sell One({info.price})");
+        }
 
         if (sellAllButton != null)
+        {
             sellAllButton.gameObject.SetActive(count > 1);
+            if (count > 1 && info != null)
+                SetButtonLabel(sellAllButton, $"Sell All({info.price * count})");
+        }
+    }
+
+    private static void SetButtonLabel(Button button, string text)
+    {
+        if (button == null)
+            return;
+
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label != null)
+            label.text = text;
+    }
+
+    private void SchedulePanelLayoutRefresh()
+    {
+        RefreshPanelLayout();
+
+        if (refreshLayoutCoroutine != null)
+            StopCoroutine(refreshLayoutCoroutine);
+
+        refreshLayoutCoroutine = StartCoroutine(RefreshPanelLayoutNextFrame());
+    }
+
+    private IEnumerator RefreshPanelLayoutNextFrame()
+    {
+        yield return null;
+        RefreshPanelLayout();
+        refreshLayoutCoroutine = null;
+    }
+
+    private void RefreshPanelLayout()
+    {
+        if (interactivePanel == null)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+
+        RectTransform panelRect = interactivePanel.transform as RectTransform;
+        if (panelRect != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+
+        VerticalLayoutGroup layoutGroup = interactivePanel.GetComponent<VerticalLayoutGroup>();
+        if (layoutGroup != null)
+        {
+            RectTransform layoutRect = layoutGroup.transform as RectTransform;
+            if (layoutRect != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRect);
+        }
     }
 
     private void OnUseClicked()
