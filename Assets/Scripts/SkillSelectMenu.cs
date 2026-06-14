@@ -63,7 +63,6 @@ public class SkillSelectMenu : MenuBase
     private List<GameObject> shopRuneItems = new List<GameObject>();
     private List<RuneInfo> cachedShopRunes = new List<RuneInfo>();
     private List<SkillInfo> cachedShopSkills = new List<SkillInfo>();
-    private bool isShopRuneSection = false;
     private int currentRefreshPrice = 1; // 当前刷新价格（每次进入商店重置为1）
     private bool isLocked = false; // 锁定状态
     private HashSet<string> lockedSkillIdentifiers = new HashSet<string>(); // 锁定的技能identifier列表
@@ -156,7 +155,7 @@ public class SkillSelectMenu : MenuBase
 
         if (shopSectionToggleButton != null)
         {
-            shopSectionToggleButton.onClick.AddListener(OnShopSectionToggleClicked);
+            shopSectionToggleButton.gameObject.SetActive(false);
         }
     }
 
@@ -186,7 +185,6 @@ public class SkillSelectMenu : MenuBase
 
         if (currentShopMode == ShopMode.MapShop)
         {
-            isShopRuneSection = false;
             cachedShopRunes = GetShopRunes(3);
             cachedShopSkills = BuildShopSkillList(hadLockedSkills);
             ApplyShopSectionUi();
@@ -194,7 +192,6 @@ public class SkillSelectMenu : MenuBase
         }
         else
         {
-            isShopRuneSection = false;
             ApplyShopSectionUi();
             UpdateShop(hadLockedSkills);
         }
@@ -229,49 +226,33 @@ public class SkillSelectMenu : MenuBase
         }
         if (shopSectionToggleButton != null)
         {
-            shopSectionToggleButton.gameObject.SetActive(!isBattleReward);
+            shopSectionToggleButton.gameObject.SetActive(false);
         }
-    }
-
-    private void OnShopSectionToggleClicked()
-    {
-        if (currentShopMode != ShopMode.MapShop)
-            return;
-
-        isShopRuneSection = !isShopRuneSection;
-        ApplyShopSectionUi();
-        DisplayCurrentShopSection();
-        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
     }
 
     private void ApplyShopSectionUi()
     {
         bool isMapShop = currentShopMode == ShopMode.MapShop;
-        bool showRunes = isMapShop && isShopRuneSection;
 
         if (shopRuneParent != null)
-            shopRuneParent.gameObject.SetActive(showRunes);
+            shopRuneParent.gameObject.SetActive(isMapShop);
         if (shopParent != null)
-            shopParent.gameObject.SetActive(!isMapShop || !isShopRuneSection);
-
-        if (shopSectionToggleButton != null)
-        {
-            TMP_Text toggleText = shopSectionToggleButton.GetComponentInChildren<TMP_Text>();
-            if (toggleText != null)
-                toggleText.text = isShopRuneSection ? "Skill" : "Rune";
-        }
+            shopParent.gameObject.SetActive(true);
 
         UpdateRefreshButton();
     }
 
     private void DisplayCurrentShopSection()
     {
-        if (currentShopMode == ShopMode.MapShop && isShopRuneSection)
-            DisplayShopRunesFromCache();
-        else if (currentShopMode == ShopMode.MapShop)
+        if (currentShopMode == ShopMode.MapShop)
+        {
             DisplayShopSkillsFromCache();
+            DisplayShopRunesFromCache();
+        }
         else
+        {
             UpdateShop(false);
+        }
 
         UpdateGoldDisplay();
     }
@@ -805,13 +786,10 @@ public class SkillSelectMenu : MenuBase
             currentRefreshPrice++;
         }
 
-        if (currentShopMode == ShopMode.MapShop && isShopRuneSection)
+        RefreshShop();
+        if (currentShopMode == ShopMode.MapShop)
         {
             RefreshShopRunes();
-        }
-        else
-        {
-            RefreshShop();
         }
 
         UpdateGoldDisplay();
@@ -972,7 +950,7 @@ public class SkillSelectMenu : MenuBase
             // 更新按钮可交互状态（检查金币是否足够）
             if (PlayerManager.Instance != null)
             {
-                bool allLocked = !isShopRuneSection && lockedSkillIdentifiers.Count >= 3;
+                bool allLocked = lockedSkillIdentifiers.Count >= 3;
                 bool canRefresh = PlayerManager.Instance.Gold >= currentRefreshPrice && !allLocked;
                 refreshButton.interactable = canRefresh;
             }
