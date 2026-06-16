@@ -228,17 +228,18 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
 
     private void SchedulePanelLayoutRefresh()
     {
-        RefreshPanelLayout();
-
         if (refreshLayoutCoroutine != null)
             StopCoroutine(refreshLayoutCoroutine);
 
-        refreshLayoutCoroutine = StartCoroutine(RefreshPanelLayoutNextFrame());
+        refreshLayoutCoroutine = StartCoroutine(RefreshPanelLayoutCoroutine());
     }
 
-    private IEnumerator RefreshPanelLayoutNextFrame()
+    private IEnumerator RefreshPanelLayoutCoroutine()
     {
+        RefreshPanelLayout();
         yield return null;
+        RefreshPanelLayout();
+        yield return new WaitForEndOfFrame();
         RefreshPanelLayout();
         refreshLayoutCoroutine = null;
     }
@@ -248,19 +249,73 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
         if (interactivePanel == null)
             return;
 
+        RectTransform panelRect = interactivePanel.transform as RectTransform;
+        float panelContentWidth = GetLayoutContentWidth(panelRect);
+
+        PrepareTmpForLayout(panelTitleText, panelContentWidth);
+        PrepareTmpForLayout(panelDescriptionText, panelContentWidth);
+
+        if (sellButton != null)
+            PrepareTmpForLayout(sellButton.GetComponentInChildren<TMP_Text>(true), panelContentWidth);
+        if (sellAllButton != null)
+            PrepareTmpForLayout(sellAllButton.GetComponentInChildren<TMP_Text>(true), panelContentWidth);
+        if (useButton != null)
+            PrepareTmpForLayout(useButton.GetComponentInChildren<TMP_Text>(true), panelContentWidth);
+
         Canvas.ForceUpdateCanvases();
 
-        RectTransform panelRect = interactivePanel.transform as RectTransform;
         if (panelRect != null)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+            RebuildLayoutUpwards(panelRect);
+    }
 
-        VerticalLayoutGroup layoutGroup = interactivePanel.GetComponent<VerticalLayoutGroup>();
+    private static float GetLayoutContentWidth(RectTransform panelRect)
+    {
+        if (panelRect == null)
+            return 0f;
+
+        float width = panelRect.rect.width;
+        VerticalLayoutGroup layoutGroup = panelRect.GetComponent<VerticalLayoutGroup>();
         if (layoutGroup != null)
+            width -= layoutGroup.padding.left + layoutGroup.padding.right;
+
+        return Mathf.Max(width, 0f);
+    }
+
+    private static void PrepareTmpForLayout(TMP_Text text, float fallbackWidth)
+    {
+        if (text == null)
+            return;
+
+        text.ForceMeshUpdate(true, true);
+
+        RectTransform rect = text.rectTransform;
+        float width = rect.rect.width;
+        if (width <= 1f)
+            width = LayoutUtility.GetPreferredWidth(rect);
+        if (width <= 1f)
+            width = rect.sizeDelta.x;
+        if (width <= 1f)
+            width = fallbackWidth;
+
+        Vector2 preferred = text.GetPreferredValues(width, 0f);
+        if (preferred.y > 0f)
+            rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, preferred.y);
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+    }
+
+    private static void RebuildLayoutUpwards(RectTransform rect)
+    {
+        if (rect == null)
+            return;
+
+        for (int i = 0; i < rect.childCount; i++)
         {
-            RectTransform layoutRect = layoutGroup.transform as RectTransform;
-            if (layoutRect != null)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRect);
+            if (rect.GetChild(i) is RectTransform childRect)
+                RebuildLayoutUpwards(childRect);
         }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
     }
 
     private void OnUseClicked()
