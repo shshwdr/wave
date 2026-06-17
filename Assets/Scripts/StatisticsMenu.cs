@@ -194,16 +194,8 @@ public class StatisticsMenu : MenuBase
             if (PlayerManager.Instance != null && SkillManager.Instance != null)
             {
                 List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
-                string detailText = "";
-                foreach (var identifier in skillIdentifiers)
-                {
-                    if (SkillManager.Instance.HasSkill(identifier))
-                    {
-                        string description = SkillManager.Instance.GetSkillDescription(identifier, false);
-                        detailText += description + "\n";
-                    }
-                }
-                
+                string detailText = SkillManager.Instance.BuildColorAreaSkillDescriptions(skillIdentifiers);
+
                 if (!string.IsNullOrEmpty(detailText))
                 {
                     skillDetailText.text = detailText;

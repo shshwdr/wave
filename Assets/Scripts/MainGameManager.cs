@@ -1399,27 +1399,12 @@ public class MainGameManager : Singleton<MainGameManager>
 
             if (skillIdentifiers.Count > 0)
             {
-                // 显示技能描述
-                string skillText = "";
-                string firstSkillIdentifier = null;
-                foreach (var identifier in skillIdentifiers)
-                {
-                    if (SkillManager.Instance.HasSkill(identifier))
-                    {
-                        if (firstSkillIdentifier == null)
-                        {
-                            firstSkillIdentifier = identifier;
-                        }
-                        string description = SkillManager.Instance.GetSkillDescription(identifier, false);
-                        skillText += description + "\n";
-                    }
-                }
+                string skillText = SkillManager.Instance.BuildColorAreaSkillDescriptions(skillIdentifiers);
 
                 if (!string.IsNullOrEmpty(skillText))
                 {
                     skillDisplayText.text = skillText;
-                    // 根据技能颜色设置panel背景色
-                    SetSkillPanelColor(skillDisplayPanel, firstSkillIdentifier);
+                    SetSkillPanelColorByIndex(skillDisplayPanel, colorIndex);
                     skillDisplayPanel.SetActive(true);
                 }
                 else
@@ -1438,6 +1423,29 @@ public class MainGameManager : Singleton<MainGameManager>
         }
     }
     
+    /// <summary>
+    /// 根据颜色索引设置panel背景色（用于颜色区域悬停）
+    /// </summary>
+    private void SetSkillPanelColorByIndex(GameObject panel, int colorIndex)
+    {
+        if (panel == null)
+            return;
+
+        Image bgImage = panel.GetComponent<Image>();
+        if (bgImage == null)
+            return;
+
+        if (colorIndex >= 0 && colorIndex < 4)
+        {
+            TileColor tileColor = (TileColor)colorIndex;
+            bgImage.color = TileColorUtil.GetUnityColor(tileColor);
+        }
+        else
+        {
+            bgImage.color = Color.white;
+        }
+    }
+
     /// <summary>
     /// 根据技能颜色设置panel背景色
     /// </summary>

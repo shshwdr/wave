@@ -110,7 +110,7 @@ public class SkillSelectMenu : MenuBase
                 {
                     TileColor tileColor = (TileColor)colorIndex;
                     Color waveColor = TileColorUtil.GetUnityColor(tileColor);
-                    colorArea[i].colorImage.color = waveColor;
+                    //colorArea[i].colorImage.color = waveColor;
                 }
 
                 // 添加鼠标悬停事件
@@ -167,6 +167,8 @@ public class SkillSelectMenu : MenuBase
         onConfirm = onConfirmCallback;
         currentShopMode = mode;
         battleRewardSkillChosen = false;
+
+        ClearShopParents();
 
         // 重置刷新价格为1
         currentRefreshPrice = 1;
@@ -273,22 +275,32 @@ public class SkillSelectMenu : MenuBase
 
     private void ClearShopSkillItems()
     {
-        foreach (var item in shopSkillItems)
-        {
-            if (item != null)
-                Destroy(item);
-        }
+        ClearChildren(shopParent);
         shopSkillItems.Clear();
     }
 
     private void ClearShopRuneItems()
     {
-        foreach (var item in shopRuneItems)
-        {
-            if (item != null)
-                Destroy(item);
-        }
+        ClearChildren(shopRuneParent);
         shopRuneItems.Clear();
+    }
+
+    private void ClearShopParents()
+    {
+        ClearShopSkillItems();
+        ClearShopRuneItems();
+    }
+
+    private void ClearChildren(Transform parent)
+    {
+        if (parent == null)
+            return;
+
+        foreach (Transform child in parent)
+        {
+            if (child != null)
+                Destroy(child.gameObject);
+        }
     }
 
     private List<SkillInfo> BuildShopSkillList(bool useLockedSkills = false)
@@ -1057,9 +1069,12 @@ public class SkillSelectMenu : MenuBase
                     SkillIconUI icon = child.GetComponent<SkillIconUI>();
                     if (icon != null)
                     {
-                        skillIconMap.Remove(icon.SkillIdentifier);
-                        Destroy(child.gameObject);
+                        string identifier = icon.SkillIdentifier;
+                        if (!string.IsNullOrEmpty(identifier))
+                            skillIconMap.Remove(identifier);
                     }
+
+                    Destroy(child.gameObject);
                 }
 
                 // 创建新的图标
@@ -1083,12 +1098,18 @@ public class SkillSelectMenu : MenuBase
         List<string> unassignedSkills = GetUnassignedSkills();
 
         // 清除旧的图标（只清除在背包中的）
-        List<SkillIconUI> iconsToRemove = new List<SkillIconUI>();
         foreach (Transform child in backpackParent)
         {
+            SkillIconUI icon = child.GetComponent<SkillIconUI>();
+            if (icon != null)
+            {
+                string identifier = icon.SkillIdentifier;
+                if (!string.IsNullOrEmpty(identifier))
+                    skillIconMap.Remove(identifier);
+            }
+
             Destroy(child.gameObject);
         }
-        
 
         // 创建新的图标
         foreach (var identifier in unassignedSkills)
@@ -1148,7 +1169,7 @@ public class SkillSelectMenu : MenuBase
     /// </summary>
     private void CreateSkillIcon(string identifier, Transform parent, int colorIndex)
     {
-        if (skillIconPrefab == null || parent == null)
+        if (skillIconPrefab == null || parent == null || string.IsNullOrEmpty(identifier))
             return;
 
         GameObject iconObj = Instantiate(skillIconPrefab, parent);
@@ -1211,15 +1232,7 @@ public class SkillSelectMenu : MenuBase
             if (PlayerManager.Instance != null && SkillManager.Instance != null)
             {
                 List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
-                string detailText = "";
-                foreach (var identifier in skillIdentifiers)
-                {
-                    if (SkillManager.Instance.HasSkill(identifier))
-                    {
-                        string description = SkillManager.Instance.GetSkillDescription(identifier, false);
-                        detailText += description + "\n";
-                    }
-                }
+                string detailText = SkillManager.Instance.BuildColorAreaSkillDescriptions(skillIdentifiers);
 
                 if (!string.IsNullOrEmpty(detailText))
                 {
@@ -1614,10 +1627,10 @@ public class SkillSelectMenu : MenuBase
         if (bgImage == null)
             return;
         
-        // 如果技能在背包中（colorIndex < 0 或 >= 4），使用#FFF0A7颜色
+        // 如果技能在背包中（colorIndex < 0 或 >= 4），使用默认颜色
         if (colorIndex < 0 || colorIndex >= 4)
         {
-            bgImage.color = TileColorUtil.HexToColor("#FFF0A7");
+            bgImage.color = TileColorUtil.GetDefaultColor();
             return;
         }
         

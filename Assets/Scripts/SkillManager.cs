@@ -298,5 +298,27 @@ public class SkillManager : Singleton<SkillManager>
         // 替换{0}为当前等级的值
         return skillInfo.description.Replace("{0}", valueString);
     }
+
+    /// <summary>
+    /// 构建颜色区域所有技能的描述文本（每条前加列表分隔圆点）
+    /// </summary>
+    public string BuildColorAreaSkillDescriptions(IList<string> skillIdentifiers, bool showNext = false)
+    {
+        if (skillIdentifiers == null || skillIdentifiers.Count == 0)
+            return "";
+
+        var lines = new List<string>();
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (!HasSkill(identifier))
+                continue;
+
+            string description = GetSkillDescription(identifier, showNext);
+            if (!string.IsNullOrEmpty(description))
+                lines.Add("• " + description);
+        }
+
+        return string.Join("\n", lines);
+    }
 }
 

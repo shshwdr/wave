@@ -93,9 +93,7 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
             // colorIndex = 0-3 表示在哪个颜色区域（0=红，1=黄，2=蓝，3=绿）
             if (colorIndex < 0 || colorIndex >= 4)
             {
-                // 如果不属于任何颜色（在背包中），使用FFEDDF颜色
-                Color defaultColor = TileColorUtil.HexToColor("#FFF0A7");
-                iconImage.color = defaultColor;
+                iconImage.color = TileColorUtil.GetDefaultColor();
             }
             else
             {

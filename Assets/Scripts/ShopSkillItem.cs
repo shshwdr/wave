@@ -110,12 +110,17 @@ public class ShopSkillItem : MonoBehaviour
             {
                 actionText.text = hidePrice ? "GET" : (isUpgrade ? "UPGRADE" : "BUY");
             }
-            // TMP_Text buttonText = buyButton.GetComponentInChildren<TMP_Text>();
-            // if (buttonText != null)
-            // {
-            //     buttonText.text = (isUpgrade ? "Upgrade" : "Buy") +$"({price})";
-            // }
+
+            ApplyTextColors(!hidePrice && !canAfford);
         }
+    }
+
+    private void ApplyTextColors(bool insufficientGold)
+    {
+        if (priceText == null)
+            return;
+
+        priceText.color = insufficientGold ? TileColorUtil.GetUnaffordableTextColor() : Color.white;
     }
 
     /// <summary>

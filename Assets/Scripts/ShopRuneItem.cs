@@ -62,6 +62,17 @@ public class ShopRuneItem : MonoBehaviour
 
         if (actionText != null)
             actionText.text = alreadyOwned ? "OWNED" : "BUY";
+
+        bool insufficientGold = !alreadyOwned && !canAfford;
+        ApplyTextColors(insufficientGold);
+    }
+
+    private void ApplyTextColors(bool insufficientGold)
+    {
+        if (priceText == null)
+            return;
+
+        priceText.color = insufficientGold ? TileColorUtil.GetUnaffordableTextColor() : Color.white;
     }
 
     private void OnBuyClicked()
