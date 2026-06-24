@@ -84,6 +84,27 @@ public class ConsumableView : MonoBehaviour
         }
     }
 
+    public RectTransform GetFlyTargetForConsumable(string consumableId)
+    {
+        if (slotIcons == null || slotIcons.Length == 0)
+            return transform as RectTransform;
+
+        foreach (ConsumableIcon icon in slotIcons)
+        {
+            if (icon != null && icon.Identifier == consumableId)
+                return icon.FlyTargetRect;
+        }
+
+        foreach (ConsumableIcon icon in slotIcons)
+        {
+            if (icon != null && !icon.HasConsumable)
+                return icon.FlyTargetRect;
+        }
+
+        ConsumableIcon firstIcon = slotIcons[0];
+        return firstIcon != null ? firstIcon.FlyTargetRect : transform as RectTransform;
+    }
+
     public static bool IsPointerOverConsumableUI()
     {
         ConsumableView view = FindObjectOfType<ConsumableView>(true);

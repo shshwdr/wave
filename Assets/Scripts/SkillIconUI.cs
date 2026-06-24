@@ -99,7 +99,7 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
             {
                 // 根据colorIndex获取对应的颜色
                 TileColor tileColor = (TileColor)colorIndex;
-                Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+                Color colorValue = TileColorUtil.GetShopSkillColor(tileColor);
                 iconImage.color = colorValue;
             }
 

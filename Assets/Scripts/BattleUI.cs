@@ -72,6 +72,8 @@ public class BattleUI : MonoBehaviour
     private Tween swapTextPulseTween; // Swap文本脉冲动画
     private Vector3 originalSwapTextScale = Vector3.one; // Swap文本原始缩放
 
+    public RectTransform GoldTextRect => goldText != null ? goldText.rectTransform : null;
+
     private void Start()
     {
         playerManager = PlayerManager.Instance;

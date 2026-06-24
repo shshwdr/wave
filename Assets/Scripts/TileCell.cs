@@ -84,7 +84,7 @@ public class TileCell : MonoBehaviour
     {
         if (spriteRenderer != null)
         {
-            originalColor = TileColorUtil.GetUnityColor(currentColor);
+            originalColor = TileColorUtil.GetBattleNoteColor(currentColor);
             selectHighlight.GetComponent<Image>().color = originalColor*2;
             spriteRenderer.color = originalColor;
             if (!isHighlighted)

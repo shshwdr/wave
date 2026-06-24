@@ -12,16 +12,19 @@ public class MapNode : MonoBehaviour
     [Header("节点配置")]
     [SerializeField] private string type = "battle";
     [SerializeField] private Image iconImage;
+    [SerializeField] private GameObject consumableRewardIndicator;
 
     private Button nodeButton;
     private bool isBossNode;
     private bool used;
     private bool visited;
+    private bool hasConsumableReward;
     private Color normalIconColor = Color.white;
 
     public string Type => type;
     public bool IsBossNode => isBossNode;
     public bool IsUsed => used;
+    public bool HasConsumableReward => hasConsumableReward;
     public Vector2 Position => ((RectTransform)transform).anchoredPosition;
     public bool IsInteractable => nodeButton != null && nodeButton.interactable;
 
@@ -43,7 +46,20 @@ public class MapNode : MonoBehaviour
             normalIconColor = iconImage.color;
         }
 
+        EnsureConsumableIndicatorReference();
+        SetConsumableIndicatorVisible(false);
+
         RefreshIcon();
+    }
+
+    private void EnsureConsumableIndicatorReference()
+    {
+        if (consumableRewardIndicator != null)
+            return;
+
+        Transform consumableTransform = transform.Find("consumable");
+        if (consumableTransform != null)
+            consumableRewardIndicator = consumableTransform.gameObject;
     }
 
     public void SetType(string newType)
@@ -82,6 +98,18 @@ public class MapNode : MonoBehaviour
     {
         this.visited = visited;
         RefreshIconColor();
+    }
+
+    public void SetHasConsumableReward(bool value)
+    {
+        hasConsumableReward = value;
+    }
+
+    public void SetConsumableIndicatorVisible(bool visible)
+    {
+        EnsureConsumableIndicatorReference();
+        if (consumableRewardIndicator != null)
+            consumableRewardIndicator.SetActive(visible);
     }
 
     private void HandleClick()

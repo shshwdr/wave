@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -90,6 +91,42 @@ public class ConsumableManager : Singleton<ConsumableManager>
             return false;
 
         return GetCount(identifier) + amount <= info.maxCount;
+    }
+
+    /// <summary>
+    /// Whether the player can obtain one more of this consumable (stack existing or use an empty slot).
+    /// </summary>
+    public bool CanObtainConsumable(string identifier)
+    {
+        if (!CanAdd(identifier, 1))
+            return false;
+
+        if (HasConsumable(identifier))
+            return true;
+
+        return GetOwnedTypes().Count < 3;
+    }
+
+    /// <summary>
+    /// Pick a random available consumable for battle rewards.
+    /// </summary>
+    public string GetRandomAvailableConsumable()
+    {
+        if (CSVLoader.Instance == null || CSVLoader.Instance.consumableInfoMap == null)
+            return null;
+
+        int currentLevel = LevelManager.Instance != null ? LevelManager.Instance.CurrentLevel : 1;
+        List<ConsumableInfo> candidates = CSVLoader.Instance.consumableInfoMap.Values
+            .Where(info => info != null
+                           && info.available
+                           && (info.unlockLevel <= 0 || currentLevel >= info.unlockLevel))
+            .ToList();
+
+        if (candidates.Count == 0)
+            return null;
+
+        int index = Random.Range(0, candidates.Count);
+        return candidates[index].identifier;
     }
 
     public bool AddConsumable(string identifier, int amount, bool recordOrder = true)

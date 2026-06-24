@@ -67,6 +67,7 @@ public class IslandController : MonoBehaviour
         SelectActiveNodes();
         BuildConnections();
         BuildNodeTypes();
+        AssignConsumableRewards();
 
         currentNode = null;
         if (entryNode != null)
@@ -164,6 +165,7 @@ public class IslandController : MonoBehaviour
                 : (unlockedNodes.Contains(node) && !node.IsUsed);
             node.SetInteractable(canClick);
             node.SetVisited(visitedNodes.Contains(node));
+            node.SetConsumableIndicatorVisible(revealAllNodesCheat && visible && node.HasConsumableReward);
         }
 
         RefreshLineVisibility(visibleNodes);
@@ -331,6 +333,26 @@ public class IslandController : MonoBehaviour
             }
 
             node.SetType("battle");
+        }
+    }
+
+    /// <summary>
+    /// Randomly mark 50% of battle nodes to grant a consumable reward after victory.
+    /// </summary>
+    private void AssignConsumableRewards()
+    {
+        foreach (MapNode node in activeNodes)
+        {
+            node.SetHasConsumableReward(false);
+        }
+
+        foreach (MapNode node in activeNodes)
+        {
+            if (!string.Equals(node.Type, "battle", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            float dropChance = GameData.Instance != null ? GameData.Instance.ConsumableDropChance : 0.5f;
+            node.SetHasConsumableReward(UnityEngine.Random.value < dropChance);
         }
     }
 

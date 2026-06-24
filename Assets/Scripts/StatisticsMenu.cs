@@ -60,7 +60,7 @@ public class StatisticsMenu : MenuBase
                 if (colorArea[i].colorImage != null)
                 {
                     TileColor tileColor = (TileColor)colorIndex;
-                    Color waveColor = TileColorUtil.GetUnityColor(tileColor);
+                    Color waveColor = TileColorUtil.GetShopSkillColor(tileColor);
                     colorArea[i].colorImage.color = waveColor;
                 }
             }
@@ -260,7 +260,7 @@ public class StatisticsMenu : MenuBase
             if (colorLower == "red" || colorLower == "yellow" || colorLower == "blue" || colorLower == "green")
             {
                 TileColor tileColor = GetTileColorFromString(skillInfo.color);
-                Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+                Color colorValue = TileColorUtil.GetShopSkillColor(tileColor);
                 bgImage.color = colorValue;
             }
             else
@@ -293,7 +293,7 @@ public class StatisticsMenu : MenuBase
         if (colorIndex >= 0 && colorIndex < 4)
         {
             TileColor tileColor = (TileColor)colorIndex;
-            Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+            Color colorValue = TileColorUtil.GetShopSkillColor(tileColor);
             bgImage.color = colorValue;
         }
         else

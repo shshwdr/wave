@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// 格子颜色枚举
@@ -18,7 +19,18 @@ public enum TileColor
 [CreateAssetMenu(fileName = "GameData", menuName = "Wave/GameData")]
 public class GameData : ScriptableObject
 {
-    [SerializeField] private List<Color> tileColors = new List<Color>
+    [Header("Shop Skill Colors")]
+    [FormerlySerializedAs("tileColors")]
+    [SerializeField] private List<Color> shopSkillColors = new List<Color>
+    {
+        new Color(1f, 0.78431374f, 0.8862745f, 1f),       // Red  #FFC8E2
+        new Color(0.4862745f, 0.6745098f, 0.9647059f, 1f), // Yellow #7CACF6
+        new Color(0.70980394f, 0.9019608f, 0.9607843f, 1f), // Blue  #B5E6F5
+        new Color(0.74509805f, 0.7490196f, 0.9607843f, 1f), // Green #BEBFF5
+    };
+
+    [Header("Battle Note Colors")]
+    [SerializeField] private List<Color> battleNoteColors = new List<Color>
     {
         new Color(1f, 0.78431374f, 0.8862745f, 1f),       // Red  #FFC8E2
         new Color(0.4862745f, 0.6745098f, 0.9647059f, 1f), // Yellow #7CACF6
@@ -28,6 +40,10 @@ public class GameData : ScriptableObject
 
     [SerializeField] private Color defaultColor = new Color(1f, 0.9411765f, 0.654902f, 1f); // #FFF0A7
     [SerializeField] private Color unaffordableTextColor = new Color(0.99215686f, 0.5529412f, 0.45490196f, 1f); // #FD8D74
+
+    [Header("Map Rewards")]
+    [Range(0f, 1f)]
+    [SerializeField] private float consumableDropChance = 0.5f;
 
     private static GameData instance;
 
@@ -51,13 +67,24 @@ public class GameData : ScriptableObject
 
     public Color DefaultColor => defaultColor;
     public Color UnaffordableTextColor => unaffordableTextColor;
+    public float ConsumableDropChance => consumableDropChance;
 
-    public Color GetTileColor(int colorIndex)
+    public Color GetShopSkillColor(int colorIndex)
     {
-        if (tileColors == null || colorIndex < 0 || colorIndex >= tileColors.Count)
+        return GetColorFromList(shopSkillColors, colorIndex);
+    }
+
+    public Color GetBattleNoteColor(int colorIndex)
+    {
+        return GetColorFromList(battleNoteColors, colorIndex);
+    }
+
+    private Color GetColorFromList(List<Color> colors, int colorIndex)
+    {
+        if (colors == null || colorIndex < 0 || colorIndex >= colors.Count)
             return defaultColor;
 
-        return tileColors[colorIndex];
+        return colors[colorIndex];
     }
 }
 
@@ -73,12 +100,14 @@ public static class TileColorUtil
         return res;
     }
 
-    /// <summary>
-    /// 获取颜色对应的Unity Color
-    /// </summary>
-    public static Color GetUnityColor(TileColor color)
+    public static Color GetShopSkillColor(TileColor color)
     {
-        return GameData.Instance.GetTileColor((int)color);
+        return GameData.Instance.GetShopSkillColor((int)color);
+    }
+
+    public static Color GetBattleNoteColor(TileColor color)
+    {
+        return GameData.Instance.GetBattleNoteColor((int)color);
     }
 
     /// <summary>
@@ -98,10 +127,10 @@ public static class TileColorUtil
     }
 
     /// <summary>
-    /// 随机获取一个颜色
+    /// 获取战斗音符内层颜色（向白色偏移）
     /// </summary>
-    public static TileColor GetRandomColor()
+    public static Color GetInnerBattleNoteColor(TileColor color, float whiteBlend = 0.5f)
     {
-        return (TileColor)Random.Range(0, System.Enum.GetValues(typeof(TileColor)).Length);
+        return Color.Lerp(GetBattleNoteColor(color), Color.white, whiteBlend);
     }
 }

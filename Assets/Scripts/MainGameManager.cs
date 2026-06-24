@@ -114,6 +114,7 @@ public class MainGameManager : Singleton<MainGameManager>
     public int NextBattleLevelIndex => nextBattleLevelIndex;
     private bool battleFromBossMapNode;
     private bool activeBattleFromBossMapNode;
+    private MapNode activeBattleMapNode;
     private int activeBattleLevelIndex = -1;
     private bool waitingForNextIslandSelection;
     private int waitingIslandId = -1;
@@ -134,6 +135,11 @@ public class MainGameManager : Singleton<MainGameManager>
     
     // 跟踪gold关卡中从chest（敌人）获得的金钱
     private int goldFromChests = 0;
+
+    // 战斗结果界面待领取奖励
+    private int pendingBattleDisplayGold;
+    private int pendingBattleGoldToGrant;
+    private string pendingBattleConsumableId;
     
     // Puzzle编辑模式相关
     private bool isPuzzleEditMode = false;
@@ -311,6 +317,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
     public void StartBattleFromMap(MapNode node = null)
     {
+        activeBattleMapNode = node;
         battleFromBossMapNode = node != null && node.IsBossNode;
         StartBattle();
     }
@@ -1438,7 +1445,7 @@ public class MainGameManager : Singleton<MainGameManager>
         if (colorIndex >= 0 && colorIndex < 4)
         {
             TileColor tileColor = (TileColor)colorIndex;
-            bgImage.color = TileColorUtil.GetUnityColor(tileColor);
+            bgImage.color = TileColorUtil.GetBattleNoteColor(tileColor);
         }
         else
         {
@@ -1477,7 +1484,7 @@ public class MainGameManager : Singleton<MainGameManager>
             if (colorLower == "red" || colorLower == "yellow" || colorLower == "blue" || colorLower == "green")
             {
                 TileColor tileColor = GetTileColorFromString(skillInfo.color);
-                Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+                Color colorValue = TileColorUtil.GetBattleNoteColor(tileColor);
                 bgImage.color = colorValue;
             }
             else
@@ -3300,22 +3307,31 @@ public class MainGameManager : Singleton<MainGameManager>
 
         int totalGoldEarned = 0;
         int levelGold = 0;
+        pendingBattleDisplayGold = 0;
+        pendingBattleGoldToGrant = 0;
+        pendingBattleConsumableId = null;
         
-        // 掉落gold（使用当前关卡信息）
-        if (currentLevelInfo != null && currentLevelInfo.gold > 0 && PlayerManager.Instance != null)
+        // 关卡完成金币延后到战斗结果界面领取
+        if (currentLevelInfo != null && currentLevelInfo.gold > 0)
         {
             int goldToAdd = currentLevelInfo.gold;
-            
-            PlayerManager.Instance.AddGold(goldToAdd);
             levelGold = goldToAdd;
             totalGoldEarned += goldToAdd;
-            Debug.Log($"关卡完成，获得 {goldToAdd} gold");
+            pendingBattleGoldToGrant = goldToAdd;
+            pendingBattleDisplayGold += goldToAdd;
+            Debug.Log($"关卡完成，待领取 {goldToAdd} gold");
         }
         
-        // 如果是gold关卡，添加从chest获得的金钱
+        // 如果是gold关卡，添加从chest获得的金钱（战斗中已入账，仅用于展示）
         if (currentLevelInfo != null && currentLevelInfo.type == "gold" && goldFromChests > 0)
         {
             totalGoldEarned += goldFromChests;
+            pendingBattleDisplayGold += goldFromChests;
+        }
+
+        if (activeBattleMapNode != null && activeBattleMapNode.HasConsumableReward && ConsumableManager.Instance != null)
+        {
+            pendingBattleConsumableId = ConsumableManager.Instance.GetRandomAvailableConsumable();
         }
         
         // 显示获得的金钱toast
@@ -3482,7 +3498,36 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private void OnBattleVictoryContinue()
     {
-        ShowBattleRewardShop(() => OpenMap());
+        ShowBattleResultMenu();
+    }
+
+    private void ShowBattleResultMenu()
+    {
+        BattleResultMenu menu = BattleResultMenu.GetOrCreate();
+        if (menu == null)
+        {
+            activeBattleMapNode = null;
+            OpenMap();
+            return;
+        }
+
+        var rewards = new BattleResultMenu.RewardData
+        {
+            displayGold = pendingBattleDisplayGold,
+            goldToGrant = pendingBattleGoldToGrant,
+            consumableId = pendingBattleConsumableId,
+            includeCardReward = true,
+            includeRelicReward = activeBattleMapNode != null && activeBattleMapNode.IsBossNode
+        };
+
+        menu.ShowRewards(rewards, () =>
+        {
+            pendingBattleDisplayGold = 0;
+            pendingBattleGoldToGrant = 0;
+            pendingBattleConsumableId = null;
+            activeBattleMapNode = null;
+            OpenMap();
+        });
     }
 
     private void CacheNextIslandTransitionState(bool defeatedBossLevel, bool defeatedFinalBoss)

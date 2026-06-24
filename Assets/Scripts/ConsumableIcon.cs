@@ -33,6 +33,16 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
     public string Identifier => identifier;
     public bool HasConsumable => !string.IsNullOrEmpty(identifier);
     public bool IsPanelOpen => interactivePanel != null && interactivePanel.activeSelf;
+    public RectTransform FlyTargetRect
+    {
+        get
+        {
+            if (iconImage != null)
+                return iconImage.rectTransform;
+
+            return transform as RectTransform;
+        }
+    }
 
     private void Awake()
     {

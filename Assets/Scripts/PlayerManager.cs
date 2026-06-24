@@ -32,8 +32,11 @@ public class PlayerManager : Singleton<PlayerManager>
     private float enemyDamageBonus = 0f; // 敌人伤害加成百分比（下次战斗）
 
     // Wave技能配置：List<List<string>>，索引0,1,2,3对应红、黄、蓝、绿
-    // 每个内层List存储该颜色wave的技能identifier列表
+    // 每个内层List存储该颜色wave的技能identifier列表（顺序=玩家拖入顺序）
     private List<List<string>> waveSkillsDict = new List<List<string>>();
+
+    // 背包中技能的显示顺序（越晚加入越靠后）
+    private List<string> backpackSkillOrder = new List<string>();
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
@@ -85,6 +88,106 @@ public class PlayerManager : Singleton<PlayerManager>
             waveSkillsDict.Add(new List<string>());
         }
         waveSkillsDict[colorIndex] = new List<string>(skills);
+    }
+
+    /// <summary>
+    /// 获取背包技能列表（按玩家加入顺序）
+    /// </summary>
+    public List<string> GetBackpackSkills()
+    {
+        EnsureBackpackSkillOrderSynced();
+        return new List<string>(backpackSkillOrder);
+    }
+
+    /// <summary>
+    /// 将技能加入背包末尾，或插入到指定位置
+    /// </summary>
+    public void AddBackpackSkill(string identifier, int index = -1)
+    {
+        if (string.IsNullOrEmpty(identifier))
+            return;
+
+        backpackSkillOrder.Remove(identifier);
+        if (index >= 0 && index <= backpackSkillOrder.Count)
+            backpackSkillOrder.Insert(index, identifier);
+        else
+            backpackSkillOrder.Add(identifier);
+    }
+
+    public void RemoveBackpackSkill(string identifier)
+    {
+        if (string.IsNullOrEmpty(identifier))
+            return;
+
+        backpackSkillOrder.Remove(identifier);
+    }
+
+    /// <summary>
+    /// 在背包内调整顺序
+    /// </summary>
+    public void ReorderBackpackSkill(string identifier, int newIndex)
+    {
+        if (string.IsNullOrEmpty(identifier))
+            return;
+
+        backpackSkillOrder.Remove(identifier);
+        if (newIndex < 0 || newIndex >= backpackSkillOrder.Count)
+            backpackSkillOrder.Add(identifier);
+        else
+            backpackSkillOrder.Insert(newIndex, identifier);
+    }
+
+    /// <summary>
+    /// 在颜色区域内调整技能顺序
+    /// </summary>
+    public void ReorderWaveSkill(int colorIndex, string identifier, int newIndex)
+    {
+        if (string.IsNullOrEmpty(identifier) || colorIndex < 0 || colorIndex >= 4)
+            return;
+
+        List<string> skills = GetWaveSkills(colorIndex);
+        skills.Remove(identifier);
+        if (newIndex < 0 || newIndex >= skills.Count)
+            skills.Add(identifier);
+        else
+            skills.Insert(newIndex, identifier);
+
+        SetWaveSkills(colorIndex, skills);
+    }
+
+    /// <summary>
+    /// 同步背包列表：移除已分配到颜色区域的技能，补上遗漏的未分配技能
+    /// </summary>
+    public void EnsureBackpackSkillOrderSynced()
+    {
+        if (SkillManager.Instance == null)
+            return;
+
+        HashSet<string> assignedSkills = new HashSet<string>();
+        for (int i = 0; i < 4; i++)
+        {
+            foreach (var skillId in GetWaveSkills(i))
+                assignedSkills.Add(skillId);
+        }
+
+        backpackSkillOrder.RemoveAll(id =>
+            string.IsNullOrEmpty(id)
+            || !SkillManager.Instance.HasSkill(id)
+            || assignedSkills.Contains(id));
+
+        if (CSVLoader.Instance == null || CSVLoader.Instance.cardInfoMap == null)
+            return;
+
+        foreach (var kvp in CSVLoader.Instance.cardInfoMap)
+        {
+            string id = kvp.Key;
+            if (SkillManager.Instance.HasSkill(id)
+                && !assignedSkills.Contains(id)
+                && !backpackSkillOrder.Contains(id))
+            {
+                backpackSkillOrder.Add(id);
+            }
+        }
     }
     
     /// <summary>
