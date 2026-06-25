@@ -12,14 +12,19 @@ public class MapNode : MonoBehaviour
     [Header("节点配置")]
     [SerializeField] private string type = "battle";
     [SerializeField] private Image iconImage;
+    [SerializeField] private GameObject consumableRewardIndicator;
 
     private Button nodeButton;
     private bool isBossNode;
     private bool used;
+    private bool visited;
+    private bool hasConsumableReward;
+    private Color normalIconColor = Color.white;
 
     public string Type => type;
     public bool IsBossNode => isBossNode;
     public bool IsUsed => used;
+    public bool HasConsumableReward => hasConsumableReward;
     public Vector2 Position => ((RectTransform)transform).anchoredPosition;
     public bool IsInteractable => nodeButton != null && nodeButton.interactable;
 
@@ -35,7 +40,26 @@ public class MapNode : MonoBehaviour
 
         nodeButton.onClick.RemoveAllListeners();
         nodeButton.onClick.AddListener(HandleClick);
+
+        if (iconImage != null)
+        {
+            normalIconColor = iconImage.color;
+        }
+
+        EnsureConsumableIndicatorReference();
+        SetConsumableIndicatorVisible(false);
+
         RefreshIcon();
+    }
+
+    private void EnsureConsumableIndicatorReference()
+    {
+        if (consumableRewardIndicator != null)
+            return;
+
+        Transform consumableTransform = transform.Find("consumable");
+        if (consumableTransform != null)
+            consumableRewardIndicator = consumableTransform.gameObject;
     }
 
     public void SetType(string newType)
@@ -56,6 +80,8 @@ public class MapNode : MonoBehaviour
         {
             nodeButton.interactable = interactable;
         }
+
+        RefreshIconColor();
     }
 
     public void SetMapVisible(bool visible)
@@ -70,7 +96,20 @@ public class MapNode : MonoBehaviour
 
     public void SetVisited(bool visited)
     {
-        // 预留：可按 visited 调整节点外观
+        this.visited = visited;
+        RefreshIconColor();
+    }
+
+    public void SetHasConsumableReward(bool value)
+    {
+        hasConsumableReward = value;
+    }
+
+    public void SetConsumableIndicatorVisible(bool visible)
+    {
+        EnsureConsumableIndicatorReference();
+        if (consumableRewardIndicator != null)
+            consumableRewardIndicator.SetActive(visible);
     }
 
     private void HandleClick()
@@ -86,6 +125,25 @@ public class MapNode : MonoBehaviour
         }
 
         iconImage.sprite = LoadMapNodeSprite(GetIconResourceName());
+        RefreshIconColor();
+    }
+
+    private void RefreshIconColor()
+    {
+        if (iconImage == null)
+        {
+            return;
+        }
+
+        bool showDisabledLook = visited && (nodeButton == null || !nodeButton.interactable);
+        if (showDisabledLook && nodeButton != null)
+        {
+            iconImage.color = normalIconColor * nodeButton.colors.disabledColor;
+        }
+        else
+        {
+            iconImage.color = normalIconColor;
+        }
     }
 
     private string GetIconResourceName()

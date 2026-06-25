@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b143dfd394436b5469bb21f15089ed65, type: 3}
+  m_Name: GameData
+  m_EditorClassIdentifier: 
+  shopSkillColors:
+  - {r: 0.9137255, g: 0.54901963, b: 0.77254903, a: 1}
+  - {r: 0.6509804, g: 0.7176471, b: 0.9098039, a: 1}
+  - {r: 0.62352943, g: 0.78039217, b: 0.60784316, a: 1}
+  - {r: 0.89411765, g: 0.6745098, b: 0.5411765, a: 1}
+  battleNoteColors:
+  - {r: 0.9333334, g: 0.72156864, b: 0.9450981, a: 1}
+  - {r: 0.54509807, g: 0.7294118, b: 0.9294118, a: 1}
+  - {r: 0.7254902, g: 0.8470589, b: 0.30980393, a: 1}
+  - {r: 1, g: 0.882353, b: 0.57254905, a: 1}
+  defaultColor: {r: 0.78039217, g: 0.78039217, b: 0.78039217, a: 1}
+  unaffordableTextColor: {r: 0.99215686, g: 0.5529412, b: 0.45490196, a: 1}
+  consumableDropChance: 0.5

@@ -27,6 +27,7 @@ public class BattleUI : MonoBehaviour
     [SerializeField] private Button restartButton; // Restart按钮
     [SerializeField] private Button settingButton; // Setting按钮
     [SerializeField] private TMP_Text hardModeText; // HARD MODE字样
+    [SerializeField] private TMP_Text consumableSwapHintText;
     
     [Header("描述信息显示UI")]
     [SerializeField] private GameObject skillDisplayPanel; // 用于显示格子技能信息的固定UI元素
@@ -70,6 +71,8 @@ public class BattleUI : MonoBehaviour
     // Swap相关
     private Tween swapTextPulseTween; // Swap文本脉冲动画
     private Vector3 originalSwapTextScale = Vector3.one; // Swap文本原始缩放
+
+    public RectTransform GoldTextRect => goldText != null ? goldText.rectTransform : null;
 
     private void Start()
     {
@@ -138,6 +141,14 @@ public class BattleUI : MonoBehaviour
         {
             originalSwapTextScale = swapTextRect.localScale;
         }
+
+        if (swapCountText != null)
+            swapCountText.gameObject.SetActive(false);
+        if (swapCountBarFill != null)
+            swapCountBarFill.gameObject.SetActive(false);
+
+        EnsureConsumableSwapHint();
+        HideConsumableSwapHint();
         
         // 初始化Restart按钮
         if (restartButton != null)
@@ -724,6 +735,44 @@ public class BattleUI : MonoBehaviour
     public GameObject GetAllyDescriptionPanel()
     {
         return allyDescriptionPanel;
+    }
+
+    public void ShowConsumableSwapHint()
+    {
+        EnsureConsumableSwapHint();
+        if (consumableSwapHintText != null)
+        {
+            consumableSwapHintText.text = "Drag two adjacent tiles to swap. Right-click to cancel.";
+            consumableSwapHintText.gameObject.SetActive(true);
+        }
+    }
+
+    public void HideConsumableSwapHint()
+    {
+        if (consumableSwapHintText != null)
+            consumableSwapHintText.gameObject.SetActive(false);
+    }
+
+    private void EnsureConsumableSwapHint()
+    {
+        if (consumableSwapHintText != null)
+            return;
+
+        GameObject hintObj = new GameObject("ConsumableSwapHint");
+        hintObj.transform.SetParent(transform, false);
+
+        RectTransform rect = hintObj.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0f);
+        rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = new Vector2(0f, 24f);
+        rect.sizeDelta = new Vector2(640f, 36f);
+
+        consumableSwapHintText = hintObj.AddComponent<TextMeshProUGUI>();
+        consumableSwapHintText.fontSize = 18f;
+        consumableSwapHintText.alignment = TextAlignmentOptions.Center;
+        consumableSwapHintText.color = new Color(1f, 0.95f, 0.75f, 1f);
+        hintObj.SetActive(false);
     }
     
     private void OnDestroy()

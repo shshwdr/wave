@@ -158,22 +158,23 @@ public class BoardManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 网格坐标转世界坐标r
+    /// 网格坐标转世界坐标（含 BoardManager 的 position 偏移）
     /// </summary>
     public Vector3 GridToWorldPosition(Vector2Int gridPos)
     {
         float x = gridPos.x * tileSize + boardOffset.x;
         float y = gridPos.y * tileSize + boardOffset.y;
-        return new Vector3(x, y, 0);
+        return transform.TransformPoint(new Vector3(x, y, 0));
     }
 
     /// <summary>
-    /// 世界坐标转网格坐标
+    /// 世界坐标转网格坐标（含 BoardManager 的 position 偏移）
     /// </summary>
     public Vector2Int WorldToGridPosition(Vector3 worldPos)
     {
-        int x = Mathf.RoundToInt((worldPos.x - boardOffset.x) / tileSize);
-        int y = Mathf.RoundToInt((worldPos.y - boardOffset.y) / tileSize);
+        Vector3 localPos = transform.InverseTransformPoint(worldPos);
+        int x = Mathf.RoundToInt((localPos.x - boardOffset.x) / tileSize);
+        int y = Mathf.RoundToInt((localPos.y - boardOffset.y) / tileSize);
         return new Vector2Int(x, y);
     }
 
@@ -222,12 +223,12 @@ public class BoardManager : MonoBehaviour
     /// <summary>
     /// 交换两个格子
     /// </summary>
-    public void SwapTiles(Vector2Int pos1, Vector2Int pos2)
+    public bool SwapTiles(Vector2Int pos1, Vector2Int pos2)
     {
         if (!IsValidPosition(pos1) || !IsValidPosition(pos2))
         {
             Debug.LogWarning("Invalid positions for swap!");
-            return;
+            return false;
         }
 
         TileCell tile1 = board[pos1.x, pos1.y];
@@ -235,14 +236,14 @@ public class BoardManager : MonoBehaviour
 
         if (tile1 == null || tile2 == null)
         {
-            return;
+            return false;
         }
         
         // 检查是否有dirty或disabled的tile，这些tile不能参与交换
         if (tile1.IsDirty || tile2.IsDirty || tile1.IsDisabled || tile2.IsDisabled)
         {
             Debug.LogWarning("Cannot swap dirty or disabled tiles!");
-            return;
+            return false;
         }
 
         // 交换数据
@@ -260,6 +261,7 @@ public class BoardManager : MonoBehaviour
         tile2.SwapAnimation(pos1World);
 
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/Waves/sfx_change_select_tile");
+        return true;
     }
 
     /// <summary>

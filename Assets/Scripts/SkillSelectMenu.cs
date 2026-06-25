@@ -15,7 +15,9 @@ public class SkillSelectMenu : MenuBase
     public enum ShopMode
     {
         MapShop,
-        BattleReward
+        BattleReward,
+        BattleRewardSkill,
+        BattleRewardRune
     }
 
     [Header("商店区域")]
@@ -56,14 +58,16 @@ public class SkillSelectMenu : MenuBase
     [SerializeField] private Button statisticsButton;
 
     private Action onConfirm; // 确认按钮的回调
+    private Action onBattleRewardPicked;
+    private bool battleRewardRequireBothPicks;
     private ShopMode currentShopMode = ShopMode.MapShop;
     private bool battleRewardSkillChosen;
+    private bool battleRewardRuneChosen;
     private Dictionary<string, SkillIconUI> skillIconMap = new Dictionary<string, SkillIconUI>(); // 技能identifier -> UI实例
     private List<GameObject> shopSkillItems = new List<GameObject>(); // 商店技能项列表
     private List<GameObject> shopRuneItems = new List<GameObject>();
     private List<RuneInfo> cachedShopRunes = new List<RuneInfo>();
     private List<SkillInfo> cachedShopSkills = new List<SkillInfo>();
-    private bool isShopRuneSection = false;
     private int currentRefreshPrice = 1; // 当前刷新价格（每次进入商店重置为1）
     private bool isLocked = false; // 锁定状态
     private HashSet<string> lockedSkillIdentifiers = new HashSet<string>(); // 锁定的技能identifier列表
@@ -79,6 +83,7 @@ public class SkillSelectMenu : MenuBase
     [Header("拖拽设置")]
     [SerializeField] private int dragDropLayer = 0; // 拖拽目标检测的Layer
 
+    private RectTransform backpackDropRect;
     private FMOD.Studio.EventInstance shopFilter;
 
     protected override void Awake()
@@ -110,8 +115,8 @@ public class SkillSelectMenu : MenuBase
                 if (colorArea[i].colorImage != null)
                 {
                     TileColor tileColor = (TileColor)colorIndex;
-                    Color waveColor = TileColorUtil.GetUnityColor(tileColor);
-                    colorArea[i].colorImage.color = waveColor;
+                    Color waveColor = TileColorUtil.GetShopSkillColor(tileColor);
+                    //colorArea[i].colorImage.color = waveColor;
                 }
 
                 // 添加鼠标悬停事件
@@ -133,6 +138,23 @@ public class SkillSelectMenu : MenuBase
                     entryExit.callback.AddListener((data) => OnColorAreaButtonHover(colorIndex, false));
                     trigger.triggers.Add(entryExit);
                 }
+
+                DragDropTarget dropTarget = colorArea[i].GetComponent<DragDropTarget>();
+                if (dropTarget != null)
+                {
+                    dropTarget.targetType = DragDropTarget.TargetType.ColorArea;
+                    dropTarget.colorIndex = colorIndex;
+                }
+            }
+        }
+
+        DragDropTarget[] allDropTargets = GetComponentsInChildren<DragDropTarget>(true);
+        foreach (var dropTarget in allDropTargets)
+        {
+            if (dropTarget.targetType == DragDropTarget.TargetType.Backpack)
+            {
+                backpackDropRect = dropTarget.transform as RectTransform;
+                break;
             }
         }
 
@@ -156,7 +178,7 @@ public class SkillSelectMenu : MenuBase
 
         if (shopSectionToggleButton != null)
         {
-            shopSectionToggleButton.onClick.AddListener(OnShopSectionToggleClicked);
+            shopSectionToggleButton.gameObject.SetActive(false);
         }
     }
 
@@ -166,8 +188,13 @@ public class SkillSelectMenu : MenuBase
     public void ShowSkillSelection(Action onConfirmCallback = null, ShopMode mode = ShopMode.MapShop)
     {
         onConfirm = onConfirmCallback;
+        onBattleRewardPicked = null;
+        battleRewardRequireBothPicks = false;
         currentShopMode = mode;
         battleRewardSkillChosen = false;
+        battleRewardRuneChosen = false;
+
+        ClearShopParents();
 
         // 重置刷新价格为1
         currentRefreshPrice = 1;
@@ -186,15 +213,27 @@ public class SkillSelectMenu : MenuBase
 
         if (currentShopMode == ShopMode.MapShop)
         {
-            isShopRuneSection = false;
             cachedShopRunes = GetShopRunes(3);
             cachedShopSkills = BuildShopSkillList(hadLockedSkills);
             ApplyShopSectionUi();
             DisplayCurrentShopSection();
         }
+        else if (currentShopMode == ShopMode.BattleRewardRune)
+        {
+            cachedShopRunes = GetShopRunes(3);
+            ApplyShopSectionUi();
+            DisplayShopRunesFromCache();
+        }
+        else if (currentShopMode == ShopMode.BattleReward)
+        {
+            cachedShopRunes = GetShopRunes(3);
+            cachedShopSkills = BuildShopSkillList(hadLockedSkills);
+            ApplyShopSectionUi();
+            DisplayShopRunesFromCache();
+            DisplayShopSkillsFromCache();
+        }
         else
         {
-            isShopRuneSection = false;
             ApplyShopSectionUi();
             UpdateShop(hadLockedSkills);
         }
@@ -215,9 +254,35 @@ public class SkillSelectMenu : MenuBase
         }
     }
 
+    /// <summary>
+    /// Battle result overlay: free pick from skills or runes, closes without advancing the run.
+    /// </summary>
+    public void ShowBattleRewardOverlay(Action onClose, ShopMode mode, Action onRewardPicked = null, bool requireBothPicks = false)
+    {
+        battleRewardRequireBothPicks = requireBothPicks;
+        onBattleRewardPicked = onRewardPicked;
+        ShowSkillSelection(onClose, mode);
+        transform.SetAsLastSibling();
+    }
+
+    private void NotifyBattleRewardPickedIfReady()
+    {
+        if (onBattleRewardPicked == null)
+            return;
+
+        if (battleRewardRequireBothPicks)
+        {
+            if (!battleRewardSkillChosen || !battleRewardRuneChosen)
+                return;
+        }
+
+        onBattleRewardPicked.Invoke();
+        onBattleRewardPicked = null;
+    }
+
     private void ApplyShopModeUi()
     {
-        bool isBattleReward = currentShopMode == ShopMode.BattleReward;
+        bool isBattleReward = IsBattleRewardMode;
         if (refreshButton != null)
         {
             refreshButton.gameObject.SetActive(!isBattleReward);
@@ -229,49 +294,37 @@ public class SkillSelectMenu : MenuBase
         }
         if (shopSectionToggleButton != null)
         {
-            shopSectionToggleButton.gameObject.SetActive(!isBattleReward);
+            shopSectionToggleButton.gameObject.SetActive(false);
         }
-    }
-
-    private void OnShopSectionToggleClicked()
-    {
-        if (currentShopMode != ShopMode.MapShop)
-            return;
-
-        isShopRuneSection = !isShopRuneSection;
-        ApplyShopSectionUi();
-        DisplayCurrentShopSection();
-        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_place_skill_color");
     }
 
     private void ApplyShopSectionUi()
     {
         bool isMapShop = currentShopMode == ShopMode.MapShop;
-        bool showRunes = isMapShop && isShopRuneSection;
+        bool showSkills = isMapShop
+            || currentShopMode == ShopMode.BattleReward
+            || currentShopMode == ShopMode.BattleRewardSkill;
+        bool showRunes = isMapShop || currentShopMode == ShopMode.BattleRewardRune;
 
         if (shopRuneParent != null)
             shopRuneParent.gameObject.SetActive(showRunes);
         if (shopParent != null)
-            shopParent.gameObject.SetActive(!isMapShop || !isShopRuneSection);
-
-        if (shopSectionToggleButton != null)
-        {
-            TMP_Text toggleText = shopSectionToggleButton.GetComponentInChildren<TMP_Text>();
-            if (toggleText != null)
-                toggleText.text = isShopRuneSection ? "Skill" : "Rune";
-        }
+            shopParent.gameObject.SetActive(showSkills);
 
         UpdateRefreshButton();
     }
 
     private void DisplayCurrentShopSection()
     {
-        if (currentShopMode == ShopMode.MapShop && isShopRuneSection)
-            DisplayShopRunesFromCache();
-        else if (currentShopMode == ShopMode.MapShop)
+        if (currentShopMode == ShopMode.MapShop)
+        {
             DisplayShopSkillsFromCache();
+            DisplayShopRunesFromCache();
+        }
         else
+        {
             UpdateShop(false);
+        }
 
         UpdateGoldDisplay();
     }
@@ -292,22 +345,32 @@ public class SkillSelectMenu : MenuBase
 
     private void ClearShopSkillItems()
     {
-        foreach (var item in shopSkillItems)
-        {
-            if (item != null)
-                Destroy(item);
-        }
+        ClearChildren(shopParent);
         shopSkillItems.Clear();
     }
 
     private void ClearShopRuneItems()
     {
-        foreach (var item in shopRuneItems)
-        {
-            if (item != null)
-                Destroy(item);
-        }
+        ClearChildren(shopRuneParent);
         shopRuneItems.Clear();
+    }
+
+    private void ClearShopParents()
+    {
+        ClearShopSkillItems();
+        ClearShopRuneItems();
+    }
+
+    private void ClearChildren(Transform parent)
+    {
+        if (parent == null)
+            return;
+
+        foreach (Transform child in parent)
+        {
+            if (child != null)
+                Destroy(child.gameObject);
+        }
     }
 
     private List<SkillInfo> BuildShopSkillList(bool useLockedSkills = false)
@@ -344,7 +407,12 @@ public class SkillSelectMenu : MenuBase
         return shopSkills;
     }
 
-    private bool IsFreeShopMode => currentShopMode == ShopMode.BattleReward;
+    private bool IsBattleRewardMode =>
+        currentShopMode == ShopMode.BattleReward
+        || currentShopMode == ShopMode.BattleRewardSkill
+        || currentShopMode == ShopMode.BattleRewardRune;
+
+    private bool IsFreeShopMode => IsBattleRewardMode;
     
     /// <summary>
     /// 更新商店显示
@@ -559,7 +627,7 @@ public class SkillSelectMenu : MenuBase
         if (shopItem == null)
             shopItem = itemObj.AddComponent<ShopRuneItem>();
 
-        shopItem.Init(runeInfo, this);
+        shopItem.Init(runeInfo, this, IsFreeShopMode);
     }
 
     public void BuyRune(RuneInfo runeInfo)
@@ -567,14 +635,20 @@ public class SkillSelectMenu : MenuBase
         if (PlayerManager.Instance == null || RuneManager.Instance == null || runeInfo == null)
             return;
 
+        if (IsFreeShopMode && battleRewardRuneChosen)
+            return;
+
         if (RuneManager.Instance.HasRune(runeInfo.identifier))
             return;
 
         int price = RuneManager.Instance.GetDiscountedShopPrice(runeInfo.buyPrice);
-        if (!PlayerManager.Instance.ConsumeGold(price))
+        if (!IsFreeShopMode)
         {
-            Debug.LogWarning($"金币不足，无法购买符文: {runeInfo.identifier}");
-            return;
+            if (!PlayerManager.Instance.ConsumeGold(price))
+            {
+                Debug.LogWarning($"金币不足，无法购买符文: {runeInfo.identifier}");
+                return;
+            }
         }
 
         RuneManager.Instance.AddRune(runeInfo.identifier);
@@ -583,9 +657,19 @@ public class SkillSelectMenu : MenuBase
         if (runeMenu != null)
             runeMenu.RefreshRunes();
 
-        cachedShopRunes.RemoveAll(r => r.identifier == runeInfo.identifier);
-        RemoveShopRuneItem(runeInfo.identifier);
-        UpdateShopRuneItemsState();
+        if (IsFreeShopMode)
+        {
+            battleRewardRuneChosen = true;
+            HideAllShopRunes();
+            NotifyBattleRewardPickedIfReady();
+        }
+        else
+        {
+            cachedShopRunes.RemoveAll(r => r.identifier == runeInfo.identifier);
+            RemoveShopRuneItem(runeInfo.identifier);
+            UpdateShopRuneItemsState();
+        }
+
         UpdateGoldDisplay();
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
     }
@@ -704,6 +788,7 @@ public class SkillSelectMenu : MenuBase
         {
             battleRewardSkillChosen = true;
             HideAllShopSkills();
+            NotifyBattleRewardPickedIfReady();
         }
         else
         {
@@ -756,6 +841,17 @@ public class SkillSelectMenu : MenuBase
         shopSkillItems.Clear();
     }
 
+    private void HideAllShopRunes()
+    {
+        foreach (var item in shopRuneItems)
+        {
+            if (item != null)
+                Destroy(item);
+        }
+
+        shopRuneItems.Clear();
+    }
+
     /// <summary>
     /// 从商店中移除指定的技能项
     /// </summary>
@@ -805,13 +901,10 @@ public class SkillSelectMenu : MenuBase
             currentRefreshPrice++;
         }
 
-        if (currentShopMode == ShopMode.MapShop && isShopRuneSection)
+        RefreshShop();
+        if (currentShopMode == ShopMode.MapShop)
         {
             RefreshShopRunes();
-        }
-        else
-        {
-            RefreshShop();
         }
 
         UpdateGoldDisplay();
@@ -966,13 +1059,13 @@ public class SkillSelectMenu : MenuBase
             TMP_Text buttonText = refreshButton.GetComponentInChildren<TMP_Text>();
             if (buttonText != null)
             {
-                buttonText.text = $"Refresh({currentRefreshPrice})";
+                buttonText.text = $"{currentRefreshPrice}";
             }
 
             // 更新按钮可交互状态（检查金币是否足够）
             if (PlayerManager.Instance != null)
             {
-                bool allLocked = !isShopRuneSection && lockedSkillIdentifiers.Count >= 3;
+                bool allLocked = lockedSkillIdentifiers.Count >= 3;
                 bool canRefresh = PlayerManager.Instance.Gold >= currentRefreshPrice && !allLocked;
                 refreshButton.interactable = canRefresh;
             }
@@ -1079,9 +1172,12 @@ public class SkillSelectMenu : MenuBase
                     SkillIconUI icon = child.GetComponent<SkillIconUI>();
                     if (icon != null)
                     {
-                        skillIconMap.Remove(icon.SkillIdentifier);
-                        Destroy(child.gameObject);
+                        string identifier = icon.SkillIdentifier;
+                        if (!string.IsNullOrEmpty(identifier))
+                            skillIconMap.Remove(identifier);
                     }
+
+                    Destroy(child.gameObject);
                 }
 
                 // 创建新的图标
@@ -1101,68 +1197,28 @@ public class SkillSelectMenu : MenuBase
         if (backpackParent == null || SkillManager.Instance == null || PlayerManager.Instance == null)
             return;
 
-        // 获取所有已拥有但未分配到颜色区域的技能
-        List<string> unassignedSkills = GetUnassignedSkills();
+        // 获取背包技能（按加入顺序）
+        List<string> backpackSkills = PlayerManager.Instance.GetBackpackSkills();
 
-        // 清除旧的图标（只清除在背包中的）
-        List<SkillIconUI> iconsToRemove = new List<SkillIconUI>();
+        // 清除旧的图标
         foreach (Transform child in backpackParent)
         {
+            SkillIconUI icon = child.GetComponent<SkillIconUI>();
+            if (icon != null)
+            {
+                string identifier = icon.SkillIdentifier;
+                if (!string.IsNullOrEmpty(identifier))
+                    skillIconMap.Remove(identifier);
+            }
+
             Destroy(child.gameObject);
         }
-        
 
         // 创建新的图标
-        foreach (var identifier in unassignedSkills)
+        foreach (var identifier in backpackSkills)
         {
             CreateSkillIcon(identifier, backpackParent, -1); // -1表示在背包中
         }
-    }
-
-    /// <summary>
-    /// 获取所有未分配的技能
-    /// </summary>
-    private List<string> GetUnassignedSkills()
-    {
-        List<string> result = new List<string>();
-        
-        if (SkillManager.Instance == null || PlayerManager.Instance == null)
-            return result;
-
-        // 获取所有已拥有的技能
-        HashSet<string> allOwnedSkills = new HashSet<string>();
-        if (CSVLoader.Instance != null && CSVLoader.Instance.cardInfoMap != null)
-        {
-            foreach (var kvp in CSVLoader.Instance.cardInfoMap)
-            {
-                if (SkillManager.Instance.HasSkill(kvp.Key))
-                {
-                    allOwnedSkills.Add(kvp.Key);
-                }
-            }
-        }
-
-        // 获取所有已分配的技能
-        HashSet<string> assignedSkills = new HashSet<string>();
-        for (int i = 0; i < 4; i++)
-        {
-            List<string> skills = PlayerManager.Instance.GetWaveSkills(i);
-            foreach (var skill in skills)
-            {
-                assignedSkills.Add(skill);
-            }
-        }
-
-        // 计算未分配的技能
-        foreach (var skill in allOwnedSkills)
-        {
-            if (!assignedSkills.Contains(skill))
-            {
-                result.Add(skill);
-            }
-        }
-
-        return result;
     }
 
     /// <summary>
@@ -1170,7 +1226,7 @@ public class SkillSelectMenu : MenuBase
     /// </summary>
     private void CreateSkillIcon(string identifier, Transform parent, int colorIndex)
     {
-        if (skillIconPrefab == null || parent == null)
+        if (skillIconPrefab == null || parent == null || string.IsNullOrEmpty(identifier))
             return;
 
         GameObject iconObj = Instantiate(skillIconPrefab, parent);
@@ -1189,14 +1245,11 @@ public class SkillSelectMenu : MenuBase
     /// </summary>
     private void AddSkillToBackpack(string identifier)
     {
-        if (backpackParent == null)
+        if (PlayerManager.Instance == null)
             return;
 
-        // 如果技能已经在某个颜色区域，先移除
         RemoveSkillFromColorArea(identifier);
-
-        // 添加到背包
-        CreateSkillIcon(identifier, backpackParent, -1);
+        PlayerManager.Instance.AddBackpackSkill(identifier);
     }
 
     /// <summary>
@@ -1233,15 +1286,7 @@ public class SkillSelectMenu : MenuBase
             if (PlayerManager.Instance != null && SkillManager.Instance != null)
             {
                 List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
-                string detailText = "";
-                foreach (var identifier in skillIdentifiers)
-                {
-                    if (SkillManager.Instance.HasSkill(identifier))
-                    {
-                        string description = SkillManager.Instance.GetSkillDescription(identifier, false);
-                        detailText += description + "\n";
-                    }
-                }
+                string detailText = SkillManager.Instance.BuildColorAreaSkillDescriptions(skillIdentifiers);
 
                 if (!string.IsNullOrEmpty(detailText))
                 {
@@ -1364,10 +1409,20 @@ public class SkillSelectMenu : MenuBase
             }
         }
 
-        // 如果目标和原位置相同，不处理
+        // 如果目标和原位置相同，仅在区域内调整顺序
         if (targetParent == originalParent)
         {
-            // 重置拖拽状态
+            if (PlayerManager.Instance != null)
+            {
+                if (targetColorIndex >= 0)
+                    PlayerManager.Instance.ReorderWaveSkill(targetColorIndex, identifier, targetSlotIndex);
+                else
+                    PlayerManager.Instance.ReorderBackpackSkill(identifier, targetSlotIndex);
+            }
+
+            UpdateColorAreas();
+            UpdateBackpack();
+
             draggingIcon = null;
             originalParent = null;
             originalSiblingIndex = -1;
@@ -1378,7 +1433,6 @@ public class SkillSelectMenu : MenuBase
         // 从原位置移除
         if (originalColorIndex >= 0 && originalColorIndex < 4)
         {
-            // 从颜色区域移除
             if (PlayerManager.Instance != null)
             {
                 List<string> skills = PlayerManager.Instance.GetWaveSkills(originalColorIndex);
@@ -1386,34 +1440,31 @@ public class SkillSelectMenu : MenuBase
                 PlayerManager.Instance.SetWaveSkills(originalColorIndex, skills);
             }
         }
-        // 如果原位置是背包（originalColorIndex == -1），不需要从PlayerManager移除，只需要更新UI即可
+        else if (PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.RemoveBackpackSkill(identifier);
+        }
 
         // 添加到目标位置
         bool draggedToColor = false;
         if (targetColorIndex >= 0 && targetColorIndex < 4)
         {
-            // 添加到颜色区域
             if (PlayerManager.Instance != null)
             {
                 List<string> skills = PlayerManager.Instance.GetWaveSkills(targetColorIndex);
-                if (!skills.Contains(identifier))
-                {
-                    if (targetSlotIndex >= 0 && targetSlotIndex < skills.Count)
-                    {
-                        skills.Insert(targetSlotIndex, identifier);
-                    }
-                    else
-                    {
-                        skills.Add(identifier);
-                    }
-                    PlayerManager.Instance.SetWaveSkills(targetColorIndex, skills);
-                    draggedToColor = true; // 标记为拖动到颜色区域
-                }
+                if (targetSlotIndex >= 0 && targetSlotIndex <= skills.Count)
+                    skills.Insert(targetSlotIndex, identifier);
+                else
+                    skills.Add(identifier);
+
+                PlayerManager.Instance.SetWaveSkills(targetColorIndex, skills);
+                draggedToColor = true;
+                FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_hold_skill_color");
             }
         }
-        else
+        else if (PlayerManager.Instance != null)
         {
-            
+            PlayerManager.Instance.AddBackpackSkill(identifier, targetSlotIndex);
         }
 
         // 更新UI
@@ -1474,19 +1525,22 @@ public class SkillSelectMenu : MenuBase
         PointerEventData dragEventData = eventData != null ? eventData : currentDragEventData;
         if (dragEventData == null)
         {
-            // 如果没有事件数据，创建默认的
             dragEventData = new PointerEventData(EventSystem.current);
             dragEventData.position = Input.mousePosition;
         }
 
-        // 销毁临时拖拽图标
+        Transform targetParent = null;
+        int targetColorIndex = -1;
+        Transform hitTransform = null;
+        bool hasValidTarget = TryResolveDropAtScreenPosition(
+            dragEventData.position, out targetParent, out targetColorIndex, out hitTransform);
+
         if (tempDragIcon != null)
         {
             Destroy(tempDragIcon.gameObject);
             tempDragIcon = null;
         }
 
-        // 恢复原始图标的透明度
         CanvasGroup canvasGroup = draggingIcon.GetComponent<CanvasGroup>();
         if (canvasGroup != null)
         {
@@ -1494,51 +1548,19 @@ public class SkillSelectMenu : MenuBase
             canvasGroup.blocksRaycasts = true;
         }
 
-        // 使用指定的Layer检测拖拽目标
-        GameObject dropTarget = GetDropTarget(dragEventData);
-        
-        if (dropTarget != null)
+        if (hasValidTarget)
         {
-            DragDropTarget target = dropTarget.GetComponent<DragDropTarget>();
-            if (target != null)
-            {
-                Transform targetParent = null;
-                int targetColorIndex = -1;
-
-                if (target.targetType == DragDropTarget.TargetType.ColorArea)
-                {
-                    // 颜色区域
-                    if (target.colorIndex >= 0 && target.colorIndex < 4 && colorArea[target.colorIndex] != null)
-                    {
-                        targetParent = colorArea[target.colorIndex].slotParent;
-                        targetColorIndex = target.colorIndex;
-                    }
-                }
-                else if (target.targetType == DragDropTarget.TargetType.Backpack)
-                {
-                    // 背包
-                    targetParent = backpackParent;
-                    targetColorIndex = -1;
-                }
-
-                if (targetParent != null)
-                {
-                    // 计算slot索引
-                    int slotIndex = GetSlotIndex(dropTarget.transform, targetParent);
-                    DropSkill(draggingIcon, targetParent, targetColorIndex, slotIndex);
-                    return;
-                }
-            }
+            int slotIndex = GetSlotIndex(hitTransform, targetParent);
+            DropSkill(draggingIcon, targetParent, targetColorIndex, slotIndex);
+            return;
         }
 
-        // 如果没有有效目标，放回原位置
         if (originalParent != null)
         {
             DropSkill(draggingIcon, originalParent, originalColorIndex);
         }
         else
         {
-            // 重置拖拽状态
             draggingIcon = null;
             originalParent = null;
             originalSiblingIndex = -1;
@@ -1546,42 +1568,166 @@ public class SkillSelectMenu : MenuBase
         }
     }
 
-    /// <summary>
-    /// 获取拖拽目标（使用指定的Layer）
-    /// </summary>
-    private GameObject GetDropTarget(PointerEventData eventData)
+    private bool TryResolveDropAtScreenPosition(
+        Vector2 screenPosition,
+        out Transform targetParent,
+        out int targetColorIndex,
+        out Transform hitTransform)
     {
-        // 使用Physics2D或Physics射线检测指定Layer的对象
-        if (Camera.main != null)
-        {
-            Ray ray = Camera.main.ScreenPointToRay(eventData.position);
-            int layerMask = 1 << dragDropLayer;
-            RaycastHit2D hit = Physics2D.Raycast(ray.origin, ray.direction, Mathf.Infinity, layerMask);
-            if (hit.collider != null)
-            {
-                return hit.collider.gameObject;
-            }
-        }
+        targetParent = null;
+        targetColorIndex = -1;
+        hitTransform = null;
 
-        // 如果Physics检测失败，尝试使用EventSystem检测
         if (EventSystem.current != null)
         {
-            PointerEventData pointerData = new PointerEventData(EventSystem.current);
-            pointerData.position = eventData.position;
-            
+            PointerEventData pointerData = new PointerEventData(EventSystem.current)
+            {
+                position = screenPosition
+            };
+
             List<RaycastResult> results = new List<RaycastResult>();
             EventSystem.current.RaycastAll(pointerData, results);
 
             foreach (var result in results)
             {
-                if (result.gameObject.layer == dragDropLayer)
+                if (draggingIcon != null)
                 {
-                    return result.gameObject;
+                    Transform t = result.gameObject.transform;
+                    if (t == draggingIcon.transform || t.IsChildOf(draggingIcon.transform))
+                        continue;
+                }
+
+                if (TryResolveHitObject(result.gameObject, out targetParent, out targetColorIndex))
+                {
+                    hitTransform = result.gameObject.transform;
+                    return true;
                 }
             }
         }
 
-        return null;
+        for (int i = 0; i < 4; i++)
+        {
+            if (colorArea[i] == null)
+                continue;
+
+            RectTransform areaRect = colorArea[i].transform as RectTransform;
+            if (IsPointerOverRect(areaRect, screenPosition))
+            {
+                targetParent = colorArea[i].slotParent;
+                targetColorIndex = i;
+                hitTransform = colorArea[i].slotParent;
+                return true;
+            }
+        }
+
+        if (backpackParent is RectTransform backpackRect && IsPointerOverRect(backpackRect, screenPosition))
+        {
+            targetParent = backpackParent;
+            targetColorIndex = -1;
+            hitTransform = backpackParent;
+            return true;
+        }
+
+        if (IsPointerOverRect(backpackDropRect, screenPosition))
+        {
+            targetParent = backpackParent;
+            targetColorIndex = -1;
+            hitTransform = backpackDropRect;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryResolveHitObject(GameObject hitObject, out Transform targetParent, out int targetColorIndex)
+    {
+        targetParent = null;
+        targetColorIndex = -1;
+
+        if (hitObject == null)
+            return false;
+
+        DragDropTarget target = hitObject.GetComponentInParent<DragDropTarget>();
+        if (target != null)
+        {
+            if (target.targetType == DragDropTarget.TargetType.Backpack)
+            {
+                targetParent = backpackParent;
+                targetColorIndex = -1;
+                return targetParent != null;
+            }
+
+            if (target.targetType == DragDropTarget.TargetType.ColorArea)
+            {
+                int colorIndex = target.colorIndex;
+                if (colorIndex < 0 || colorIndex >= 4)
+                    colorIndex = GetColorAreaIndex(target.transform);
+
+                if (colorIndex >= 0 && colorIndex < 4 && colorArea[colorIndex]?.slotParent != null)
+                {
+                    targetParent = colorArea[colorIndex].slotParent;
+                    targetColorIndex = colorIndex;
+                    return true;
+                }
+            }
+        }
+
+        Transform hitTransform = hitObject.transform;
+        for (int i = 0; i < 4; i++)
+        {
+            if (colorArea[i]?.slotParent == null)
+                continue;
+
+            if (hitTransform == colorArea[i].slotParent || hitTransform.IsChildOf(colorArea[i].slotParent))
+            {
+                targetParent = colorArea[i].slotParent;
+                targetColorIndex = i;
+                return true;
+            }
+
+            if (hitTransform == colorArea[i].transform || hitTransform.IsChildOf(colorArea[i].transform))
+            {
+                targetParent = colorArea[i].slotParent;
+                targetColorIndex = i;
+                return true;
+            }
+        }
+
+        if (backpackParent != null && (hitTransform == backpackParent || hitTransform.IsChildOf(backpackParent)))
+        {
+            targetParent = backpackParent;
+            targetColorIndex = -1;
+            return true;
+        }
+
+        return false;
+    }
+
+    private int GetColorAreaIndex(Transform transform)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            if (colorArea[i] == null)
+                continue;
+
+            if (transform == colorArea[i].transform || transform.IsChildOf(colorArea[i].transform))
+                return i;
+        }
+
+        return -1;
+    }
+
+    private bool IsPointerOverRect(RectTransform rect, Vector2 screenPosition)
+    {
+        if (rect == null)
+            return false;
+
+        Canvas canvas = rect.GetComponentInParent<Canvas>();
+        Camera eventCamera = null;
+        if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            eventCamera = canvas.worldCamera;
+
+        return RectTransformUtility.RectangleContainsScreenPoint(rect, screenPosition, eventCamera);
     }
 
     /// <summary>
@@ -1589,20 +1735,46 @@ public class SkillSelectMenu : MenuBase
     /// </summary>
     private int GetSlotIndex(Transform target, Transform parent)
     {
-        // 如果目标就是parent，返回-1（添加到末尾）
-        if (target == parent)
+        if (target == null || parent == null || target == parent)
             return -1;
 
-        // 查找目标在parent中的位置
+        Transform slotTransform = target;
+        while (slotTransform.parent != null && slotTransform.parent != parent)
+            slotTransform = slotTransform.parent;
+
+        if (slotTransform.parent != parent)
+            return -1;
+
         int index = 0;
         foreach (Transform child in parent)
         {
-            if (child == target)
+            if (child == slotTransform)
                 return index;
             index++;
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// 显示符文详情（用于商店符文项悬停）
+    /// </summary>
+    public void ShowRuneDetail(string identifier)
+    {
+        if (skillDetailPanel == null || skillDetailText == null || RuneManager.Instance == null)
+            return;
+
+        string description = RuneManager.Instance.GetRuneDescription(identifier);
+        if (!string.IsNullOrEmpty(description))
+        {
+            skillDetailText.text = description;
+
+            Image bgImage = skillDetailPanel.GetComponent<Image>();
+            if (bgImage != null)
+                bgImage.color = TileColorUtil.GetDefaultColor();
+
+            skillDetailPanel.SetActive(true);
+        }
     }
 
     /// <summary>
@@ -1636,10 +1808,10 @@ public class SkillSelectMenu : MenuBase
         if (bgImage == null)
             return;
         
-        // 如果技能在背包中（colorIndex < 0 或 >= 4），使用#FFF0A7颜色
+        // 如果技能在背包中（colorIndex < 0 或 >= 4），使用默认颜色
         if (colorIndex < 0 || colorIndex >= 4)
         {
-            bgImage.color = TileColorUtil.HexToColor("#FFF0A7");
+            bgImage.color = TileColorUtil.GetDefaultColor();
             return;
         }
         
@@ -1647,7 +1819,7 @@ public class SkillSelectMenu : MenuBase
         if (colorIndex >= 0 && colorIndex < 4)
         {
             TileColor tileColor = (TileColor)colorIndex;
-            Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+            Color colorValue = TileColorUtil.GetShopSkillColor(tileColor);
             bgImage.color = colorValue;
             return;
         }
@@ -1670,7 +1842,7 @@ public class SkillSelectMenu : MenuBase
             if (colorLower == "red" || colorLower == "yellow" || colorLower == "blue" || colorLower == "green")
             {
                 TileColor tileColor = GetTileColorFromString(skillInfo.color);
-                Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+                Color colorValue = TileColorUtil.GetShopSkillColor(tileColor);
                 bgImage.color = colorValue;
             }
             else
@@ -1703,7 +1875,7 @@ public class SkillSelectMenu : MenuBase
         if (colorIndex >= 0 && colorIndex < 4)
         {
             TileColor tileColor = (TileColor)colorIndex;
-            Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+            Color colorValue = TileColorUtil.GetShopSkillColor(tileColor);
             bgImage.color = colorValue;
         }
         else

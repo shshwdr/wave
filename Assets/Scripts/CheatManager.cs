@@ -29,7 +29,7 @@ public class CheatManager : Singleton<CheatManager>
         HandlePuzzleEditCheats();
     }
 
-    /// <summary>R 重启场景，H 清除全局进度标识，I/O 玩家伤害/死亡，P 秒杀敌人，M 地图全开，C 加 10 金币</summary>
+    /// <summary>R 重启场景，H 清除全局进度标识，I/O 玩家伤害/死亡，P 秒杀敌人，M 地图全开，C 加 10 金币，K 获得一半最大血量的护盾</summary>
     private void HandleGlobalCheats()
     {
         if (Input.GetKeyDown(KeyCode.R))
@@ -86,6 +86,17 @@ public class CheatManager : Singleton<CheatManager>
         {
             PlayerManager.Instance?.AddGold(10);
             Debug.Log("Cheat: +10 gold");
+        }
+
+        if (Input.GetKeyDown(KeyCode.K))
+        {
+            PlayerManager playerManager = PlayerManager.Instance;
+            if (playerManager != null)
+            {
+                int shieldAmount = Mathf.Max(1, playerManager.MaxHealth / 2);
+                playerManager.AddShield(shieldAmount);
+                Debug.Log($"Cheat: +{shieldAmount} shield");
+            }
         }
     }
 

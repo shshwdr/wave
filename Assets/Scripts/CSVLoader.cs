@@ -125,6 +125,22 @@ public class RuneInfo
     public string synergy;
 }
 
+public class ConsumableInfo
+{
+    public string identifier;
+    public string name;
+    public string description;
+    public string effect;
+    public List<int> values;
+    public int start;
+    public bool available;
+    public int maxCount;
+    public int unlockLevel;
+    public int price;
+    public bool isBattleOnly;
+    public Sprite icon => Resources.Load<Sprite>("Consumables/" + identifier);
+}
+
 public class CSVLoader : Singleton<CSVLoader>
 {
     public TMP_FontAsset font;
@@ -139,6 +155,7 @@ public class CSVLoader : Singleton<CSVLoader>
     public List<StartAnimInfo> startAnimInfoList = new List<StartAnimInfo>(); // 保持CSV顺序的列表
     public Dictionary<string, RuneInfo> runeInfoMap = new Dictionary<string, RuneInfo>();
     public List<RuneInfo> runeInfoList = new List<RuneInfo>();
+    public Dictionary<string, ConsumableInfo> consumableInfoMap = new Dictionary<string, ConsumableInfo>();
     // Start is called before the first frame update
     public void Init()
     {
@@ -244,6 +261,16 @@ public class CSVLoader : Singleton<CSVLoader>
                 continue;
 
             runeInfoMap[runeInfo.identifier] = runeInfo;
+        }
+
+        var consumableInfos = CsvUtil.LoadObjects<ConsumableInfo>("consumable");
+        consumableInfoMap.Clear();
+        foreach (var consumableInfo in consumableInfos)
+        {
+            if (string.IsNullOrEmpty(consumableInfo.identifier))
+                continue;
+
+            consumableInfoMap[consumableInfo.identifier] = consumableInfo;
         }
     }
 

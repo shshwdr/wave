@@ -88,9 +88,17 @@ public class MainGameManager : Singleton<MainGameManager>
     private bool isDragging = false;
     private Vector2Int currentHoverTilePos = new Vector2Int(-1, -1); // 当前鼠标悬停的格子
     
-    // 任意位置交换相关
-    private Vector2Int firstSwapTilePos = new Vector2Int(-1, -1);
-    private bool waitingForSecondSwap = false;
+    // 消耗品相邻交换模式
+    private bool isConsumableSwapMode;
+    private string consumableSwapIdentifier;
+    private Vector2Int consumableSwapStartPos = new Vector2Int(-1, -1);
+    private bool isConsumableSwapDragging;
+    private Vector2Int consumableSwapHoverPos = new Vector2Int(-1, -1);
+
+    // 右键 toggle 详情
+    private Vector2Int toggledSkillGridPos = new Vector2Int(-1, -1);
+    private Enemy toggledEnemy;
+    private Ally toggledAlly;
     
     // 高亮显示相关
     private Vector2Int lastHighlightPos = new Vector2Int(-1, -1);
@@ -106,6 +114,7 @@ public class MainGameManager : Singleton<MainGameManager>
     public int NextBattleLevelIndex => nextBattleLevelIndex;
     private bool battleFromBossMapNode;
     private bool activeBattleFromBossMapNode;
+    private MapNode activeBattleMapNode;
     private int activeBattleLevelIndex = -1;
     private bool waitingForNextIslandSelection;
     private int waitingIslandId = -1;
@@ -126,6 +135,11 @@ public class MainGameManager : Singleton<MainGameManager>
     
     // 跟踪gold关卡中从chest（敌人）获得的金钱
     private int goldFromChests = 0;
+
+    // 战斗结果界面待领取奖励
+    private int pendingBattleDisplayGold;
+    private int pendingBattleGoldToGrant;
+    private string pendingBattleConsumableId;
     
     // Puzzle编辑模式相关
     private bool isPuzzleEditMode = false;
@@ -272,6 +286,7 @@ public class MainGameManager : Singleton<MainGameManager>
             {
                 alwaysBattleAndUiController = battleDecor.AddComponent<AlwaysBattleAndUiController>();
             }
+
         }
 
         StartCoroutine(OpenMapAfterTutorialFlow());
@@ -279,6 +294,10 @@ public class MainGameManager : Singleton<MainGameManager>
 
     public bool IsInPuzzleEditMode => isPuzzleEditMode;
     public bool IsPublishMode => isPublish;
+    public bool IsInActiveBattle => !isMapOpen
+        && currentState != GameState.GameOver
+        && boardManager != null
+        && boardManager.gameObject.activeSelf;
     
     private IEnumerator OpenMapAfterTutorialFlow()
     {
@@ -298,6 +317,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
     public void StartBattleFromMap(MapNode node = null)
     {
+        activeBattleMapNode = node;
         battleFromBossMapNode = node != null && node.IsBossNode;
         StartBattle();
     }
@@ -390,6 +410,11 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         alwaysBattleAndUiController?.RefreshDisplay();
+
+        ConsumableView consumableView = alwaysForBattleAndUi != null
+            ? alwaysForBattleAndUi.GetComponentInChildren<ConsumableView>(true)
+            : FindObjectOfType<ConsumableView>(true);
+        consumableView?.Refresh();
     }
 
     /// <summary>
@@ -538,12 +563,12 @@ public class MainGameManager : Singleton<MainGameManager>
         currentState = GameState.PlayerTurn;
         noAttackNoCostTriggeredThisTurn = false; // 重置noAttackNoCost触发标志
         isDragging = false;
-        waitingForSecondSwap = false;
         dragStartPos = new Vector2Int(-1, -1);
-        firstSwapTilePos = new Vector2Int(-1, -1);
         currentHoverTilePos = new Vector2Int(-1, -1);
         lastHighlightPos = new Vector2Int(-1, -1);
         ClearHighlights();
+        ExitConsumableSwapMode();
+        HideAllDetailPanels();
 
         // 初始化PlayerManager并恢复交换次数
         if (PlayerManager.Instance != null)
@@ -720,28 +745,7 @@ public class MainGameManager : Singleton<MainGameManager>
             // 区分鼠标和触屏输入，避免冲突
             if (Input.touchCount > 0)
             {
-                // 有触屏输入时，只处理触屏
                 HandleTouchInput();
-            }
-            else
-            {
-                // 没有触屏输入时，处理鼠标悬停
-                HandleMouseHover();
-            }
-        }
-        // 处理中时（wave攻击过程中或敌人移动过程中）- 允许hover显示信息，但不允许点击交互
-        else if (isProcessing && (currentState == GameState.Processing || currentState == GameState.EnemyTurn))
-        {
-            // 处理中时仍然允许hover显示信息，但不允许点击交互
-            // 区分鼠标和触屏输入，避免冲突
-            if (Input.touchCount > 0)
-            {
-                // 触屏输入在isProcessing时已经被HandleTouchInput阻止，这里不需要处理
-            }
-            else
-            {
-                // 处理鼠标悬停（显示panel信息）
-                HandleMouseHover();
             }
         }
         else if (isProcessing)
@@ -770,614 +774,338 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void HandlePlayerInput()
     {
-        // 处理中时不允许操作
         if (isProcessing)
             return;
-        
-        // 如果教程正在拦截输入，不响应输入
+
         if (TutorialManager.Instance != null && TutorialManager.Instance.IsBlockingInput)
-        {
             return;
-        }
 
         if (StartAnimManager.Instance != null && StartAnimManager.Instance.isBlocking)
-        {
             return;
-        }
-        
-        // 如果统计菜单打开，不响应输入
+
         StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
         if (statisticsMenu != null && statisticsMenu.IsActive)
-        {
             return;
-        }
-        
-        // 如果事件菜单打开，不响应输入
+
         EventMenu eventMenu = FindObjectOfType<EventMenu>();
         if (eventMenu != null && eventMenu.IsActive)
-        {
             return;
-        }
-        
-        // 如果设置菜单打开，不响应输入
+
         SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
         if (settingMenu != null && settingMenu.IsActive)
+            return;
+
+        if (isConsumableSwapMode)
         {
+            HandleConsumableSwapInput();
             return;
         }
 
-        // Shift + 鼠标左键 - 任意位置交换
-        if (CheatManager.Instance != null && CheatManager.Instance.IsShiftSwapActive)
+        if (Input.GetMouseButtonDown(1) && !ConsumableView.IsPointerOverConsumableUI())
         {
-            if (Input.GetMouseButtonDown(0))
-            {
-                Vector2Int gridPos = GetMouseGridPosition();
-                if (boardManager != null && boardManager.IsValidPosition(gridPos))
-                {
-                    if (!waitingForSecondSwap)
-                    {
-                        // 选择第一个格子
-                        firstSwapTilePos = gridPos;
-                        waitingForSecondSwap = true;
-                        HighlightTile(gridPos, Color.yellow);
-                    }
-                    else
-                    {
-                        // 选择第二个格子并交换
-                        if (gridPos != firstSwapTilePos)
-                        {
-                            // 触发swap text脉冲效果（无论是否成功）
-                            BattleUI battleUI = FindObjectOfType<BattleUI>();
-                            if (battleUI != null)
-                            {
-                                battleUI.PlaySwapTextPulse();
-                            }
-                            
-                            // 检查是否可以交换
-                            if (PlayerManager.Instance != null && !PlayerManager.Instance.CanSwap())
-                            {
-                                Debug.Log("交换次数不足！");
-                                waitingForSecondSwap = false;
-                                firstSwapTilePos = new Vector2Int(-1, -1);
-                                return;
-                            }
-
-                            ClearHighlights();
-                            
-                            // 消耗交换次数
-                            if (PlayerManager.Instance != null)
-                            {
-                                PlayerManager.Instance.ConsumeSwap();
-                            }
-                            
-                            // 标记为处理中
-                            isProcessing = true;
-                            currentState = GameState.Processing;
-                            
-                            boardManager.SwapTiles(firstSwapTilePos, gridPos);
-                            
-                            // 交换不进入敌人回合，直接完成
-                            DOVirtual.DelayedCall(0.5f, () =>
-                            {
-                                isProcessing = false;
-                                currentState = GameState.PlayerTurn;
-                            });
-                        }
-                        waitingForSecondSwap = false;
-                        firstSwapTilePos = new Vector2Int(-1, -1);
-                    }
-                }
-            }
-        }
-        else
-        {
-            // 取消任意位置交换选择
-            if (waitingForSecondSwap)
-            {
-                ClearHighlights();
-                waitingForSecondSwap = false;
-                firstSwapTilePos = new Vector2Int(-1, -1);
-            }
-
-            // 鼠标左键 - 拖动交换（任意位置）
-            // 检查教程是否禁用拖动
-            if (TutorialManager.Instance != null && !TutorialManager.Instance.IsDragEnabled)
-            {
-                // 教程禁用拖动，不处理
-            }
-            else if (Input.GetMouseButtonDown(0))
-            {
-                Vector2Int gridPos = GetMouseGridPosition();
-                if (boardManager != null && boardManager.IsValidPosition(gridPos))
-                {
-                    dragStartPos = gridPos;
-                    isDragging = true;
-                    selectedTilePos = gridPos;
-                    
-                    // 清除所有高亮效果，只保留showFrame
-                    ClearHighlights();
-                    
-                    // 显示开始格子的框
-                    TileCell startTile = boardManager.GetTile(gridPos);
-                    if (startTile != null)
-                    {
-                        startTile.ShowFrame(true);
-                    }
-                }
-            }
-            else if (Input.GetMouseButton(0) && isDragging)
-            {
-                // 拖动中：跟踪鼠标所在的新格子
-                Vector2Int gridPos = GetMouseGridPosition();
-                if (boardManager != null && boardManager.IsValidPosition(gridPos))
-                {
-                    // 如果鼠标移动到新的格子上
-                    if (gridPos != currentHoverTilePos)
-                    {
-                        // 隐藏之前格子的框（如果不是开始格子）
-                        if (currentHoverTilePos.x >= 0 && currentHoverTilePos != dragStartPos)
-                        {
-                            TileCell prevTile = boardManager.GetTile(currentHoverTilePos);
-                            if (prevTile != null)
-                            {
-                                prevTile.ShowFrame(false);
-                            }
-                        }
-                        
-                        // 显示新格子的框（如果不是开始格子）
-                        if (gridPos != dragStartPos)
-                        {
-                            TileCell newTile = boardManager.GetTile(gridPos);
-                            if (newTile != null)
-                            {
-                                newTile.ShowFrame(true);
-                            }
-                        }
-                        
-                        currentHoverTilePos = gridPos;
-                    }
-                }
-                else
-                {
-                    // 鼠标不在有效位置上，隐藏当前悬停格子的框
-                    if (currentHoverTilePos.x >= 0 && currentHoverTilePos != dragStartPos)
-                    {
-                        TileCell hoverTile = boardManager.GetTile(currentHoverTilePos);
-                        if (hoverTile != null)
-                        {
-                            hoverTile.ShowFrame(false);
-                        }
-                    }
-                    currentHoverTilePos = new Vector2Int(-1, -1);
-                }
-            }
-            else if (Input.GetMouseButtonUp(0) && isDragging)
-            {
-                Vector2Int gridPos = GetMouseGridPosition();
-                
-                // 隐藏开始格子的框
-                if (dragStartPos.x >= 0)
-                {
-                    TileCell startTile = boardManager.GetTile(dragStartPos);
-                    if (startTile != null)
-                    {
-                        startTile.ShowFrame(false);
-                    }
-                }
-                
-                // 隐藏当前悬停格子的框（如果不是开始格子）
-                if (currentHoverTilePos.x >= 0 && currentHoverTilePos != dragStartPos)
-                {
-                    TileCell hoverTile = boardManager.GetTile(currentHoverTilePos);
-                    if (hoverTile != null)
-                    {
-                        hoverTile.ShowFrame(false);
-                    }
-                }
-                
-                // 延迟后在鼠标当前位置恢复highlight效果
-                Vector2Int finalGridPos = gridPos; // 保存最终位置
-                DOVirtual.DelayedCall(0.2f, () =>
-                {
-                    if (boardManager != null && boardManager.IsValidPosition(finalGridPos))
-                    {
-                        UpdateHighlightTiles(finalGridPos);
-                        lastHighlightPos = finalGridPos;
-                    }
-                });
-                
-                // 如果选中了两个不同的格子，交换位置
-                if (boardManager != null && 
-                    boardManager.IsValidPosition(gridPos) && 
-                    gridPos != dragStartPos)
-                {
-                    // 触发swap text脉冲效果（无论是否成功）
-                    BattleUI battleUI = FindObjectOfType<BattleUI>();
-                    if (battleUI != null)
-                    {
-                        battleUI.PlaySwapTextPulse();
-                    }
-                    
-                    // 检查是否可以交换
-                    if (PlayerManager.Instance != null && !PlayerManager.Instance.CanSwap())
-                    {
-                        Debug.Log("交换次数不足！");
-                        isDragging = false;
-                        currentHoverTilePos = new Vector2Int(-1, -1);
-                        return;
-                    }
-
-                    // 消耗交换次数
-                    if (PlayerManager.Instance != null)
-                    {
-                        PlayerManager.Instance.ConsumeSwap();
-                    }
-
-                    // 标记为处理中
-                    isProcessing = true;
-                    currentState = GameState.Processing;
-
-                    // 交换格子
-                    boardManager.SwapTiles(dragStartPos, gridPos);
-                    
-                    // 触发教程信号：拖动交换方块
-                    if (TutorialManager.Instance != null)
-                    {
-                        TutorialManager.Instance.SendSignal("dragTile");
-                    }
-                    
-                    // 交换不进入敌人回合，直接完成
-                    DOVirtual.DelayedCall(0.5f, () =>
-                    {
-                        isProcessing = false;
-                        currentState = GameState.PlayerTurn;
-                    });
-                }
-                
-                // 重置拖拽状态
-                isDragging = false;
-                currentHoverTilePos = new Vector2Int(-1, -1);
-            }
+            HandleRightClickToggleDetail();
+            return;
         }
 
-        // 鼠标右键 - 消除同色格子
-        // 检查教程是否禁用右键点击
-        if (TutorialManager.Instance != null && !TutorialManager.Instance.IsRightClickEnabled)
-        {
-            // 教程禁用右键点击，不处理
-        }
-        else if (Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonDown(0) && !ConsumableView.IsPointerOverConsumableUI())
         {
             Vector2Int gridPos = GetMouseGridPosition();
-            if (boardManager != null && boardManager.IsValidPosition(gridPos))
+            bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(gridPos);
+
+            HideAllDetailPanels();
+
+            if (TutorialManager.Instance != null && !TutorialManager.Instance.IsRightClickEnabled)
+                return;
+
+            if (isValidGridPos)
             {
-                // 播放玩家攻击动画
                 TryPlayPlayerAttackAnimation();
-                
-                // 不调用ClearHighlights()，让高亮保持显示
                 EliminateConnectedTiles(gridPos);
             }
         }
     }
 
-    /// <summary>
-    /// 处理鼠标悬停
-    /// </summary>
-    private void HandleMouseHover()
+    public void EnterConsumableSwapMode(string identifier)
     {
-        // 如果教程正在拦截输入，不响应hover
-        if (TutorialManager.Instance != null && TutorialManager.Instance.IsBlockingInput)
+        if (!IsInActiveBattle || isProcessing || string.IsNullOrEmpty(identifier))
+            return;
+
+        if (ConsumableManager.Instance == null || ConsumableManager.Instance.GetCount(identifier) <= 0)
+            return;
+
+        HideAllDetailPanels();
+        ConsumableView consumableView = FindObjectOfType<ConsumableView>(true);
+        consumableView?.HideAllPanels();
+
+        isConsumableSwapMode = true;
+        consumableSwapIdentifier = identifier;
+        consumableSwapStartPos = new Vector2Int(-1, -1);
+        consumableSwapHoverPos = new Vector2Int(-1, -1);
+        isConsumableSwapDragging = false;
+
+        BattleUI battleUI = FindObjectOfType<BattleUI>();
+        battleUI?.ShowConsumableSwapHint();
+    }
+
+    private void ExitConsumableSwapMode()
+    {
+        if (!isConsumableSwapMode && string.IsNullOrEmpty(consumableSwapIdentifier))
+            return;
+
+        ClearConsumableSwapFrames();
+
+        isConsumableSwapMode = false;
+        consumableSwapIdentifier = null;
+        consumableSwapStartPos = new Vector2Int(-1, -1);
+        consumableSwapHoverPos = new Vector2Int(-1, -1);
+        isConsumableSwapDragging = false;
+
+        BattleUI battleUI = FindObjectOfType<BattleUI>();
+        battleUI?.HideConsumableSwapHint();
+
+        ConsumableView consumableView = FindObjectOfType<ConsumableView>(true);
+        consumableView?.Refresh();
+    }
+
+    private void HandleConsumableSwapInput()
+    {
+        if (Input.GetMouseButtonDown(1))
         {
+            ExitConsumableSwapMode();
             return;
         }
-        if (StartAnimManager.Instance != null && StartAnimManager.Instance.isBlocking)
+
+        if (Input.GetMouseButtonDown(0))
         {
+            Vector2Int gridPos = GetMouseGridPosition();
+            if (boardManager != null && boardManager.IsValidPosition(gridPos))
+            {
+                consumableSwapStartPos = gridPos;
+                isConsumableSwapDragging = true;
+                ClearConsumableSwapFrames();
+
+                TileCell startTile = boardManager.GetTile(gridPos);
+                startTile?.ShowFrame(true);
+            }
+        }
+        else if (Input.GetMouseButton(0) && isConsumableSwapDragging)
+        {
+            Vector2Int gridPos = GetMouseGridPosition();
+            if (boardManager != null && boardManager.IsValidPosition(gridPos))
+            {
+                if (gridPos != consumableSwapHoverPos)
+                {
+                    if (consumableSwapHoverPos.x >= 0 && consumableSwapHoverPos != consumableSwapStartPos)
+                    {
+                        TileCell prevTile = boardManager.GetTile(consumableSwapHoverPos);
+                        prevTile?.ShowFrame(false);
+                    }
+
+                    if (gridPos != consumableSwapStartPos && IsAdjacent(consumableSwapStartPos, gridPos))
+                    {
+                        TileCell newTile = boardManager.GetTile(gridPos);
+                        newTile?.ShowFrame(true);
+                    }
+
+                    consumableSwapHoverPos = gridPos;
+                }
+            }
+            else
+            {
+                if (consumableSwapHoverPos.x >= 0 && consumableSwapHoverPos != consumableSwapStartPos)
+                {
+                    TileCell hoverTile = boardManager.GetTile(consumableSwapHoverPos);
+                    hoverTile?.ShowFrame(false);
+                }
+
+                consumableSwapHoverPos = new Vector2Int(-1, -1);
+            }
+        }
+        else if (Input.GetMouseButtonUp(0) && isConsumableSwapDragging)
+        {
+            Vector2Int gridPos = GetMouseGridPosition();
+            ClearConsumableSwapFrames();
+
+            bool swapSucceeded = false;
+            if (boardManager != null
+                && boardManager.IsValidPosition(gridPos)
+                && consumableSwapStartPos.x >= 0
+                && gridPos != consumableSwapStartPos
+                && IsAdjacent(consumableSwapStartPos, gridPos)
+                && boardManager.SwapTiles(consumableSwapStartPos, gridPos))
+            {
+                ConsumableManager.Instance?.RemoveConsumable(consumableSwapIdentifier, 1);
+                swapSucceeded = true;
+
+                isProcessing = true;
+                currentState = GameState.Processing;
+                DOVirtual.DelayedCall(0.5f, () =>
+                {
+                    isProcessing = false;
+                    currentState = GameState.PlayerTurn;
+                });
+            }
+
+            isConsumableSwapDragging = false;
+            consumableSwapStartPos = new Vector2Int(-1, -1);
+            consumableSwapHoverPos = new Vector2Int(-1, -1);
+            ExitConsumableSwapMode();
+
+            if (!swapSucceeded)
+            {
+                ConsumableView consumableView = FindObjectOfType<ConsumableView>(true);
+                consumableView?.Refresh();
+            }
+        }
+    }
+
+    private void ClearConsumableSwapFrames()
+    {
+        if (boardManager == null)
+            return;
+
+        if (consumableSwapStartPos.x >= 0)
+        {
+            TileCell startTile = boardManager.GetTile(consumableSwapStartPos);
+            startTile?.ShowFrame(false);
+        }
+
+        if (consumableSwapHoverPos.x >= 0)
+        {
+            TileCell hoverTile = boardManager.GetTile(consumableSwapHoverPos);
+            hoverTile?.ShowFrame(false);
+        }
+    }
+
+    private void HandleRightClickToggleDetail()
+    {
+        Enemy enemy = GetEnemyUnderMouse();
+        if (enemy != null && !enemy.IsDead && enemy.EnemyInfo != null)
+        {
+            if (toggledEnemy == enemy && enemyDescriptionPanel != null && enemyDescriptionPanel.activeSelf)
+            {
+                HideAllDetailPanels();
+                return;
+            }
+
+            HideAllDetailPanels();
+            toggledEnemy = enemy;
+            toggledAlly = null;
+            toggledSkillGridPos = new Vector2Int(-1, -1);
+            UpdateEnemyDescription(enemy);
             return;
         }
-        
-        // 如果技能选择界面打开，不响应hover
-        SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
-        if (skillMenu != null && skillMenu.IsActive)
+
+        Ally ally = GetAllyUnderMouse();
+        if (ally != null && !ally.IsDead)
         {
-            return;
-        }
-        
-        // 如果统计菜单打开，不响应hover
-        StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
-        if (statisticsMenu != null && statisticsMenu.IsActive)
-        {
-            return;
-        }
-        
-        // 如果事件菜单打开，不响应hover
-        EventMenu eventMenu = FindObjectOfType<EventMenu>();
-        if (eventMenu != null && eventMenu.IsActive)
-        {
-            return;
-        }
-        
-        // 如果设置菜单打开，不响应hover
-        SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
-        if (settingMenu != null && settingMenu.IsActive)
-        {
+            if (toggledAlly == ally && allyDescriptionPanel != null && allyDescriptionPanel.activeSelf)
+            {
+                HideAllDetailPanels();
+                return;
+            }
+
+            HideAllDetailPanels();
+            toggledAlly = ally;
+            toggledEnemy = null;
+            toggledSkillGridPos = new Vector2Int(-1, -1);
+            UpdateAllyDescription(ally);
             return;
         }
 
         Vector2Int gridPos = GetMouseGridPosition();
-        bool isValidGridPos = boardManager != null && boardManager.IsBoardInitialized
-            && boardManager.IsValidPosition(gridPos);
-        
-        // 检查是否悬停在敌人上
-        Enemy hoveredEnemy = GetEnemyUnderMouse();
-        bool hasEnemy = hoveredEnemy != null && !hoveredEnemy.IsDead && hoveredEnemy.EnemyInfo != null;
-        
-        // 检查是否悬停在随从上
-        Ally hoveredAlly = GetAllyUnderMouse();
-        bool hasAlly = hoveredAlly != null && !hoveredAlly.IsDead;
-        
-        // 如果正在处理中（玩家操作到敌人移动结束），不显示tile高亮，但清除已有高亮
-        if (isProcessing)
+        if (boardManager != null && boardManager.IsValidPosition(gridPos))
         {
-            // 清除高亮，但不更新
-            ClearHighlights();
-            lastHighlightPos = new Vector2Int(-1, -1); // 重置高亮位置
-        }
-        // 如果鼠标位置改变了，更新高亮（拖动时不更新高亮）
-        else if (isValidGridPos && gridPos != lastHighlightPos && !waitingForSecondSwap && !isDragging)
-        {
-            UpdateHighlightTiles(gridPos);
-            lastHighlightPos = gridPos;
-        }
-        
-        // 显示/隐藏敌人描述
-        if (hasEnemy)
-        {
-            UpdateEnemyDescription(hoveredEnemy);
-        }
-        else
-        {
-            if (enemyDescriptionPanel != null)
+            if (toggledSkillGridPos == gridPos && skillDisplayPanel != null && skillDisplayPanel.activeSelf)
             {
-                enemyDescriptionPanel.SetActive(false);
+                HideAllDetailPanels();
+                return;
             }
-        }
-        
-        // 显示/隐藏随从描述
-        if (hasAlly)
-        {
-            UpdateAllyDescription(hoveredAlly);
-        }
-        else
-        {
-            if (allyDescriptionPanel != null)
-            {
-                allyDescriptionPanel.SetActive(false);
-            }
-        }
-        
-        // 显示/隐藏技能显示（如果格子上有技能）
-        if (isValidGridPos)
-        {
+
+            HideAllDetailPanels();
+            toggledSkillGridPos = gridPos;
+            toggledEnemy = null;
+            toggledAlly = null;
             UpdateSkillDisplay(gridPos);
+            return;
         }
-        else
-        {
-            // 鼠标不在有效位置，隐藏所有信息显示并清除高亮
-            if (skillDisplayPanel != null)
-            {
-                skillDisplayPanel.SetActive(false);
-            }
-            if (enemyDescriptionPanel != null)
-            {
-                enemyDescriptionPanel.SetActive(false);
-            }
-            if (allyDescriptionPanel != null)
-            {
-                allyDescriptionPanel.SetActive(false);
-            }
-            // 清除tile高亮
-            ClearHighlights();
-            lastHighlightPos = new Vector2Int(-1, -1); // 重置高亮位置
-        }
+
+        HideAllDetailPanels();
     }
-    
-    private bool isTouching = false; // 是否正在触摸
-    private Vector2Int touchGridPos = new Vector2Int(-1, -1); // 触摸的格子位置
-    
+
+    private void HideAllDetailPanels()
+    {
+        toggledEnemy = null;
+        toggledAlly = null;
+        toggledSkillGridPos = new Vector2Int(-1, -1);
+
+        if (skillDisplayPanel != null)
+            skillDisplayPanel.SetActive(false);
+        if (enemyDescriptionPanel != null)
+            enemyDescriptionPanel.SetActive(false);
+        if (allyDescriptionPanel != null)
+            allyDescriptionPanel.SetActive(false);
+
+        ConsumableView consumableView = FindObjectOfType<ConsumableView>(true);
+        consumableView?.HideAllPanels();
+
+        ClearHighlights();
+        lastHighlightPos = new Vector2Int(-1, -1);
+    }
+
     /// <summary>
     /// 处理触屏输入
     /// </summary>
     private void HandleTouchInput()
     {
-        // 如果技能选择界面打开，不响应touch
         SkillSelectMenu skillMenu = FindObjectOfType<SkillSelectMenu>();
         if (skillMenu != null && skillMenu.IsActive)
-        {
             return;
-        }
-        
-        // 如果事件菜单打开，不响应touch
+
         EventMenu eventMenu = FindObjectOfType<EventMenu>();
         if (eventMenu != null && eventMenu.IsActive)
-        {
             return;
-        }
-        
-        // 如果设置菜单打开，不响应touch
+
         SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
         if (settingMenu != null && settingMenu.IsActive)
-        {
             return;
-        }
-        
-        // 处理中时不允许操作
-        if (isProcessing)
+
+        if (isProcessing || isConsumableSwapMode)
             return;
-        
-        // 确保相机已初始化
+
         if (mainCamera == null)
         {
             mainCamera = Camera.main;
             if (mainCamera == null)
-            {
-                Debug.LogWarning("MainGameManager: 无法找到主相机，触屏输入无法工作");
                 return;
-            }
         }
-        
-        // 检查触摸输入
-        if (Input.touchCount > 0)
+
+        if (Input.touchCount <= 0)
+            return;
+
+        Touch touch = Input.GetTouch(0);
+        if (touch.phase != TouchPhase.Ended && touch.phase != TouchPhase.Canceled)
+            return;
+
+        Vector3 touchScreenPos = touch.position;
+        if (mainCamera.orthographic)
+            touchScreenPos.z = Mathf.Abs(mainCamera.transform.position.z);
+        else
+            touchScreenPos.z = mainCamera.nearClipPlane;
+
+        Vector3 touchWorldPos = mainCamera.ScreenToWorldPoint(touchScreenPos);
+        touchWorldPos.z = 0;
+        Vector2Int gridPos = GetGridPositionFromWorld(touchWorldPos);
+
+        HideAllDetailPanels();
+
+        if (TutorialManager.Instance != null && !TutorialManager.Instance.IsRightClickEnabled)
+            return;
+
+        if (boardManager != null && boardManager.IsValidPosition(gridPos))
         {
-            Touch touch = Input.GetTouch(0);
-            
-            // 正确转换屏幕坐标到世界坐标（需要设置z值）
-            Vector3 touchScreenPos = touch.position;
-            // 对于正交相机，使用相机的z位置；对于透视相机，使用nearClipPlane
-            if (mainCamera.orthographic)
-            {
-                touchScreenPos.z = Mathf.Abs(mainCamera.transform.position.z);
-            }
-            else
-            {
-                touchScreenPos.z = mainCamera.nearClipPlane;
-            }
-            Vector3 touchWorldPos = mainCamera.ScreenToWorldPoint(touchScreenPos);
-            touchWorldPos.z = 0;
-            
-            // 检查是否触摸到敌人或tile
-            Vector2Int gridPos = GetGridPositionFromWorld(touchWorldPos);
-            
-            if (touch.phase == TouchPhase.Began)
-            {
-                isTouching = true;
-                touchGridPos = gridPos;
-                
-                bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(gridPos);
-                
-                // 检查是否触摸到敌人
-                Enemy touchedEnemy = GetEnemyAtPosition(touchWorldPos);
-                bool hasEnemy = touchedEnemy != null && !touchedEnemy.IsDead;
-                
-                // 检查是否触摸到随从
-                Ally touchedAlly = GetAllyAtPosition(touchWorldPos);
-                bool hasAlly = touchedAlly != null && !touchedAlly.IsDead;
-                
-                // 显示/隐藏敌人描述
-                if (hasEnemy)
-                {
-                    UpdateEnemyDescription(touchedEnemy);
-                }
-                else
-                {
-                    if (enemyDescriptionPanel != null)
-                    {
-                        enemyDescriptionPanel.SetActive(false);
-                    }
-                }
-                
-                // 显示/隐藏随从描述
-                if (hasAlly)
-                {
-                    UpdateAllyDescription(touchedAlly);
-                }
-                else
-                {
-                    if (allyDescriptionPanel != null)
-                    {
-                        allyDescriptionPanel.SetActive(false);
-                    }
-                }
-                
-                // 显示/隐藏技能显示（如果格子上有技能）
-                if (isValidGridPos)
-                {
-                    UpdateSkillDisplay(gridPos);
-                }
-                else
-                {
-                    if (skillDisplayPanel != null)
-                    {
-                        skillDisplayPanel.SetActive(false);
-                    }
-                }
-            }
-            else if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
-            {
-                isTouching = false;
-                touchGridPos = new Vector2Int(-1, -1);
-                
-                // 隐藏详细信息
-                if (enemyDescriptionPanel != null)
-                {
-                    enemyDescriptionPanel.SetActive(false);
-                }
-                if (allyDescriptionPanel != null)
-                {
-                    allyDescriptionPanel.SetActive(false);
-                }
-                if (skillDisplayPanel != null)
-                {
-                    skillDisplayPanel.SetActive(false);
-                }
-            }
-            else if (touch.phase == TouchPhase.Moved && isTouching)
-            {
-                // 触摸移动时更新显示
-                Vector2Int newGridPos = GetGridPositionFromWorld(touchWorldPos);
-                if (newGridPos != touchGridPos)
-                {
-                    touchGridPos = newGridPos;
-                    
-                    bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(newGridPos);
-                    
-                    // 检查是否触摸到敌人
-                    Enemy touchedEnemy = GetEnemyAtPosition(touchWorldPos);
-                    bool hasEnemy = touchedEnemy != null && !touchedEnemy.IsDead;
-                    
-                    // 检查是否触摸到随从
-                    Ally touchedAlly = GetAllyAtPosition(touchWorldPos);
-                    bool hasAlly = touchedAlly != null && !touchedAlly.IsDead;
-                    
-                    // 显示/隐藏敌人描述
-                    if (hasEnemy)
-                    {
-                        UpdateEnemyDescription(touchedEnemy);
-                    }
-                    else
-                    {
-                        if (enemyDescriptionPanel != null)
-                        {
-                            enemyDescriptionPanel.SetActive(false);
-                        }
-                    }
-                    
-                    // 显示/隐藏随从描述
-                    if (hasAlly)
-                    {
-                        UpdateAllyDescription(touchedAlly);
-                    }
-                    else
-                    {
-                        if (allyDescriptionPanel != null)
-                        {
-                            allyDescriptionPanel.SetActive(false);
-                        }
-                    }
-                    
-                    // 显示/隐藏技能显示（如果格子上有技能）
-                    if (isValidGridPos)
-                    {
-                        UpdateSkillDisplay(newGridPos);
-                    }
-                    else
-                    {
-                        if (skillDisplayPanel != null)
-                        {
-                            skillDisplayPanel.SetActive(false);
-                        }
-                    }
-                }
-            }
+            TryPlayPlayerAttackAnimation();
+            EliminateConnectedTiles(gridPos);
         }
     }
     
@@ -1678,27 +1406,12 @@ public class MainGameManager : Singleton<MainGameManager>
 
             if (skillIdentifiers.Count > 0)
             {
-                // 显示技能描述
-                string skillText = "";
-                string firstSkillIdentifier = null;
-                foreach (var identifier in skillIdentifiers)
-                {
-                    if (SkillManager.Instance.HasSkill(identifier))
-                    {
-                        if (firstSkillIdentifier == null)
-                        {
-                            firstSkillIdentifier = identifier;
-                        }
-                        string description = SkillManager.Instance.GetSkillDescription(identifier, false);
-                        skillText += description + "\n";
-                    }
-                }
+                string skillText = SkillManager.Instance.BuildColorAreaSkillDescriptions(skillIdentifiers);
 
                 if (!string.IsNullOrEmpty(skillText))
                 {
                     skillDisplayText.text = skillText;
-                    // 根据技能颜色设置panel背景色
-                    SetSkillPanelColor(skillDisplayPanel, firstSkillIdentifier);
+                    SetSkillPanelColorByIndex(skillDisplayPanel, colorIndex);
                     skillDisplayPanel.SetActive(true);
                 }
                 else
@@ -1717,6 +1430,29 @@ public class MainGameManager : Singleton<MainGameManager>
         }
     }
     
+    /// <summary>
+    /// 根据颜色索引设置panel背景色（用于颜色区域悬停）
+    /// </summary>
+    private void SetSkillPanelColorByIndex(GameObject panel, int colorIndex)
+    {
+        if (panel == null)
+            return;
+
+        Image bgImage = panel.GetComponent<Image>();
+        if (bgImage == null)
+            return;
+
+        if (colorIndex >= 0 && colorIndex < 4)
+        {
+            TileColor tileColor = (TileColor)colorIndex;
+            bgImage.color = TileColorUtil.GetBattleNoteColor(tileColor);
+        }
+        else
+        {
+            bgImage.color = Color.white;
+        }
+    }
+
     /// <summary>
     /// 根据技能颜色设置panel背景色
     /// </summary>
@@ -1748,7 +1484,7 @@ public class MainGameManager : Singleton<MainGameManager>
             if (colorLower == "red" || colorLower == "yellow" || colorLower == "blue" || colorLower == "green")
             {
                 TileColor tileColor = GetTileColorFromString(skillInfo.color);
-                Color colorValue = TileColorUtil.GetUnityColor(tileColor);
+                Color colorValue = TileColorUtil.GetBattleNoteColor(tileColor);
                 bgImage.color = colorValue;
             }
             else
@@ -3571,22 +3307,31 @@ public class MainGameManager : Singleton<MainGameManager>
 
         int totalGoldEarned = 0;
         int levelGold = 0;
+        pendingBattleDisplayGold = 0;
+        pendingBattleGoldToGrant = 0;
+        pendingBattleConsumableId = null;
         
-        // 掉落gold（使用当前关卡信息）
-        if (currentLevelInfo != null && currentLevelInfo.gold > 0 && PlayerManager.Instance != null)
+        // 关卡完成金币延后到战斗结果界面领取
+        if (currentLevelInfo != null && currentLevelInfo.gold > 0)
         {
             int goldToAdd = currentLevelInfo.gold;
-            
-            PlayerManager.Instance.AddGold(goldToAdd);
             levelGold = goldToAdd;
             totalGoldEarned += goldToAdd;
-            Debug.Log($"关卡完成，获得 {goldToAdd} gold");
+            pendingBattleGoldToGrant = goldToAdd;
+            pendingBattleDisplayGold += goldToAdd;
+            Debug.Log($"关卡完成，待领取 {goldToAdd} gold");
         }
         
-        // 如果是gold关卡，添加从chest获得的金钱
+        // 如果是gold关卡，添加从chest获得的金钱（战斗中已入账，仅用于展示）
         if (currentLevelInfo != null && currentLevelInfo.type == "gold" && goldFromChests > 0)
         {
             totalGoldEarned += goldFromChests;
+            pendingBattleDisplayGold += goldFromChests;
+        }
+
+        if (activeBattleMapNode != null && activeBattleMapNode.HasConsumableReward && ConsumableManager.Instance != null)
+        {
+            pendingBattleConsumableId = ConsumableManager.Instance.GetRandomAvailableConsumable();
         }
         
         // 显示获得的金钱toast
@@ -3753,7 +3498,36 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private void OnBattleVictoryContinue()
     {
-        ShowBattleRewardShop(() => OpenMap());
+        ShowBattleResultMenu();
+    }
+
+    private void ShowBattleResultMenu()
+    {
+        BattleResultMenu menu = BattleResultMenu.GetOrCreate();
+        if (menu == null)
+        {
+            activeBattleMapNode = null;
+            OpenMap();
+            return;
+        }
+
+        var rewards = new BattleResultMenu.RewardData
+        {
+            displayGold = pendingBattleDisplayGold,
+            goldToGrant = pendingBattleGoldToGrant,
+            consumableId = pendingBattleConsumableId,
+            includeCardReward = true,
+            includeRelicReward = activeBattleMapNode != null && activeBattleMapNode.IsBossNode
+        };
+
+        menu.ShowRewards(rewards, () =>
+        {
+            pendingBattleDisplayGold = 0;
+            pendingBattleGoldToGrant = 0;
+            pendingBattleConsumableId = null;
+            activeBattleMapNode = null;
+            OpenMap();
+        });
     }
 
     private void CacheNextIslandTransitionState(bool defeatedBossLevel, bool defeatedFinalBoss)
@@ -4310,9 +4084,6 @@ public class MainGameManager : Singleton<MainGameManager>
             }
         }
         
-        // 禁用左键移动和交换
-        // 可以保留鼠标悬停高亮
-        HandleMouseHover();
     }
     
     /// <summary>

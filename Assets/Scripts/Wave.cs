@@ -17,7 +17,8 @@ public class Wave : MonoBehaviour
     [SerializeField] private float waveFrequency = 2f; // 波动频率（每秒周期数）
 
     [Header("组件")]
-    [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private SpriteRenderer outlineRenderer;
+    [SerializeField] private SpriteRenderer innerRenderer;
     [SerializeField] private Collider2D waveCollider;
 
     private List<Enemy> hitEnemies = new List<Enemy>();
@@ -90,8 +91,12 @@ public class Wave : MonoBehaviour
     {
         if (waveCollider == null)
             waveCollider = GetComponent<Collider2D>();
-        if (spriteRenderer == null)
-            spriteRenderer = GetComponent<SpriteRenderer>();
+
+        SpriteRenderer[] renderers = GetComponentsInChildren<SpriteRenderer>(true);
+        if (outlineRenderer == null && renderers.Length > 0)
+            outlineRenderer = renderers[0];
+        if (innerRenderer == null && renderers.Length > 1)
+            innerRenderer = renderers[1];
         
         // 确保Collider2D设置为Trigger
         if (waveCollider == null)
@@ -160,12 +165,7 @@ public class Wave : MonoBehaviour
 
         transform.position = spawnPosition;
         gameObject.SetActive(true);
-        spriteRenderer.sprite = MainGameManager.Instance.tileSprites[(int)waveColor]    ;
-        // 设置spriteRenderer的颜色为对应的tile颜色
-        // if (spriteRenderer != null)
-        // {
-        //     spriteRenderer.color = TileColorUtil.GetUnityColor(waveColor) + new Color(0.2f, 0.2f, 0.2f);
-        // }
+        ApplyWaveColors();
 
         // 获取BoardManager
         if (boardManager == null)
@@ -184,6 +184,18 @@ public class Wave : MonoBehaviour
 
         // 开始移动
         StartWave();
+    }
+
+    private void ApplyWaveColors()
+    {
+        Color outlineColor = TileColorUtil.GetBattleNoteColor(waveColor);
+        Color innerColor = TileColorUtil.GetInnerBattleNoteColor(waveColor);
+
+        if (outlineRenderer != null)
+            outlineRenderer.color = outlineColor;
+
+        if (innerRenderer != null)
+            innerRenderer.color = innerColor;
     }
 
     /// <summary>
