@@ -262,7 +262,6 @@ public class SkillSelectMenu : MenuBase
         battleRewardRequireBothPicks = requireBothPicks;
         onBattleRewardPicked = onRewardPicked;
         ShowSkillSelection(onClose, mode);
-        transform.SetAsLastSibling();
     }
 
     private void NotifyBattleRewardPickedIfReady()

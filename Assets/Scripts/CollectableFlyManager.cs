@@ -29,15 +29,27 @@ public class CollectableFlyManager : Singleton<CollectableFlyManager>
         EnsurePool();
     }
 
+    public static void EnsureInstance()
+    {
+        if (Instance != null)
+            Instance.EnsurePool();
+    }
+
+    public static void BringLayerToFront()
+    {
+        if (Instance == null)
+            return;
+
+        Instance.EnsurePool();
+    }
+
     public void FlyToTarget(Sprite sprite, Vector3 worldStart, RectTransform target, int count, Action onAllComplete = null)
     {
         if (sprite == null || target == null || count <= 0)
-        {
-            onAllComplete?.Invoke();
             return;
-        }
 
         EnsurePool();
+        BringLayerToFront();
 
         int flyCount = Mathf.Clamp(count, 1, maxFlyCount);
         Vector3 worldEnd = target.position;
@@ -80,6 +92,8 @@ public class CollectableFlyManager : Singleton<CollectableFlyManager>
                 layerRect.offsetMin = Vector2.zero;
                 layerRect.offsetMax = Vector2.zero;
             }
+
+            UiSortOrder.ApplySorting(flyParent, UiSortOrder.Fly);
         }
 
         if (flyPrefab == null)
@@ -126,7 +140,10 @@ public class CollectableFlyManager : Singleton<CollectableFlyManager>
     private static void OnTakeFromPool(CollectableFlyObject flyObject)
     {
         if (flyObject != null)
+        {
             flyObject.gameObject.SetActive(true);
+            BringLayerToFront();
+        }
     }
 
     private void OnReturnedToPool(CollectableFlyObject flyObject)

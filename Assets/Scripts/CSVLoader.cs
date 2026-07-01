@@ -123,6 +123,7 @@ public class RuneInfo
     public List<string> unlock;
     public int unlockLevel;
     public string synergy;
+    public Sprite icon => Resources.Load<Sprite>("rune/" + identifier);
 }
 
 public class ConsumableInfo

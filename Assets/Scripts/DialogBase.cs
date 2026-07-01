@@ -21,6 +21,7 @@ public class DialogBase : MenuBase
 
     protected override void Awake()
     {
+        UiSortOrder.ApplySorting(transform, UiSortOrder.Popup, enableRaycast: true);
         base.Awake();
         
         // 绑定按钮事件
@@ -107,6 +108,15 @@ public class DialogBase : MenuBase
         {
             Debug.LogWarning("DialogBase not found in scene!");
         }
+    }
+
+    public override void Show(bool immediate = false)
+    {
+        if (animatedRect != null)
+            ShowAnim(immediate);
+
+        menu.SetActive(true);
+        UiSortOrder.BringPopupToFront(transform);
     }
 }
 

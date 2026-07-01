@@ -55,23 +55,6 @@ public class BattleResultMenu : MenuBase
         RebuildCells();
         UpdateContinueButton();
         Show();
-        transform.SetAsLastSibling();
-    }
-
-    public override void Show(bool immediate = false)
-    {
-        RectTransform rootRect = GetComponent<RectTransform>();
-        if (rootRect != null)
-        {
-            rootRect.anchorMin = Vector2.zero;
-            rootRect.anchorMax = Vector2.one;
-            rootRect.offsetMin = Vector2.zero;
-            rootRect.offsetMax = Vector2.zero;
-            rootRect.anchoredPosition = Vector2.zero;
-        }
-
-        base.Show(immediate);
-        transform.SetAsLastSibling();
     }
 
     private void RebuildCells()
@@ -86,7 +69,7 @@ public class BattleResultMenu : MenuBase
             AddCell(
                 BattleResultCell.RewardType.Gold,
                 GetGoldIcon(),
-                $"{currentRewards.displayGold} Gold",
+                $"Get {currentRewards.displayGold} Gold",
                 ClaimGold);
         }
 
@@ -100,7 +83,7 @@ public class BattleResultMenu : MenuBase
             AddCell(
                 BattleResultCell.RewardType.Consumable,
                 consumableSprite,
-                consumableName,
+                $"Get {consumableName}",
                 ClaimConsumable);
         }
 
@@ -152,27 +135,22 @@ public class BattleResultMenu : MenuBase
         int flyCount = Mathf.Clamp(currentRewards != null ? currentRewards.displayGold : grantAmount, 1, 15);
         Sprite icon = GetGoldIcon();
         Vector3 startPosition = GetCellWorldPosition(BattleResultCell.RewardType.Gold);
-        RectTransform target = GetGoldFlyTarget();
+        RectTransform target = GetGoldFlyTarget() ?? GetHudFallbackTarget();
+
+        if (icon == null || target == null)
+            return;
 
         pendingGoldToGrant = 0;
         MarkCellClaimed(BattleResultCell.RewardType.Gold);
 
-        if (target != null && CollectableFlyManager.Instance != null)
+        CollectableFlyManager.EnsureInstance();
+        CollectableFlyManager.Instance.FlyToTarget(icon, startPosition, target, flyCount, () =>
         {
-            CollectableFlyManager.Instance.FlyToTarget(icon, startPosition, target, flyCount, () =>
-            {
-                if (grantAmount > 0 && PlayerManager.Instance != null)
-                    PlayerManager.Instance.AddGold(grantAmount);
+            if (grantAmount > 0 && PlayerManager.Instance != null)
+                PlayerManager.Instance.AddGold(grantAmount);
 
-                FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
-            });
-            return;
-        }
-
-        if (grantAmount > 0 && PlayerManager.Instance != null)
-            PlayerManager.Instance.AddGold(grantAmount);
-
-        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
+        });
     }
 
     private void ClaimConsumable()
@@ -195,26 +173,22 @@ public class BattleResultMenu : MenuBase
         RectTransform target = view != null
             ? view.GetFlyTargetForConsumable(consumableId)
             : null;
+        target ??= GetHudFallbackTarget();
+
+        if (consumableSprite == null || target == null)
+            return;
 
         pendingConsumableId = null;
         MarkCellClaimed(BattleResultCell.RewardType.Consumable);
 
-        if (target != null && consumableSprite != null && CollectableFlyManager.Instance != null)
+        CollectableFlyManager.EnsureInstance();
+        CollectableFlyManager.Instance.FlyToTarget(consumableSprite, startPosition, target, 1, () =>
         {
-            CollectableFlyManager.Instance.FlyToTarget(consumableSprite, startPosition, target, 1, () =>
-            {
-                if (ConsumableManager.Instance.AddConsumable(consumableId, 1))
-                    view?.Refresh();
+            if (ConsumableManager.Instance.AddConsumable(consumableId, 1))
+                view?.Refresh();
 
-                FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
-            });
-            return;
-        }
-
-        if (ConsumableManager.Instance.AddConsumable(consumableId, 1))
-            view?.Refresh();
-
-        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_buy_skill");
+        });
     }
 
     private void OpenCombinedRewardShop()
@@ -224,11 +198,7 @@ public class BattleResultMenu : MenuBase
             return;
 
         MarkCellClaimed(BattleResultCell.RewardType.Shop);
-        skillMenu.ShowBattleRewardOverlay(
-            null,
-            SkillSelectMenu.ShopMode.BattleReward,
-            null,
-            requireBothPicks: true);
+        OpenBattleRewardShop(skillMenu, SkillSelectMenu.ShopMode.BattleReward);
     }
 
     private void OpenCardRewardShop()
@@ -238,9 +208,7 @@ public class BattleResultMenu : MenuBase
             return;
 
         MarkCellClaimed(BattleResultCell.RewardType.Card);
-        skillMenu.ShowBattleRewardOverlay(
-            null,
-            SkillSelectMenu.ShopMode.BattleRewardSkill);
+        OpenBattleRewardShop(skillMenu, SkillSelectMenu.ShopMode.BattleRewardSkill);
     }
 
     private void OpenRelicRewardShop()
@@ -250,9 +218,17 @@ public class BattleResultMenu : MenuBase
             return;
 
         MarkCellClaimed(BattleResultCell.RewardType.Relic);
+        OpenBattleRewardShop(skillMenu, SkillSelectMenu.ShopMode.BattleRewardRune);
+    }
+
+    private void OpenBattleRewardShop(SkillSelectMenu skillMenu, SkillSelectMenu.ShopMode mode)
+    {
+        Hide();
         skillMenu.ShowBattleRewardOverlay(
+            () => Show(),
+            mode,
             null,
-            SkillSelectMenu.ShopMode.BattleRewardRune);
+            requireBothPicks: mode == SkillSelectMenu.ShopMode.BattleReward);
     }
 
     private Vector3 GetCellWorldPosition(BattleResultCell.RewardType type)
@@ -281,6 +257,16 @@ public class BattleResultMenu : MenuBase
         }
 
         return null;
+    }
+
+    private static RectTransform GetHudFallbackTarget()
+    {
+        AlwaysBattleAndUiController hud = FindObjectOfType<AlwaysBattleAndUiController>(true);
+        if (hud != null)
+            return hud.transform as RectTransform;
+
+        BattleUI battleUI = FindObjectOfType<BattleUI>(true);
+        return battleUI != null ? battleUI.transform as RectTransform : null;
     }
 
     private void MarkCellClaimed(BattleResultCell.RewardType type)

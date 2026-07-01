@@ -9,6 +9,7 @@ using UnityEngine.UI;
 public class ShopRuneItem : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("UI组件")]
+    [SerializeField] private Image iconImage;
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text descriptionText;
     [SerializeField] private TMP_Text priceText;
@@ -20,6 +21,12 @@ public class ShopRuneItem : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
     private bool hidePrice;
 
     public string RuneIdentifier => runeInfo != null ? runeInfo.identifier : "";
+
+    private void Awake()
+    {
+        if (nameText != null)
+            nameText.gameObject.SetActive(false);
+    }
 
     public void Init(RuneInfo info, SkillSelectMenu menu, bool freePurchase = false)
     {
@@ -46,8 +53,7 @@ public class ShopRuneItem : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
         if (runeInfo == null || RuneManager.Instance == null)
             return;
 
-        if (nameText != null)
-            nameText.text = RuneManager.Instance.GetRuneName(runeInfo.identifier);
+        UpdateIconImage();
 
         if (descriptionText != null)
             descriptionText.text = RuneManager.Instance.GetRuneDescription(runeInfo.identifier);
@@ -61,9 +67,8 @@ public class ShopRuneItem : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
 
         if (priceText != null)
         {
-            priceText.gameObject.SetActive(!hidePrice);
-            if (!hidePrice)
-                priceText.text = price.ToString();
+            priceText.gameObject.SetActive(true);
+            priceText.text = hidePrice ? "0" : price.ToString();
         }
 
         if (buyButton != null)
@@ -74,6 +79,25 @@ public class ShopRuneItem : MonoBehaviour, IPointerEnterHandler, IPointerExitHan
 
         bool insufficientGold = !hidePrice && !alreadyOwned && !canAfford;
         ApplyTextColors(insufficientGold);
+    }
+
+    private void UpdateIconImage()
+    {
+        if (iconImage == null || runeInfo == null)
+            return;
+
+        Sprite sprite = runeInfo.icon;
+        if (sprite != null)
+        {
+            iconImage.sprite = sprite;
+            iconImage.enabled = true;
+            iconImage.gameObject.SetActive(true);
+        }
+        else
+        {
+            iconImage.sprite = null;
+            iconImage.enabled = false;
+        }
     }
 
     private void ApplyTextColors(bool insufficientGold)

@@ -87,7 +87,7 @@ public class ShopSkillItem : MonoBehaviour
 
         if (priceText != null)
         {
-            priceText.gameObject.SetActive(!hidePrice);
+            priceText.gameObject.SetActive(true);
         }
 
         // 更新购买按钮状态
@@ -101,9 +101,9 @@ public class ShopSkillItem : MonoBehaviour
             bool canAfford = hidePrice || (PlayerManager.Instance != null && PlayerManager.Instance.Gold >= price);
             buyButton.interactable = canAfford;
             
-            if (priceText != null && !hidePrice)
+            if (priceText != null)
             {
-                priceText.text = price.ToString();
+                priceText.text = hidePrice ? "0" : price.ToString();
             }
 
             if (actionText != null)

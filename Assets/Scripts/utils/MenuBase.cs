@@ -47,7 +47,9 @@ public class MenuBase : MonoBehaviour
         
         targetTrans = transform.position;
         targetSizeDelta = transform.localScale.x;
+        isStartupHide = true;
         Hide(true);
+        isStartupHide = false;
     }
 
     public virtual void tryInteract()
@@ -89,6 +91,7 @@ public class MenuBase : MonoBehaviour
     protected float targetSizeDelta;
     private float hideTime = 0.3f;
     public  float showTime = 0.5f;
+    private bool isStartupHide;
     virtual public void ShowAnim(bool immediate = false)
     {
         immediate = true;
@@ -122,7 +125,8 @@ public class MenuBase : MonoBehaviour
             {
                 Destroy(gameObject);
             }
-            OnMenuClosed?.Invoke(); // 通知外部它关闭了
+            if (!isStartupHide)
+                OnMenuClosed?.Invoke();
             AfterHide();
             return;
         }
@@ -141,7 +145,8 @@ public class MenuBase : MonoBehaviour
         {
             menu.SetActive(false);
             
-            OnMenuClosed?.Invoke(); // 通知外部它关闭了
+            if (!isStartupHide)
+                OnMenuClosed?.Invoke();
             AfterHide();
             if (destroyWhenHide)
             {
@@ -162,7 +167,8 @@ public class MenuBase : MonoBehaviour
          
          menu.SetActive(false);
          
-         OnMenuClosed?.Invoke(); // 通知外部它关闭了
+         if (!isStartupHide)
+             OnMenuClosed?.Invoke();
          AfterHide();
          if (destroyWhenHide)
          {
@@ -171,13 +177,11 @@ public class MenuBase : MonoBehaviour
     }
     virtual public void Show(bool immediate = false)
     {
-     
-
         if (animatedRect != null)
         {
             ShowAnim(immediate);
         }
-        
+
         menu.SetActive(true);
     }
     // virtual public void Hide()
