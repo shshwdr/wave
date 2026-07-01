@@ -38,6 +38,15 @@ public class GameData : ScriptableObject
         new Color(0.74509805f, 0.7490196f, 0.9607843f, 1f), // Green #BEBFF5
     };
 
+    [Header("Battle Note Outer Colors")]
+    [SerializeField] private List<Color> battleNoteOuterColors = new List<Color>
+    {
+        new Color(1f, 0.78431374f, 0.8862745f, 1f),       // Red  #FFC8E2
+        new Color(0.4862745f, 0.6745098f, 0.9647059f, 1f), // Yellow #7CACF6
+        new Color(0.70980394f, 0.9019608f, 0.9607843f, 1f), // Blue  #B5E6F5
+        new Color(0.74509805f, 0.7490196f, 0.9607843f, 1f), // Green #BEBFF5
+    };
+
     [SerializeField] private Color defaultColor = new Color(1f, 0.9411765f, 0.654902f, 1f); // #FFF0A7
     [SerializeField] private Color unaffordableTextColor = new Color(0.99215686f, 0.5529412f, 0.45490196f, 1f); // #FD8D74
 
@@ -79,6 +88,11 @@ public class GameData : ScriptableObject
         return GetColorFromList(battleNoteColors, colorIndex);
     }
 
+    public Color GetBattleNoteOuterColor(int colorIndex)
+    {
+        return GetColorFromList(battleNoteOuterColors, colorIndex);
+    }
+
     private Color GetColorFromList(List<Color> colors, int colorIndex)
     {
         if (colors == null || colorIndex < 0 || colorIndex >= colors.Count)
@@ -108,6 +122,11 @@ public static class TileColorUtil
     public static Color GetBattleNoteColor(TileColor color)
     {
         return GameData.Instance.GetBattleNoteColor((int)color);
+    }
+
+    public static Color GetBattleNoteOuterColor(TileColor color)
+    {
+        return GameData.Instance.GetBattleNoteOuterColor((int)color);
     }
 
     /// <summary>

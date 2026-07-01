@@ -29,6 +29,10 @@ public class SkillSelectMenu : MenuBase
     [SerializeField] private GameObject shopRuneItemPrefab;
     [SerializeField] private Button shopSectionToggleButton;
 
+    [Header("商店区域显示")]
+    [SerializeField] private GameObject shopSkillSectionRoot;
+    [SerializeField] private GameObject shopRuneSectionRoot;
+
     [Header("颜色区域")]
     [SerializeField] public ColorArea[] colorArea = new ColorArea[4]; // 0=红，1=黄，2=蓝，3=绿
 
@@ -303,12 +307,14 @@ public class SkillSelectMenu : MenuBase
         bool showSkills = isMapShop
             || currentShopMode == ShopMode.BattleReward
             || currentShopMode == ShopMode.BattleRewardSkill;
-        bool showRunes = isMapShop || currentShopMode == ShopMode.BattleRewardRune;
+        bool showRunes = isMapShop
+            || currentShopMode == ShopMode.BattleReward
+            || currentShopMode == ShopMode.BattleRewardRune;
 
-        if (shopRuneParent != null)
-            shopRuneParent.gameObject.SetActive(showRunes);
-        if (shopParent != null)
-            shopParent.gameObject.SetActive(showSkills);
+        if (shopSkillSectionRoot != null)
+            shopSkillSectionRoot.SetActive(showSkills);
+        if (shopRuneSectionRoot != null)
+            shopRuneSectionRoot.SetActive(showRunes);
 
         UpdateRefreshButton();
     }

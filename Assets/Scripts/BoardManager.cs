@@ -26,6 +26,9 @@ public class BoardManager : MonoBehaviour
         TileColor.Green 
     };
 
+    [Header("输入遮罩")]
+    [SerializeField] private GameObject cover;
+
     private TileCell[,] board;
     private Transform boardParent;
     
@@ -50,6 +53,13 @@ public class BoardManager : MonoBehaviour
         
         // 计算居中偏移
         CalculateCenterOffset();
+
+        if (cover == null)
+        {
+            Transform coverTransform = transform.Find("cover");
+            if (coverTransform != null)
+                cover = coverTransform.gameObject;
+        }
     }
 
     /// <summary>
@@ -617,6 +627,27 @@ public class BoardManager : MonoBehaviour
             // 更新图片位置（完全一致）
             bossDisplayImage.transform.position = bossWorldPos;
         }
+
+        UpdateCoverVisibility();
+    }
+
+    /// <summary>
+    /// 玩家因已点击、note 生成或敌人移动而不可点击时显示遮罩；教程拦截时不显示。
+    /// </summary>
+    private void UpdateCoverVisibility()
+    {
+        if (cover == null)
+            return;
+
+        bool showCover = false;
+        if (MainGameManager.Instance != null && MainGameManager.Instance.IsProcessing)
+        {
+            bool tutorialBlocking = TutorialManager.Instance != null && TutorialManager.Instance.IsBlockingInput;
+            showCover = !tutorialBlocking;
+        }
+
+        if (cover.activeSelf != showCover)
+            cover.SetActive(showCover);
     }
     
     

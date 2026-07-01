@@ -1,11 +1,12 @@
 using System.Collections;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 单个消耗品槽位：槽位背景常驻，有道具时显示内容；右键打开本 Icon 内的操作面板。
+/// 单个消耗品槽位：槽位背景常驻，有道具时显示内容；左键/右键打开本 Icon 内的操作面板。
 /// </summary>
 public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
 {
@@ -29,6 +30,8 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
     private ConsumableView parentView;
     private string identifier;
     private Coroutine refreshLayoutCoroutine;
+    private Vector3 panelBaseScale = Vector3.one;
+    private Tweener panelScaleTween;
 
     public string Identifier => identifier;
     public bool HasConsumable => !string.IsNullOrEmpty(identifier);
@@ -55,8 +58,16 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
         if (sellAllButton != null)
             sellAllButton.onClick.AddListener(OnSellAllClicked);
 
+        if (interactivePanel != null)
+            panelBaseScale = interactivePanel.transform.localScale;
+
         HidePanel();
         Clear();
+    }
+
+    private void OnDestroy()
+    {
+        KillPanelTween();
     }
 
     public void SetConsumable(string consumableIdentifier)
@@ -130,7 +141,8 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
         if (!HasConsumable)
             return;
 
-        if (eventData.button == PointerEventData.InputButton.Right)
+        if (eventData.button == PointerEventData.InputButton.Left ||
+            eventData.button == PointerEventData.InputButton.Right)
             TogglePanel();
     }
 
@@ -149,6 +161,7 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
         interactivePanel.SetActive(true);
         UpdatePanelContent();
         SchedulePanelLayoutRefresh();
+        PlayPanelOpenAnimation();
     }
 
     public void HidePanel()
@@ -159,8 +172,35 @@ public class ConsumableIcon : MonoBehaviour, IPointerClickHandler
             refreshLayoutCoroutine = null;
         }
 
+        KillPanelTween();
+
         if (interactivePanel != null)
+        {
+            interactivePanel.transform.localScale = panelBaseScale;
             interactivePanel.SetActive(false);
+        }
+    }
+
+    private void PlayPanelOpenAnimation()
+    {
+        if (interactivePanel == null)
+            return;
+
+        Transform panelTransform = interactivePanel.transform;
+        KillPanelTween();
+        panelTransform.localScale = Vector3.zero;
+        panelScaleTween = panelTransform
+            .DOScale(panelBaseScale, 0.15f)
+            .SetEase(Ease.OutBack, 0.6f)
+            .SetUpdate(true);
+    }
+
+    private void KillPanelTween()
+    {
+        if (panelScaleTween != null && panelScaleTween.IsActive())
+            panelScaleTween.Kill();
+
+        panelScaleTween = null;
     }
 
     public void RefreshPanelIfOpen()

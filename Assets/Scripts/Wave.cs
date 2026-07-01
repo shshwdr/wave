@@ -86,6 +86,7 @@ public class Wave : MonoBehaviour
 
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
+    public bool IsMoving => isMoving;
 
     private void Awake()
     {
@@ -188,7 +189,7 @@ public class Wave : MonoBehaviour
 
     private void ApplyWaveColors()
     {
-        Color outlineColor = TileColorUtil.GetBattleNoteColor(waveColor);
+        Color outlineColor = TileColorUtil.GetBattleNoteOuterColor(waveColor);
         Color innerColor = TileColorUtil.GetInnerBattleNoteColor(waveColor);
 
         if (outlineRenderer != null)
@@ -268,6 +269,64 @@ public class Wave : MonoBehaviour
         // 更新位置
         float currentY = baseYPosition + verticalOffset;
         transform.position = new Vector3(currentX, currentY, transform.position.z);
+    }
+
+    /// <summary>
+    /// 是否已离开棋盘（向前波离开最右列，向后波离开最左列）
+    /// </summary>
+    public bool HasClearedBoard()
+    {
+        if (boardManager == null)
+            return false;
+
+        Vector2Int currentGridPos = boardManager.WorldToGridPosition(transform.position);
+        return moveBackward
+            ? currentGridPos.x < 0
+            : currentGridPos.x > boardManager.Width - 1;
+    }
+
+    /// <summary>
+    /// 是否仍有可能击中 boss（含飞行途中与终点碰撞检测）
+    /// </summary>
+    public bool CanStillHitBoss()
+    {
+        Boss boss = MainGameManager.GetCurrentBoss();
+        if (boss == null || boss.IsDead || moveBackward)
+            return false;
+
+        if (hitEnemies.Contains(boss))
+            return false;
+
+        Vector3 bossPos = boss.transform.position;
+        const float collisionRange = 0.5f;
+
+        if (transform.position.x > bossPos.x + collisionRange)
+            return false;
+
+        float startX = startPosition.x;
+        float targetX = targetPosition.x;
+        float travelX = targetX - startX;
+        if (Mathf.Abs(travelX) < 0.001f)
+            return false;
+
+        float phaseOffset = columnIndex * Mathf.PI;
+
+        // 途经 boss X 时是否对齐
+        float progressAtBoss = (bossPos.x - startX) / travelX;
+        if (progressAtBoss >= 0f && progressAtBoss <= 1f)
+        {
+            float elapsedAtBoss = progressAtBoss * waveDuration;
+            float yAtBoss = baseYPosition + Mathf.Sin(elapsedAtBoss * waveFrequency * 2f * Mathf.PI + phaseOffset) * waveAmplitude;
+            if (Mathf.Abs(yAtBoss - bossPos.y) <= collisionRange)
+                return true;
+        }
+
+        // 终点是否与 boss 碰撞（与 CheckBossCollision 一致）
+        float yAtEnd = baseYPosition + Mathf.Sin(waveDuration * waveFrequency * 2f * Mathf.PI + phaseOffset) * waveAmplitude;
+        if (Mathf.Abs(targetX - bossPos.x) <= collisionRange && Mathf.Abs(yAtEnd - bossPos.y) <= collisionRange)
+            return true;
+
+        return false;
     }
     
     /// <summary>

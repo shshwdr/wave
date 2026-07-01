@@ -83,6 +83,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private GameState currentState = GameState.PlayerTurn;
     private bool isProcessing = false;  // 是否正在处理（波浪、移动等）
+    public bool IsProcessing => isProcessing;
     private Vector2Int selectedTilePos = new Vector2Int(-1, -1);
     private Vector2Int dragStartPos = new Vector2Int(-1, -1);
     private bool isDragging = false;
@@ -103,6 +104,7 @@ public class MainGameManager : Singleton<MainGameManager>
     // 高亮显示相关
     private Vector2Int lastHighlightPos = new Vector2Int(-1, -1);
     private List<Vector2Int> highlightedTiles = new List<Vector2Int>();
+    private bool leftMouseDownInBattle;
 
     // 技能显示相关
     private TileColor currentDisplayColor = TileColor.Red;
@@ -236,6 +238,7 @@ public class MainGameManager : Singleton<MainGameManager>
     private static Dictionary<int, bool> waveGroupHasDamage = new Dictionary<int, bool>();
     private static bool noAttackNoCostTriggeredThisTurn = false; // 一个回合只会触发一次
     private static HashSet<int> pendingWaveGroups = new HashSet<int>(); // 等待结算完成的wave group
+    private bool earlyTurnEndScheduled = false; // 是否已因 note 离盘而提前调度敌人回合
 
     private void Start()
     {
@@ -566,6 +569,7 @@ public class MainGameManager : Singleton<MainGameManager>
         dragStartPos = new Vector2Int(-1, -1);
         currentHoverTilePos = new Vector2Int(-1, -1);
         lastHighlightPos = new Vector2Int(-1, -1);
+        leftMouseDownInBattle = false;
         ClearHighlights();
         ExitConsumableSwapMode();
         HideAllDetailPanels();
@@ -741,6 +745,9 @@ public class MainGameManager : Singleton<MainGameManager>
         else if (currentState == GameState.PlayerTurn && !isProcessing && !isMapOpen)
         {
             HandlePlayerInput();
+
+            if (Input.touchCount == 0)
+                HandleMouseHover();
             
             // 区分鼠标和触屏输入，避免冲突
             if (Input.touchCount > 0)
@@ -752,6 +759,9 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             // 其他处理中状态时清除高亮
             ClearHighlights();
+
+            if (currentState == GameState.Processing && pendingWaveGroups.Count > 0)
+                TryEarlyEndPlayerTurnFromWaves();
         }
         
         // 如果事件菜单打开，清除高亮
@@ -809,20 +819,106 @@ public class MainGameManager : Singleton<MainGameManager>
 
         if (Input.GetMouseButtonDown(0) && !ConsumableView.IsPointerOverConsumableUI())
         {
+            leftMouseDownInBattle = true;
+            Vector2Int gridPos = GetMouseGridPosition();
+            if (boardManager != null && boardManager.IsValidPosition(gridPos))
+            {
+                lastHighlightPos = gridPos;
+                currentHoverTilePos = gridPos;
+                UpdateHighlightTiles(gridPos);
+                StartPressColorPulseOnHighlightedTiles();
+            }
+        }
+
+        if (Input.GetMouseButtonUp(0) && !ConsumableView.IsPointerOverConsumableUI())
+        {
+            bool hadBattleMouseDown = leftMouseDownInBattle;
+            leftMouseDownInBattle = false;
+
             Vector2Int gridPos = GetMouseGridPosition();
             bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(gridPos);
 
+            StopPressColorPulseOnHighlightedTiles();
             HideAllDetailPanels();
 
             if (TutorialManager.Instance != null && !TutorialManager.Instance.IsRightClickEnabled)
                 return;
 
-            if (isValidGridPos)
+            if (hadBattleMouseDown && isValidGridPos)
             {
                 TryPlayPlayerAttackAnimation();
                 EliminateConnectedTiles(gridPos);
             }
         }
+    }
+
+    /// <summary>
+    /// 处理鼠标悬停高亮
+    /// </summary>
+    private void HandleMouseHover()
+    {
+        if (isProcessing || isConsumableSwapMode)
+        {
+            ClearHighlights();
+            return;
+        }
+
+        if (TutorialManager.Instance != null && TutorialManager.Instance.IsBlockingInput)
+            return;
+
+        if (StartAnimManager.Instance != null && StartAnimManager.Instance.isBlocking)
+            return;
+
+        StatisticsMenu statisticsMenu = FindObjectOfType<StatisticsMenu>();
+        if (statisticsMenu != null && statisticsMenu.IsActive)
+            return;
+
+        EventMenu eventMenu = FindObjectOfType<EventMenu>();
+        if (eventMenu != null && eventMenu.IsActive)
+            return;
+
+        SettingMenu settingMenu = FindObjectOfType<SettingMenu>();
+        if (settingMenu != null && settingMenu.IsActive)
+            return;
+
+        if (ConsumableView.IsPointerOverConsumableUI())
+        {
+            if (lastHighlightPos.x >= 0)
+            {
+                ClearHighlights();
+                lastHighlightPos = new Vector2Int(-1, -1);
+                currentHoverTilePos = new Vector2Int(-1, -1);
+            }
+            return;
+        }
+
+        Vector2Int gridPos = GetMouseGridPosition();
+        if (boardManager == null || !boardManager.IsValidPosition(gridPos))
+        {
+            if (lastHighlightPos.x >= 0)
+            {
+                ClearHighlights();
+                lastHighlightPos = new Vector2Int(-1, -1);
+                currentHoverTilePos = new Vector2Int(-1, -1);
+            }
+            return;
+        }
+
+        if (gridPos == lastHighlightPos)
+            return;
+
+        if (lastHighlightPos.x >= 0 && IsInSameConnectedGroup(lastHighlightPos, gridPos))
+        {
+            lastHighlightPos = gridPos;
+            return;
+        }
+
+        lastHighlightPos = gridPos;
+        currentHoverTilePos = gridPos;
+        UpdateHighlightTiles(gridPos);
+
+        if (Input.GetMouseButton(0) && !ConsumableView.IsPointerOverConsumableUI())
+            StartPressColorPulseOnHighlightedTiles();
     }
 
     public void EnterConsumableSwapMode(string identifier)
@@ -1593,6 +1689,48 @@ public class MainGameManager : Singleton<MainGameManager>
         highlightedTiles.Clear();
     }
 
+    private bool IsInSameConnectedGroup(Vector2Int posA, Vector2Int posB)
+    {
+        if (boardManager == null || !boardManager.IsValidPosition(posA) || !boardManager.IsValidPosition(posB))
+            return false;
+
+        TileCell tileA = boardManager.GetTile(posA);
+        TileCell tileB = boardManager.GetTile(posB);
+        if (tileA == null || tileB == null || tileA.Color != tileB.Color)
+            return false;
+
+        return boardManager.GetConnectedSameColorTiles(posA).Contains(posB);
+    }
+
+    private void StartPressColorPulseOnTiles(List<Vector2Int> tiles)
+    {
+        if (boardManager == null)
+            return;
+
+        foreach (var pos in tiles)
+        {
+            TileCell tile = boardManager.GetTile(pos);
+            tile?.StartPressColorPulse();
+        }
+    }
+
+    private void StartPressColorPulseOnHighlightedTiles()
+    {
+        StartPressColorPulseOnTiles(highlightedTiles);
+    }
+
+    private void StopPressColorPulseOnHighlightedTiles()
+    {
+        if (boardManager == null)
+            return;
+
+        foreach (var pos in highlightedTiles)
+        {
+            TileCell tile = boardManager.GetTile(pos);
+            tile?.StopPressColorPulse();
+        }
+    }
+
     /// <summary>
     /// 获取鼠标所在的网格位置
     /// </summary>
@@ -1648,6 +1786,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
         // 标记为处理中
         isProcessing = true;
+        earlyTurnEndScheduled = false;
         currentState = GameState.Processing;
 
         // 获取起始格子的颜色
@@ -2494,6 +2633,104 @@ public class MainGameManager : Singleton<MainGameManager>
     }
     
     /// <summary>
+    /// 所有 note 已离开棋盘且不会再击中 boss 时，提前切换回合逻辑（note 继续飞行）
+    /// </summary>
+    private void TryEarlyEndPlayerTurnFromWaves()
+    {
+        if (earlyTurnEndScheduled)
+            return;
+        if (!isProcessing || currentState != GameState.Processing)
+            return;
+        if (pendingWaveGroups.Count == 0)
+            return;
+        if (WouldNoAttackNoCostBlockEarlyTurnEnd())
+            return;
+        if (!AreAllActiveWavesReadyForTurnEnd())
+            return;
+
+        earlyTurnEndScheduled = true;
+
+        DOVirtual.DelayedCall(0.1f, () =>
+        {
+            if (currentState != GameState.Processing)
+                return;
+
+            if (currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle")
+            {
+                if (CheckAllTilesCleared())
+                {
+                    CompleteLevel();
+                    return;
+                }
+            }
+
+            EndPlayerTurn();
+        });
+    }
+
+    private bool AreAllActiveWavesReadyForTurnEnd()
+    {
+        if (waveParent == null)
+            return false;
+
+        bool hasActiveWave = false;
+        for (int i = 0; i < waveParent.childCount; i++)
+        {
+            Wave wave = waveParent.GetChild(i).GetComponent<Wave>();
+            if (wave == null || !wave.IsMoving)
+                continue;
+
+            hasActiveWave = true;
+            if (!wave.HasClearedBoard())
+                return false;
+            if (wave.CanStillHitBoss())
+                return false;
+        }
+
+        return hasActiveWave;
+    }
+
+    private bool WouldNoAttackNoCostBlockEarlyTurnEnd()
+    {
+        if (noAttackNoCostTriggeredThisTurn)
+            return false;
+        if (PlayerManager.Instance == null || SkillManager.Instance == null)
+            return false;
+
+        bool hasNoAttackNoCost = false;
+        for (int i = 0; i < 4; i++)
+        {
+            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(i);
+            foreach (var identifier in skillIdentifiers)
+            {
+                if (SkillManager.Instance.HasSkill(identifier))
+                {
+                    SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+                    if (skillInfo != null && skillInfo.effect == "noAttackNoCost")
+                    {
+                        hasNoAttackNoCost = true;
+                        break;
+                    }
+                }
+            }
+            if (hasNoAttackNoCost)
+                break;
+        }
+
+        if (!hasNoAttackNoCost)
+            return false;
+
+        foreach (int groupId in pendingWaveGroups)
+        {
+            bool hasDamage = waveGroupHasDamage.ContainsKey(groupId) && waveGroupHasDamage[groupId];
+            if (!hasDamage)
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// 检查所有wave group是否都完成了，如果是则进入敌人回合
     /// </summary>
     private void CheckAllWaveGroupsCompleted()
@@ -2510,6 +2747,10 @@ public class MainGameManager : Singleton<MainGameManager>
         
         DOVirtual.DelayedCall(0.1f, () =>
         {
+            // 已因 note 离盘提前进入敌人回合，无需再次切换
+            if (currentState != GameState.Processing)
+                return;
+
             isProcessing = false;
             
             // 检查puzzle模式：如果所有tiles都消除了，完成关卡
@@ -3034,6 +3275,7 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             // 如果没有banner，直接进入玩家回合
             isProcessing = false;
+            earlyTurnEndScheduled = false;
             currentState = GameState.PlayerTurn;
         }
     }

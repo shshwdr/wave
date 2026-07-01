@@ -24,13 +24,18 @@ public class TileCell : MonoBehaviour
     private TileColor currentColor;
     private Vector2Int gridPosition;
     private bool isHighlighted = false;
-    private Color originalColor;
+    private Color noteColor;
     private bool hasFog = false; // 是否有fog
     private bool isDirty = false; // 是否有dirt
     private bool isDisabled = false; // 是否被禁用
     private bool isBeingDestroyed = false; // 是否正在被消除
     private Tween bounceTween; // 当前的弹动动画
     private Vector3 originalWorldPosition; // 原始世界位置
+    private bool isPressColorPulsing = false;
+    private const float PressColorPulseMinAlpha = 0.5f;
+    private const float PressColorPulseMaxAlpha = 1f;
+    private const float PressColorPulseDuration = 0.45f;
+    private const float PressColorRestoreDuration = 0.15f;
 
     [Header("生成效果")]
     [SerializeField] private GameObject spawnEffect; // 生成效果对象
@@ -82,18 +87,22 @@ public class TileCell : MonoBehaviour
     /// </summary>
     private void UpdateVisual()
     {
+        noteColor = TileColorUtil.GetBattleNoteColor(currentColor);
+
         if (spriteRenderer != null)
+            spriteRenderer.color = noteColor;
+
+        if (note != null)
+            note.color = TileColorUtil.GetInnerBattleNoteColor(currentColor);
+
+        if (selectHighlight != null)
         {
-            originalColor = TileColorUtil.GetBattleNoteColor(currentColor);
-            selectHighlight.GetComponent<Image>().color = originalColor*2;
-            spriteRenderer.color = originalColor;
+            Image highlightImage = selectHighlight.GetComponent<Image>();
+            if (highlightImage != null)
+                highlightImage.color = noteColor * 2f;
+
             if (!isHighlighted)
-            {
                 selectHighlight.SetActive(false);
-                //spriteRenderer.color = originalColor;
-            }
-            
-            //note.sprite = MainGameManager.Instance.tileSprites[(int)currentColor];
         }
     }
 
@@ -107,21 +116,11 @@ public class TileCell : MonoBehaviour
             return;
             
         isHighlighted = highlight;
-        if (spriteRenderer != null)
-        {
-            if (highlight)
-            {
-                
-                selectHighlight.SetActive(true);
-               // spriteRenderer.color = originalColor*2/3; // 高亮时显示为白色
-            }
-            else
-            {
-                
-                selectHighlight.SetActive(false);
-                //spriteRenderer.color = originalColor;
-            }
-        }
+        if (selectHighlight != null)
+            selectHighlight.SetActive(highlight);
+
+        if (!highlight && isPressColorPulsing)
+            StopPressColorPulse();
     }
     
     /// <summary>
@@ -135,6 +134,38 @@ public class TileCell : MonoBehaviour
         {
             SetHighlight(true);
         }
+    }
+
+    public void StartPressColorPulse()
+    {
+        if (spriteRenderer == null || isPressColorPulsing)
+            return;
+
+        isPressColorPulsing = true;
+        spriteRenderer.DOKill();
+
+        Color color = noteColor;
+        color.a = PressColorPulseMaxAlpha;
+        spriteRenderer.color = color;
+
+        spriteRenderer.DOFade(PressColorPulseMinAlpha, PressColorPulseDuration)
+            .SetEase(Ease.InOutSine)
+            .SetLoops(-1, LoopType.Yoyo);
+    }
+
+    public void StopPressColorPulse()
+    {
+        if (spriteRenderer == null || !isPressColorPulsing)
+            return;
+
+        isPressColorPulsing = false;
+        spriteRenderer.DOKill();
+
+        Color color = noteColor;
+        color.a = PressColorPulseMaxAlpha;
+        spriteRenderer.color = color;
+        spriteRenderer.DOFade(PressColorPulseMaxAlpha, PressColorRestoreDuration)
+            .SetEase(Ease.OutQuad);
     }
 
     /// <summary>
