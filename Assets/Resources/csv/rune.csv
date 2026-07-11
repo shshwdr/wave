@@ -1,13 +1,26 @@
-﻿identifier,name,description,descriptionMore,effect,values,isStart,available,buyPrice,unlock,unlockLevel,synergy
-keepShieldValue,keepShieldValue,Shield value would not half when turn starts,,keepShieldValue,50,,1,10,,,护盾
-ShieldDamage,ShieldDamage,"When enemy hit player when she has shield, the enemy takes {0}% damage back",,ShieldDamage,50,,1,10,,,护盾
-hitTakeDamage,Impact Crash,Collided foes take {0}% wave damage.,,hitTakeDamage,100,,1,10,,,击退
-damageIncreaseAll,Amplify,All wave damage increase {0}% ,,damageIncreaseAll,20,,1,10,,,
-shopVIPCard,VIP card,All item in shop get {0}% discount,,shopCheaper,50,,1,10,,,
-closerMoreDamage,,enemy on the leftmost 2 column take {0}% extra damage,,closerMoreDamage,50,,,,,,换血
-hitKeepMove,,push back will push until hit collider,,hitKeepMove,50,,,,,,击退
-SafeDistance,,"When there is no enemy in leftmost 3 columns, all wave damage increase {0}%",,SafeDistance,50,,,,,,击退
-PushToBoss,,"If an enemy push back to the right border, do {0}% damage to the boss",,PushToBoss,50,,,,,,
-ExplodeAlly,,"When an ally dies, it explodes, dealing {0} damage to adjacent enemies.",,ExplodeAlly,50,,,,,,
-t,,随从受到致死伤害时，有 {0}% 几率保留 1 点血不灭，并立刻向前走 1 格。,,,50,,,,,,
-t1,,当敌人进行移动后，你自动对最前排的敌人发射一个不带任何技能的 1 格基础波浪。,,,50,,,,,,
+﻿identifier,name,description,descriptionMore,effect,values,isStart,available,buyPrice,unlock,unlockLevel,synergy,,,,,,
+keepShieldValue,keepShieldValue,Shield value would not half when turn starts,,keepShieldValue,50,,1,10,,,护盾,,,,,,
+ShieldDamage,ShieldDamage,"When enemy hit player when she has shield, the enemy takes {0}% damage back",,ShieldDamage,50,,1,10,,,护盾,,,,,,
+hitTakeDamage,Impact Crash,Collided foes take {0}% wave damage.,,hitTakeDamage,100,,1,10,,,击退,,,,,,
+damageIncreaseAll,Amplify,All wave damage increase {0}% ,,damageIncreaseAll,20,,1,10,,,,,,,,,
+shopVIPCard,VIP card,All item in shop get {0}% discount,,shopCheaper,50,,1,10,,,,,,,,,
+closerMoreDamage,,enemy on the leftmost 2 column take {0}% extra damage,,closerMoreDamage,50,,,,,,换血,,,,,,
+hitKeepMove,,push back will push until hit collider,,hitKeepMove,50,,,,,,击退,,,,,,
+SafeDistance,,"When there is no enemy in leftmost 3 columns, all wave damage increase {0}%",,SafeDistance,50,,,,,,击退,,,,,,
+PushToBoss,,"If an enemy push back to the right border, do {0}% damage to the boss",,PushToBoss,50,,,,,,,,,,,,
+ExplodeAlly,,"When an ally dies, it explodes, dealing {0} damage to adjacent enemies.",,ExplodeAlly,50,,,,,,,,,,,,
+t,,随从受到致死伤害时，有 {0}% 几率保留 1 点血不灭，并立刻向前走 1 格。,,,50,,,,,,,,,,,,
+t1,,当敌人进行移动后，你自动对最前排的敌人发射一个不带任何技能的 1 格基础波浪。,,,50,,,,,,,,,,,,
+,,每击败1只怪本场战斗+{0}基础攻击,,,1,,,,,,,,,,,,
+,,HP<{0}时伤害+{1}%减伤+{2}%,,,,,,,,,,,,,,,
+,,死亡时复活,,,,,,,,,,,,,,,
+,,回合开始时获得{0}护盾,,,10,,,,,,,,,,,,
+,,回合结束{0}%概率额外行动,,,10,,,,,,,,,,,,
+,,消耗品掉落概率+{0}%,,,50,,,,,,,,,,,,
+,,每损1HP伤害+{0}%,,,,,,,,,,,,,,,
+,,溅射伤害{0}%,,,,,,,,,,,,,,,
+,,暴击伤害+{0}%,,,,,,,,,,,,,,,
+,,护盾吸收伤害时，反弹吸收量的{0}%,,,,,,,,,,,,,,,
+,,护盾被击破时，对全体敌人造成{0}点伤害,,,,,,,,,,,,,,,
+,,All allies max hp increase {0}%,,,,,,,,,召唤,,10,,,,1
+,,召唤物在场时 召唤物分担玩家受到的{0}%伤害,,,,,,,,,召唤,,,,,,
