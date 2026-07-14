@@ -13,7 +13,7 @@ public class SkillInfo
     public bool isStart;
     public string effect;
     public List<int> values; //count equals level
-    public int maxLevel;
+    public int maxLevel => (values != null && values.Count > 0) ? values.Count : 1;
     public bool available;
     public int buyPrice;
     public int upgradePrice;
