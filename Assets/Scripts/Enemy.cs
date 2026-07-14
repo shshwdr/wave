@@ -256,12 +256,12 @@ public class Enemy : Character
     }
 
     /// <summary>
-    /// 受到伤害
+    /// 受到伤害。返回实际结算的伤害（被盾牌挡住时为 0）。
     /// </summary>
-    public void TakeDamage(int damage, Vector3 attackDirection, bool shouldKnockback = false, int knockbackTiles = 0, float redWaveDamage = 0f)
+    public int TakeDamage(int damage, Vector3 attackDirection, bool shouldKnockback = false, int knockbackTiles = 0, float redWaveDamage = 0f, bool isCritical = false)
     {
         if (isDead)
-            return;
+            return 0;
 
         // Shield敌人：每回合第一次攻击被吃掉（但如果本回合已经攻击过，则不执行防御逻辑）
         if (hasShield && shieldActive && !hasAttackedThisTurn)
@@ -269,9 +269,9 @@ public class Enemy : Character
             shieldActive = false;
             isShielded = false; // 被攻击后，重置防御状态，播放普通idle
             UpdateShieldDisplay();
-            DamageNumber.CreateDamageNumber(0, transform.position, false);
+            DamageNumber.CreateDamageNumber(0, transform.position, false, false);
             // 伤害被吃掉，不造成伤害
-            return;
+            return 0;
         }
         
         // 被攻击后，重置防御状态
@@ -297,7 +297,7 @@ public class Enemy : Character
         currentHealth = Mathf.Max(0, currentHealth);
 
         // 显示伤害数字
-        DamageNumber.CreateDamageNumber(damage, transform.position, false);
+        DamageNumber.CreateDamageNumber(damage, transform.position, false, isCritical);
 
         // 击退效果（只有shouldKnockback为true时才击退）
         if (shouldKnockback && knockbackTiles > 0)
@@ -329,6 +329,23 @@ public class Enemy : Character
         {
             Die();
         }
+
+        return damage;
+    }
+
+    /// <summary>
+    /// 斩杀：直接进入死亡流程（不额外飘字）
+    /// </summary>
+    public void KillByExecute()
+    {
+        if (isDead)
+            return;
+
+        currentHealth = 0;
+        if (healthBar != null)
+            healthBar.UpdateHealthBar(currentHealth, maxHealth);
+
+        Die();
     }
 
     /// <summary>

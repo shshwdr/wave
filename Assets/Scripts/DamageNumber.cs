@@ -14,6 +14,8 @@ public class DamageNumber : MonoBehaviour
     [SerializeField] private Color damageColor = Color.red;
     [SerializeField] private Color zeroDamageColor = Color.gray;
     [SerializeField] private Color healColor = Color.green;
+    [SerializeField] private Color criticalColor = new Color(1f, 0.85f, 0.2f, 1f);
+    [SerializeField] private GameObject criticalGO;
 
     private void Awake()
     {
@@ -52,7 +54,7 @@ public class DamageNumber : MonoBehaviour
     /// <summary>
     /// 显示伤害数字
     /// </summary>
-    public void ShowDamage(int damage, Vector3 worldPosition, bool isHeal = false)
+    public void ShowDamage(int damage, Vector3 worldPosition, bool isHeal = false, bool isCritical = false)
     {
         if (damageText == null)
             return;
@@ -62,7 +64,24 @@ public class DamageNumber : MonoBehaviour
         
         // 设置文本和颜色
         damageText.text = isHeal ? $"+{damage}" : $"-{damage}";
-        damageText.color = isHeal ? healColor : (damage == 0? zeroDamageColor:damageColor);
+        if (isHeal)
+        {
+            damageText.color = healColor;
+            if (criticalGO != null)
+                criticalGO.SetActive(false);
+        }
+        else if (isCritical)
+        {
+            damageText.color = criticalColor;
+            if (criticalGO != null)
+                criticalGO.SetActive(true);
+        }
+        else
+        {
+            damageText.color = damage == 0 ? zeroDamageColor : damageColor;
+            if (criticalGO != null)
+                criticalGO.SetActive(false);
+        }
         
         // 重置初始状态
         transform.localScale = Vector3.one;
@@ -90,7 +109,7 @@ public class DamageNumber : MonoBehaviour
     /// <summary>
     /// 创建伤害数字
     /// </summary>
-    public static void CreateDamageNumber(int damage, Vector3 worldPosition, bool isHeal = false)
+    public static void CreateDamageNumber(int damage, Vector3 worldPosition, bool isHeal = false, bool isCritical = false)
     {
         //GameObject damageObj = new GameObject("DamageNumber");
         //DamageNumber damageNumber = damageObj.AddComponent<DamageNumber>();
@@ -110,7 +129,6 @@ public class DamageNumber : MonoBehaviour
        // }
         
        canvasObj.GetComponentInChildren<RectTransform>().position = screenPos;
-        canvasObj.GetComponent<DamageNumber>().ShowDamage(damage, worldPosition, isHeal);
+        canvasObj.GetComponent<DamageNumber>().ShowDamage(damage, worldPosition, isHeal, isCritical);
     }
 }
-

@@ -302,7 +302,9 @@ public class SkillManager : Singleton<SkillManager>
     /// <summary>
     /// 构建颜色区域所有技能的描述文本（每条前加列表分隔圆点）
     /// </summary>
-    public string BuildColorAreaSkillDescriptions(IList<string> skillIdentifiers, bool showNext = false)
+    /// <param name="tilesUsed">战斗悬停时连通方块数；&lt;0 表示未知</param>
+    /// <param name="battleContext">战斗中悬停：未激活条目显示灰色</param>
+    public string BuildColorAreaSkillDescriptions(IList<string> skillIdentifiers, bool showNext = false, int tilesUsed = -1, bool battleContext = false)
     {
         if (skillIdentifiers == null || skillIdentifiers.Count == 0)
             return "";
@@ -314,11 +316,50 @@ public class SkillManager : Singleton<SkillManager>
                 continue;
 
             string description = GetSkillDescription(identifier, showNext);
-            if (!string.IsNullOrEmpty(description))
+            if (string.IsNullOrEmpty(description))
+                continue;
+
+            if (battleContext && !IsSkillActiveForBattleDisplay(identifier, tilesUsed))
+                lines.Add($"<color=#808080>• {description}</color>");
+            else
                 lines.Add("• " + description);
         }
 
         return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// 战斗悬停描述：当前全局/连通状态可知时，判断技能是否“激活”
+    /// （依赖具体目标敌人的技能不在此变灰）
+    /// </summary>
+    private bool IsSkillActiveForBattleDisplay(string identifier, int tilesUsed)
+    {
+        if (!CSVLoader.Instance.cardInfoMap.TryGetValue(identifier, out SkillInfo skillInfo) || skillInfo == null)
+            return true;
+
+        int value = GetSkillValue(identifier);
+        switch (skillInfo.effect)
+        {
+            case "hurtDamageIncrease":
+                return PlayerManager.Instance != null && PlayerManager.Instance.TookHpDamageLastEnemyTurn;
+
+            case "shieldBuff":
+            case "shieldExplosion":
+                return PlayerManager.Instance != null && PlayerManager.Instance.CurrentShield > 0;
+
+            case "pure":
+                return tilesUsed == 1;
+
+            case "encourageMoreTiles":
+            case "allOrNothing":
+                return tilesUsed > value;
+
+            case "moreTileMoreDamage":
+                return tilesUsed > 5;
+
+            default:
+                return true;
+        }
     }
 }
 

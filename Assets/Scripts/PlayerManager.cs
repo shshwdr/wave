@@ -31,6 +31,10 @@ public class PlayerManager : Singleton<PlayerManager>
     private float bossDamageReduction = 0f; // Boss初始血量减少百分比（下次战斗）
     private float enemyDamageBonus = 0f; // 敌人伤害加成百分比（下次战斗）
 
+    // 上一敌方回合是否真的扣过玩家 HP（护盾全挡不算）
+    private bool tookHpDamageDuringEnemyTurn = false;
+    private bool tookHpDamageLastEnemyTurn = false;
+
     // Wave技能配置：List<List<string>>，索引0,1,2,3对应红、黄、蓝、绿
     // 每个内层List存储该颜色wave的技能identifier列表（顺序=玩家拖入顺序）
     private List<List<string>> waveSkillsDict = new List<List<string>>();
@@ -59,6 +63,8 @@ public class PlayerManager : Singleton<PlayerManager>
     public float TempWaveDamageBonus => tempWaveDamageBonus;
     public float BossDamageReduction => bossDamageReduction;
     public float EnemyDamageBonus => enemyDamageBonus;
+    /// <summary>上一敌方回合是否受到过血量伤害（用于 hurtDamageIncrease 等）</summary>
+    public bool TookHpDamageLastEnemyTurn => tookHpDamageLastEnemyTurn;
     
     /// <summary>
     /// 获取wave技能配置字典
@@ -326,6 +332,8 @@ public class PlayerManager : Singleton<PlayerManager>
         // 注意：不重置currentSwapCount，exchange在战斗结束时恢复
         tempSwapCount = 0; // 重置临时交换次数
         // 注意：不重置tempWaveDamageBonus，它会在战斗结束后清除
+        tookHpDamageDuringEnemyTurn = false;
+        tookHpDamageLastEnemyTurn = false;
     }
     
     /// <summary>
@@ -455,12 +463,30 @@ public class PlayerManager : Singleton<PlayerManager>
 
         currentHealth -= remaining;
         currentHealth = Mathf.Max(0, currentHealth);
+        tookHpDamageDuringEnemyTurn = true;
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/PlayerStatus/sfx_player_hurt");
 
         // 播放受伤动画
         TryPlayHurtAnimation();
 
         Debug.Log($"玩家受到 {remaining} 伤害（护盾抵消 {damage - remaining}），当前血量: {currentHealth}/{maxHealth}，护盾: {currentShield}");
+    }
+
+    /// <summary>
+    /// 敌方回合开始：清空本敌方回合受伤记录
+    /// </summary>
+    public void NotifyEnemyTurnStart()
+    {
+        tookHpDamageDuringEnemyTurn = false;
+    }
+
+    /// <summary>
+    /// 玩家回合开始：锁定上一敌方回合是否掉过血
+    /// </summary>
+    public void NotifyPlayerTurnStart()
+    {
+        tookHpDamageLastEnemyTurn = tookHpDamageDuringEnemyTurn;
+        tookHpDamageDuringEnemyTurn = false;
     }
 
     /// <summary>

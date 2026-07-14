@@ -84,6 +84,15 @@ public class Wave : MonoBehaviour
     private int minionEchoValue = 0; // minionEcho的值
     private bool isSkillTriggeredDamage = false; // 标记当前伤害是否是技能触发的（防止技能互相触发）
 
+    private int criticalChancePercent = 0; // 暴击率（默认 0，加法叠加）
+    private int criticalDamagePercent = 200; // 暴击伤害百分比（默认 200%，加法叠加）
+    private bool hasBossDamage = false;
+    private int bossDamageValue = 0;
+    private bool hasBounceRandom = false;
+    private int bounceRandomValue = 0;
+    private int executeThresholdPercent = 0; // 斩杀线%，无技能时为 0（不斩杀）
+    private const float BounceEffectDuration = 0.5f;
+
     public float Duration => waveDuration; // 获取波浪持续时间
     public TileColor WaveColor => waveColor; // 获取波浪颜色
     public bool IsMoving => isMoving;
@@ -157,6 +166,13 @@ public class Wave : MonoBehaviour
         targetValue = 0;
         tilesUsed = tilesUsedCount; // 记录使用的tile数量
         isSkillTriggeredDamage = false; // 重置技能触发标志
+        criticalChancePercent = 0;
+        criticalDamagePercent = 200;
+        hasBossDamage = false;
+        bossDamageValue = 0;
+        hasBounceRandom = false;
+        bounceRandomValue = 0;
+        executeThresholdPercent = 0;
         
         // 初始化波动相关变量
         columnIndex = gridPos.x; // 列索引
@@ -684,6 +700,29 @@ public class Wave : MonoBehaviour
                     hasMinionEcho = true;
                     minionEchoValue = value;
                     break;
+
+                case "criticalChance":
+                    criticalChancePercent += value;
+                    break;
+
+                case "hurtDamageIncrease":
+                    if (PlayerManager.Instance != null && PlayerManager.Instance.TookHpDamageLastEnemyTurn)
+                        damage = damage * (1f + value / 100f);
+                    break;
+
+                case "bossDamage":
+                    hasBossDamage = true;
+                    bossDamageValue += value;
+                    break;
+
+                case "bounceRandom":
+                    hasBounceRandom = true;
+                    bounceRandomValue += value;
+                    break;
+
+                case "executeThresholdIncrease":
+                    executeThresholdPercent += value;
+                    break;
             }
         }
         
@@ -921,76 +960,18 @@ public class Wave : MonoBehaviour
                 
                 
                 // 获取红色wave的基础伤害（用于hitTakeDamage）
-                float redWaveBaseDamage = 20f; // 默认基础伤害
-                if (PlayerManager.Instance != null)
-                {
-                    redWaveBaseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
-                }
-                //if (waveColor == TileColor.Red)
-                {
-                    // 如果是红色wave，使用当前伤害（已应用所有加成）
-                    redWaveBaseDamage = finalDamage;
-                }
-                
-                bool wasAlive = !enemy.IsDead;
-                enemy.TakeDamage((int)finalDamage, direction, shouldKnockback, knockbackTiles, redWaveBaseDamage);
-                
-                // 检查敌人是否死亡（由这次伤害导致）
-                if (wasAlive && enemy.IsDead)
-                {
-                    // 触发bounty技能
-                    if (hasBounty && PlayerManager.Instance != null)
-                    {
-                        PlayerManager.Instance.AddGold(bountyValue);
-                        Debug.Log($"Bounty: 获得 {bountyValue} gold");
-                        FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_coin_skill");
-                    }
-                    
-                    // 触发exchange技能
-                    if (hasExchange && PlayerManager.Instance != null)
-                    {
-                        PlayerManager.Instance.AddTempSwapCount(exchangeValue);
-                        Debug.Log($"Exchange: 获得 {exchangeValue} 临时交换次数");
-                    }
-                }
-                
-                // 记录伤害到wave group（用于spawnAlly技能）
-                MainGameManager.RecordWaveDamage(waveGroupId, finalDamage);
-                
-                // 应用aoeAttack技能 - 对四向相邻的敌人造成伤害
-                if (hasAoeAttack)
-                {
-                    ApplyAoeAttack(enemy, finalDamage);
-                }
-                
-                // 应用bossEcho技能 - 攻击普通敌人时，对Boss造成伤害
-                if (hasBossEcho && !isSkillTriggeredDamage && enemy != null && !(enemy is Boss))
-                {
-                    ApplyBossEcho(finalDamage);
-                }
-                
-                // 应用minionEcho技能 - 攻击Boss时，对随机普通敌人造成伤害
-                if (hasMinionEcho && !isSkillTriggeredDamage && enemy != null && enemy is Boss)
-                {
-                    ApplyMinionEcho(finalDamage);
-                }
-                
-                // 击中回血
-                if (hasHealWhenHit && PlayerManager.Instance != null)
-                {
-                    int healValue = (int)(finalDamage * healAmount / 100f);
-                    PlayerManager.Instance.Heal(healValue);
-                    DamageNumber.CreateDamageNumber(healValue, transform.position, true);
-                    // 回血效果已在PlayerManager.Heal()中创建
-                }
+                float redWaveBaseDamage = GetRedWaveBaseDamage(finalDamage);
 
-                // 击中获得护盾
-                if (hasShieldWhenHit && PlayerManager.Instance != null)
-                {
-                    int shieldValue = (int)(finalDamage * shieldWhenHitValue / 100f);
-                    PlayerManager.Instance.AddShield(shieldValue);
-                    DamageNumber.CreateDamageNumber(shieldValue, transform.position, true);
-                }
+                ApplyDamageAndFollowUps(
+                    enemy,
+                    finalDamage,
+                    direction,
+                    shouldKnockback,
+                    knockbackTiles,
+                    redWaveBaseDamage,
+                    allowBounce: true,
+                    applyAoeAndEcho: true,
+                    applyOnHitEffects: true);
                 
                 // 应用hitAddColor技能（击中敌人时改变场上tile颜色）
                 if (hasHitAddColor && boardManager != null)
@@ -1018,6 +999,227 @@ public class Wave : MonoBehaviour
                 
             }
         }
+    }
+
+    private float GetRedWaveBaseDamage(float fallbackDamage)
+    {
+        float redWaveBaseDamage = 20f;
+        if (PlayerManager.Instance != null)
+            redWaveBaseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
+        redWaveBaseDamage = fallbackDamage;
+        return redWaveBaseDamage;
+    }
+
+    private bool RollCritical()
+    {
+        if (criticalChancePercent <= 0)
+            return false;
+        return Random.Range(0, 100) < criticalChancePercent;
+    }
+
+    /// <summary>
+    /// 结算一次对敌人的伤害（含暴击/Boss加伤/斩杀），并可选触发 aoe/echo/弹射。
+    /// </summary>
+    private void ApplyDamageAndFollowUps(
+        Enemy enemy,
+        float rawDamage,
+        Vector3 direction,
+        bool shouldKnockback,
+        int knockbackTiles,
+        float redWaveBaseDamage,
+        bool allowBounce,
+        bool applyAoeAndEcho,
+        bool applyOnHitEffects)
+    {
+        if (enemy == null || enemy.IsDead)
+            return;
+
+        float finalDamage = rawDamage;
+
+        if (hasBossDamage && bossDamageValue > 0 && enemy is Boss)
+            finalDamage *= (1f + bossDamageValue / 100f);
+
+        bool isCritical = RollCritical();
+        if (isCritical)
+            finalDamage *= criticalDamagePercent / 100f;
+
+        int healthBefore = enemy.CurrentHealth;
+        bool wasAlive = !enemy.IsDead;
+        int appliedDamage = enemy.TakeDamage(
+            (int)finalDamage, direction, shouldKnockback, knockbackTiles, redWaveBaseDamage, isCritical);
+
+        TryExecuteEnemy(enemy);
+
+        bool killed = wasAlive && enemy.IsDead;
+        if (killed)
+            ApplyKillRewards(enemy);
+
+        int overkill = Mathf.Max(0, appliedDamage - healthBefore);
+
+        MainGameManager.RecordWaveDamage(waveGroupId, finalDamage);
+
+        if (applyAoeAndEcho)
+        {
+            if (hasAoeAttack)
+                ApplyAoeAttack(enemy, finalDamage);
+
+            if (hasBossEcho && !isSkillTriggeredDamage && !(enemy is Boss))
+                ApplyBossEcho(finalDamage);
+
+            if (hasMinionEcho && !isSkillTriggeredDamage && enemy is Boss)
+                ApplyMinionEcho(finalDamage);
+        }
+
+        if (applyOnHitEffects)
+        {
+            if (hasHealWhenHit && PlayerManager.Instance != null)
+            {
+                int healValue = (int)(finalDamage * healAmount / 100f);
+                PlayerManager.Instance.Heal(healValue);
+                DamageNumber.CreateDamageNumber(healValue, transform.position, true);
+            }
+
+            if (hasShieldWhenHit && PlayerManager.Instance != null)
+            {
+                int shieldValue = (int)(finalDamage * shieldWhenHitValue / 100f);
+                PlayerManager.Instance.AddShield(shieldValue);
+                DamageNumber.CreateDamageNumber(shieldValue, transform.position, true);
+            }
+        }
+
+        // 其他伤害结算完后再弹射；弹射不再触发 bounce
+        if (allowBounce && hasBounceRandom && bounceRandomValue > 0 && killed && overkill > 0)
+        {
+            float bounceDamage = overkill * bounceRandomValue / 100f;
+            QueueBounceRandom(enemy.transform.position, bounceDamage);
+        }
+    }
+
+    private void TryExecuteEnemy(Enemy enemy)
+    {
+        if (enemy == null || enemy.IsDead)
+            return;
+        if (enemy is Boss)
+            return;
+        if (executeThresholdPercent <= 0)
+            return;
+
+        float healthPercent = (float)enemy.CurrentHealth / enemy.MaxHealth * 100f;
+        if (healthPercent >= executeThresholdPercent)
+            return;
+
+        ShowSkillEffectAt("effect/execution", enemy.transform.position);
+        enemy.KillByExecute();
+    }
+
+    private void ApplyKillRewards(Enemy enemy)
+    {
+        if (enemy == null)
+            return;
+
+        if (hasBounty && PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.AddGold(bountyValue);
+            Debug.Log($"Bounty: 获得 {bountyValue} gold");
+            FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/UI/sfx_coin_skill");
+        }
+
+        if (hasExchange && PlayerManager.Instance != null)
+        {
+            PlayerManager.Instance.AddTempSwapCount(exchangeValue);
+            Debug.Log($"Exchange: 获得 {exchangeValue} 临时交换次数");
+        }
+    }
+
+    private void QueueBounceRandom(Vector3 startPosition, float bounceDamage)
+    {
+        if (bounceDamage <= 0f)
+            return;
+
+        MainGameManager.BeginDelayedSkillEffect();
+
+        // 等当前帧其他伤害结算完再选目标并飞行
+        DOVirtual.DelayedCall(0f, () =>
+        {
+            Enemy target = PickRandomLivingEnemy();
+            if (target == null)
+            {
+                MainGameManager.EndDelayedSkillEffect();
+                return;
+            }
+
+            PlayBounceEffect(startPosition, target.transform.position, () =>
+            {
+                if (target != null && !target.IsDead)
+                {
+                    float redWaveBaseDamage = GetRedWaveBaseDamage(bounceDamage);
+                    ApplyDamageAndFollowUps(
+                        target,
+                        bounceDamage,
+                        Vector3.right,
+                        false,
+                        0,
+                        redWaveBaseDamage,
+                        allowBounce: false,
+                        applyAoeAndEcho: true,
+                        applyOnHitEffects: false);
+                }
+                MainGameManager.EndDelayedSkillEffect();
+            });
+        });
+    }
+
+    private Enemy PickRandomLivingEnemy()
+    {
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        List<Enemy> candidates = new List<Enemy>();
+
+        if (enemyManager != null)
+        {
+            foreach (var e in enemyManager.ActiveEnemies)
+            {
+                if (e != null && !e.IsDead)
+                    candidates.Add(e);
+            }
+        }
+
+        Boss boss = MainGameManager.GetCurrentBoss();
+        if (boss != null && !boss.IsDead && !candidates.Contains(boss))
+            candidates.Add(boss);
+
+        if (candidates.Count == 0)
+            return null;
+
+        return candidates[Random.Range(0, candidates.Count)];
+    }
+
+    private void PlayBounceEffect(Vector3 start, Vector3 end, System.Action onComplete)
+    {
+        GameObject prefab = Resources.Load<GameObject>("effect/bounce");
+        if (prefab == null)
+        {
+            onComplete?.Invoke();
+            return;
+        }
+
+        GameObject effect = Instantiate(prefab, start, Quaternion.identity);
+        effect.transform.DOMove(end, BounceEffectDuration)
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() =>
+            {
+                Destroy(effect);
+                onComplete?.Invoke();
+            });
+    }
+
+    private void ShowSkillEffectAt(string resourcePath, Vector3 position)
+    {
+        GameObject prefab = Resources.Load<GameObject>(resourcePath);
+        if (prefab == null)
+            return;
+
+        GameObject effect = Instantiate(prefab, position, Quaternion.identity);
+        Destroy(effect, 2f);
     }
 
     /// <summary>
@@ -1284,27 +1486,18 @@ public class Wave : MonoBehaviour
                 float addDamageValue = MainGameManager.GetAddDamageWhenPassValue(waveGroupId);
                 finalDamage = finalDamage * (1f + addDamageValue / 100f);
             }
-            
-            // 对boss造成伤害
-            float redWaveBaseDamage = 20f;
-            if (PlayerManager.Instance != null)
-            {
-                redWaveBaseDamage = PlayerManager.Instance.GetCurrentBattleBaseDamage();
-            }
-            if (waveColor == TileColor.Red)
-            {
-                redWaveBaseDamage = finalDamage;
-            }
-            boss.TakeDamage((int)finalDamage, direction, false, 0, redWaveBaseDamage);
-            
-            // 应用minionEcho技能 - 攻击Boss时，对随机普通敌人造成伤害
-            if (hasMinionEcho && !isSkillTriggeredDamage)
-            {
-                ApplyMinionEcho(finalDamage);
-            }
-            
-            // 记录伤害
-            MainGameManager.RecordWaveDamage(waveGroupId, finalDamage);
+
+            float redWaveBaseDamage = GetRedWaveBaseDamage(finalDamage);
+            ApplyDamageAndFollowUps(
+                boss,
+                finalDamage,
+                direction,
+                false,
+                0,
+                redWaveBaseDamage,
+                allowBounce: true,
+                applyAoeAndEcho: true,
+                applyOnHitEffects: true);
         }
     }
     

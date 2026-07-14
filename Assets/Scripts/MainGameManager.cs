@@ -238,7 +238,25 @@ public class MainGameManager : Singleton<MainGameManager>
     private static Dictionary<int, bool> waveGroupHasDamage = new Dictionary<int, bool>();
     private static bool noAttackNoCostTriggeredThisTurn = false; // 一个回合只会触发一次
     private static HashSet<int> pendingWaveGroups = new HashSet<int>(); // 等待结算完成的wave group
+    private static int pendingDelayedSkillEffects = 0; // bounce 等延迟特效未完成数量
     private bool earlyTurnEndScheduled = false; // 是否已因 note 离盘而提前调度敌人回合
+
+    public static bool HasPendingDelayedSkillEffects => pendingDelayedSkillEffects > 0;
+
+    public static void BeginDelayedSkillEffect()
+    {
+        pendingDelayedSkillEffects++;
+    }
+
+    public static void EndDelayedSkillEffect()
+    {
+        pendingDelayedSkillEffects = Mathf.Max(0, pendingDelayedSkillEffects - 1);
+        if (pendingDelayedSkillEffects > 0 || Instance == null)
+            return;
+
+        Instance.TryEarlyEndPlayerTurnFromWaves();
+        Instance.CheckAllWaveGroupsCompleted();
+    }
 
     private void Start()
     {
@@ -565,6 +583,8 @@ public class MainGameManager : Singleton<MainGameManager>
         isProcessing = false;
         currentState = GameState.PlayerTurn;
         noAttackNoCostTriggeredThisTurn = false; // 重置noAttackNoCost触发标志
+        pendingDelayedSkillEffects = 0;
+        earlyTurnEndScheduled = false;
         isDragging = false;
         dragStartPos = new Vector2Int(-1, -1);
         currentHoverTilePos = new Vector2Int(-1, -1);
@@ -1502,7 +1522,9 @@ public class MainGameManager : Singleton<MainGameManager>
 
             if (skillIdentifiers.Count > 0)
             {
-                string skillText = SkillManager.Instance.BuildColorAreaSkillDescriptions(skillIdentifiers);
+                int tilesUsed = boardManager.GetConnectedSameColorTiles(gridPos).Count;
+                string skillText = SkillManager.Instance.BuildColorAreaSkillDescriptions(
+                    skillIdentifiers, false, tilesUsed, true);
 
                 if (!string.IsNullOrEmpty(skillText))
                 {
@@ -2643,6 +2665,8 @@ public class MainGameManager : Singleton<MainGameManager>
             return;
         if (pendingWaveGroups.Count == 0)
             return;
+        if (pendingDelayedSkillEffects > 0)
+            return;
         if (WouldNoAttackNoCostBlockEarlyTurnEnd())
             return;
         if (!AreAllActiveWavesReadyForTurnEnd())
@@ -2654,6 +2678,12 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             if (currentState != GameState.Processing)
                 return;
+
+            if (pendingDelayedSkillEffects > 0)
+            {
+                earlyTurnEndScheduled = false;
+                return;
+            }
 
             if (currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle")
             {
@@ -2740,6 +2770,12 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             return;
         }
+
+        // bounce 等延迟特效未完成时等待
+        if (pendingDelayedSkillEffects > 0)
+        {
+            return;
+        }
         
         // 所有wave group都完成了
         // 重置noAttackNoCost触发标志（新的玩家回合）
@@ -2749,6 +2785,9 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             // 已因 note 离盘提前进入敌人回合，无需再次切换
             if (currentState != GameState.Processing)
+                return;
+
+            if (pendingDelayedSkillEffects > 0)
                 return;
 
             isProcessing = false;
@@ -3084,6 +3123,9 @@ public class MainGameManager : Singleton<MainGameManager>
         currentState = GameState.EnemyTurn;
         isProcessing = true; // 敌人移动时也禁止操作
 
+        if (PlayerManager.Instance != null)
+            PlayerManager.Instance.NotifyEnemyTurnStart();
+
         // 隐藏所有技能、敌人、随从面板
         if (skillDisplayPanel != null)
         {
@@ -3258,6 +3300,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
         if (PlayerManager.Instance != null)
         {
+            PlayerManager.Instance.NotifyPlayerTurnStart();
             PlayerManager.Instance.DecayShieldAtTurnStart();
         }
         
