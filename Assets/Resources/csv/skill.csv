@@ -1,15 +1,14 @@
 ﻿identifier,name,description,effect,synergy,descriptionMore,color,isStart,values,available,buyPrice,upgradePrice,weight,unlock,unlockLevel,changeToRune,shape
 damageIncrease,Damage, +{0}% damage.,damageIncrease,攻击,This wave deals +{0}% damage.,red,,50|75,1,3,3,10,,,,1
-aoeAttack,Splash,Adjacent foes take {0} damage.,aoeAttack,攻击|aoe,"When this wave hits an enemy, also deal {0} damage to adjacent enemies.",red,,50|75,1,3,3,10,,4,,1
-criticalChance,criticalChance,Damage has {0}% critical chance (200% damage),criticalChance,攻击|暴击,,red,,20|40,1,,,10,,,,
-lowHP,Execution, +{0}% damage to enemies below 30% HP.,lowHP,攻击|残血, +{0}% damage to enemies below 30% HP.,blue,,75|100,1,3,3,10,,5,,1
+aoeAttack,Splash,Adjacent foes take {0} damage.,aoeAttack,攻击|aoe,"When this wave hits an enemy, also deal {0} damage to adjacent enemies.",red,,50|75,1,3,3,5,,4,,1
+criticalChance,criticalChance,Damage has {0}% critical chance (200% damage),criticalChance,攻击|暴击,,red,,20|40,1,3,3,7,,,,1
+lowHP,Execution, +{0}% damage to enemies below 30% HP.,lowHP,攻击|残血, +{0}% damage to enemies below 30% HP.,blue,,75|100,1,3,3,5,,5,,1
 highHP,First Strike, +{0}% damage to enemies at full HP.,highHP,攻击|满血, +{0}% damage to enemies at full HP.,yellow,,100|150,1,3,3,10,,,,1
-hurtDamageIncrease,hurtDamageIncrease,damage increase {0}% if lost hp last turn,hurtDamageIncrease,攻击|受击,,red,,100,,,,10,,,,1
+hurtDamageIncrease,hurtDamageIncrease,damage increase {0}% if lost hp last turn,hurtDamageIncrease,攻击|受击,,red,,100,1,3,3,5,,,,1
 Boss Echo,Boss Echo,Hitting a normal enemy also deals {0}% damage to the Boss.,bossEcho,攻击|boss,,red,,50,1,3,3,10,,4,,1
 Minion Echo,Minion Echo,Hitting the Boss deals {0}% damage to a random normal enemies.,minionEcho,攻击|boss,,blue,,50,1,3,3,10,,4,,1
-bossDamage,bossDamage,Damage to Bosses +{0}%,bossDamage,攻击|boss,,blue,,100,1,,,10,,,,
-bounceRandom,bounceRandom,{0}% of Overkill Damage bounces to a random enemy.,bounceRandom,攻击,,blue,,100,0,,,10,,,,
-executeThresholdIncrease,executeThresholdIncrease,Execute Threshold +{0}% (Instantly executes enemies if their remaining HP is <10% after an attack). Ineffective against Bosses.,executeThresholdIncrease,攻击|斩杀,,blue,,10,,,,10,,,,
+bossDamage,bossDamage,Damage to Bosses +{0}%,bossDamage,攻击|boss,,blue,,100,1,3,3,10,,4,,1
+executeThresholdIncrease,executeThresholdIncrease,Execute Threshold +{0}% (Instantly executes enemies if their remaining HP is <10% after an attack). Ineffective against Bosses.,executeThresholdIncrease,攻击|斩杀,,blue,,10|20,1,3,3,3,,,,1
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,10,,,,1
 ,,太op了改一改 - 不改了，把概率调低就好,,,,,,,,,,10,,,,1
@@ -19,10 +18,10 @@ addDamageWhenPass,Resonant,"When this wave passes a tile of the same color, its 
 moreTileMoreDamage,Scale,Waves with over 5 tiles gain +{0}% damage per extra tile.,moreTileMoreDamage,多|攻击,{0}% base damage × tiles used.,red,,10|20,1,3,3,10,,6,,1
 encourageMoreTiles,Mega Wave,Waves formed from more than {0} tiles deal +100% damage.,encourageMoreTiles,多|攻击,Waves formed from more than {0} tiles deal +150% damage.,yellow,,11|9,1,3,3,10,,2,,1
 All or Nothing,All or Nothing,"Waves formed from more than {0} tiles deal +100% damage, otherwise deal 50% damage",allOrNothing,多|攻击,,red,,9|7,1,3,3,10,,3,,1
-,,"When create wave over {0} count, create wave on the biggest group of the tile with the same color",,多|连击,,,,10|8,,,,10,,,,
-,,"If last wave generated was the same color, create wave on the biggest group of the tile with a different color",,多|连击,,,,,,,,,,,,
-,,Create wave on the biggest group of the tile with the same color on kill,,多|连击,,,,,,,,,,,,
-,,"When this wave hit enemy more than once, each hit damage increase {0}%",,多|攻击,,,,10,,,,,,,,
+recreateSameColor,recreateSameColor,"When create wave over {0}, create another biggest wave with the same color",recreateSameColor,多|连击,,red,,10|8,1,3,3,10,,,,
+recreateDifferentColor,recreateDifferentColor,"If last wave generated was the same color, create biggest wave with a different color",recreateDifferentColor,多|连击,,blue,,,1,3,3,10,,,,
+recreateSameColorOnKill,recreateSameColorOnKill,"On direct kill, create another wave from the largest same-color group.",recreateSameColorOnKill,多|连击,,yellow,,,1,3,3,10,,,,
+hitSameIncreaseDamage,hitSameIncreaseDamage,Repeated hits on the same enemy gain +{0}% damage each time.,hitSameIncreaseDamage,多|攻击,,green,,20,1,3,3,10,,,,
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,10,,,,1
 spawnAlly,Summon,Spawn ally (HP = {0}% total wave dmg).,spawnAlly,召唤,Spawn an ally on the grid with HP equal to {0}% of the total damage of this wave.,yellow,,20|40,1,3,3,10,,2,,1
@@ -70,7 +69,7 @@ bounty,Bounty, +{0} gold on kill.,bounty,钱|击杀,Killing an enemy with this c
 ,, +{0} base damage in this battle on kill,,击杀,,,,,,,,10,,,,1
 ,,,,,,,,,,,,,,,,
 待定,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,
+bounceRandom,bounceRandom,{0}% of Overkill Damage bounces to a random enemy.,bounceRandom,攻击,,blue,,100,0,,,10,,,,
 ,,,,,,,,,,,,10,,,,1
 ,,,,毒,,,,,,,,10,,,,1
 ,,如果击中的敌人相邻没有敌人，向最近的敌人移动,,位移,,,,,,,,10,,,,1

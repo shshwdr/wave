@@ -233,6 +233,9 @@ public class MainGameManager : Singleton<MainGameManager>
     
     // 经过同色tile效果：每个 wave group 内每格只触发一次
     private static Dictionary<int, HashSet<Vector2Int>> waveGroupPassedSameColorTiles = new Dictionary<int, HashSet<Vector2Int>>();
+
+    // hitSameIncreaseDamage：同一 wave group 内对同一敌人的命中次数
+    private static Dictionary<int, Dictionary<Enemy, int>> waveGroupEnemyHitCounts = new Dictionary<int, Dictionary<Enemy, int>>();
     
     // noAttackNoCost技能管理 - 跟踪每个wave group是否造成伤害
     private static Dictionary<int, bool> waveGroupHasDamage = new Dictionary<int, bool>();
@@ -240,6 +243,8 @@ public class MainGameManager : Singleton<MainGameManager>
     private static HashSet<int> pendingWaveGroups = new HashSet<int>(); // 等待结算完成的wave group
     private static int pendingDelayedSkillEffects = 0; // bounce 等延迟特效未完成数量
     private bool earlyTurnEndScheduled = false; // 是否已因 note 离盘而提前调度敌人回合
+    private static bool hasLastManualWaveColor = false;
+    private static TileColor lastManualWaveColor;
 
     public static bool HasPendingDelayedSkillEffects => pendingDelayedSkillEffects > 0;
 
@@ -585,6 +590,7 @@ public class MainGameManager : Singleton<MainGameManager>
         noAttackNoCostTriggeredThisTurn = false; // 重置noAttackNoCost触发标志
         pendingDelayedSkillEffects = 0;
         earlyTurnEndScheduled = false;
+        hasLastManualWaveColor = false;
         isDragging = false;
         dragStartPos = new Vector2Int(-1, -1);
         currentHoverTilePos = new Vector2Int(-1, -1);
@@ -1524,7 +1530,7 @@ public class MainGameManager : Singleton<MainGameManager>
             {
                 int tilesUsed = boardManager.GetConnectedSameColorTiles(gridPos).Count;
                 string skillText = SkillManager.Instance.BuildColorAreaSkillDescriptions(
-                    skillIdentifiers, false, tilesUsed, true);
+                    skillIdentifiers, false, tilesUsed, true, colorIndex);
 
                 if (!string.IsNullOrEmpty(skillText))
                 {
@@ -1785,9 +1791,9 @@ public class MainGameManager : Singleton<MainGameManager>
     /// <summary>
     /// 消除连通同色格子
     /// </summary>
-    private void EliminateConnectedTiles(Vector2Int startPos)
+    private void EliminateConnectedTiles(Vector2Int startPos, bool isManualWave = true)
     {
-        if (boardManager == null || isProcessing)
+        if (boardManager == null || (isManualWave && isProcessing))
             return;
 
         // 获取所有连通的同色格子
@@ -1815,6 +1821,19 @@ public class MainGameManager : Singleton<MainGameManager>
         TileCell startTile = boardManager.GetTile(startPos);
         TileColor waveColor = startTile != null ? startTile.Color : TileColor.Red;
         int colorIndex = (int)waveColor; // TileColor枚举值：Red=0, Yellow=1, Blue=2, Green=3
+        bool recreateSameColorAfterGravity = isManualWave
+            && HasEquippedColorSkill(waveColor, "recreateSameColor", out string recreateSameIdentifier)
+            && connectedTiles.Count > SkillManager.Instance.GetSkillValue(recreateSameIdentifier);
+        bool recreateDifferentColorAfterGravity = isManualWave
+            && hasLastManualWaveColor
+            && lastManualWaveColor == waveColor
+            && HasEquippedColorSkill(waveColor, "recreateDifferentColor", out _);
+
+        if (isManualWave)
+        {
+            lastManualWaveColor = waveColor;
+            hasLastManualWaveColor = true;
+        }
 
         EventReference waveEvent;
 
@@ -1893,6 +1912,7 @@ public class MainGameManager : Singleton<MainGameManager>
             waveGroupAddDamageWhenPass[currentWaveGroupId] = 0f; // 初始化addDamageWhenPass
             waveGroupHasDamage[currentWaveGroupId] = false; // 初始化伤害标志
             waveGroupPassedSameColorTiles[currentWaveGroupId] = new HashSet<Vector2Int>();
+            waveGroupEnemyHitCounts[currentWaveGroupId] = new Dictionary<Enemy, int>();
             pendingWaveGroups.Add(currentWaveGroupId); // 添加到待结算列表
         }
 
@@ -1991,12 +2011,12 @@ public class MainGameManager : Singleton<MainGameManager>
             bool isFirstWave = (waveIndex == 0);
             // 如果只有一个tile且有pure技能，传递pure信息
             // 创建向前移动的波浪
-            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, false);
+            CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, false, isManualWave);
 
             // 如果有frontAndBack技能，同时创建向后移动的波浪
             if (hasFrontAndBack)
             {
-                CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, false, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, true);
+                CreateWave(worldPos, waveColor, pos, currentWaveGroupId, isFirstWave, false, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, true, isManualWave);
             }
 
             boardManager.RemoveTile(pos);
@@ -2022,6 +2042,12 @@ public class MainGameManager : Singleton<MainGameManager>
         DOVirtual.DelayedCall(0.3f, () =>
         {
             boardManager.ApplyGravity(!isPuzzleMode);
+
+            // recreate 技能只由手动波触发一轮；额外生成的波不会继续触发 recreate。
+            if (recreateSameColorAfterGravity)
+                CreateWaveFromLargestTileGroup(waveColor, null);
+            if (recreateDifferentColorAfterGravity)
+                CreateWaveFromLargestTileGroup(null, waveColor);
         });
 
         // 不再在这里直接调用EndPlayerTurn
@@ -2047,7 +2073,7 @@ public class MainGameManager : Singleton<MainGameManager>
     /// <summary>
     /// 创建波浪攻击
     /// </summary>
-    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f, bool hasPure = false, int pureValue = 0, int tilesUsed = 1, bool backward = false)
+    private void CreateWave(Vector3 spawnPosition, TileColor color, Vector2Int gridPos, int waveGroupId, bool isFirstWave, bool hasDamageBottomSkill, float damageMultiplier = 1f, bool hasPure = false, int pureValue = 0, int tilesUsed = 1, bool backward = false, bool allowRecreateOnKill = true)
     {
         if (wavePrefab == null)
             return;
@@ -2059,7 +2085,53 @@ public class MainGameManager : Singleton<MainGameManager>
             wave = waveObj.AddComponent<Wave>();
         }
 
-        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue, tilesUsed, backward);
+        wave.Init(spawnPosition, color, 10f, gridPos, waveGroupId, isFirstWave, hasDamageBottomSkill, damageMultiplier, hasPure, pureValue, tilesUsed, backward, allowRecreateOnKill);
+    }
+
+    private bool HasEquippedColorSkill(TileColor color, string effect, out string identifier)
+    {
+        identifier = null;
+        if (PlayerManager.Instance == null || SkillManager.Instance == null || CSVLoader.Instance == null)
+            return false;
+
+        foreach (var skillIdentifier in PlayerManager.Instance.GetWaveSkills((int)color))
+        {
+            if (!SkillManager.Instance.HasSkill(skillIdentifier))
+                continue;
+            if (!CSVLoader.Instance.cardInfoMap.TryGetValue(skillIdentifier, out SkillInfo skillInfo))
+                continue;
+            if (skillInfo != null && skillInfo.effect == effect)
+            {
+                identifier = skillIdentifier;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void CreateWaveFromLargestTileGroup(TileColor? requiredColor, TileColor? excludedColor)
+    {
+        if (boardManager == null)
+            return;
+
+        List<Vector2Int> group = boardManager.GetLargestConnectedSameColorGroup(requiredColor, excludedColor);
+        if (group.Count > 0)
+            EliminateConnectedTiles(group[0], false);
+    }
+
+    public static void TryRecreateSameColorOnDirectKill(TileColor color)
+    {
+        MainGameManager instance = FindObjectOfType<MainGameManager>();
+        if (instance == null || !instance.HasEquippedColorSkill(color, "recreateSameColorOnKill", out _))
+            return;
+
+        instance.CreateWaveFromLargestTileGroup(color, null);
+    }
+
+    public static bool WasLastManualWaveColor(int colorIndex)
+    {
+        return hasLastManualWaveColor && (int)lastManualWaveColor == colorIndex;
     }
 
     /// <summary>
@@ -2494,6 +2566,26 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         return 0f;
     }
+
+    /// <summary>
+    /// 登记同一 wave group 内对同一敌人的命中次数（含本组所有波浪）。
+    /// </summary>
+    public static int RegisterEnemyHitForWaveGroup(int waveGroupId, Enemy enemy)
+    {
+        if (enemy == null)
+            return 0;
+
+        if (!waveGroupEnemyHitCounts.ContainsKey(waveGroupId))
+            waveGroupEnemyHitCounts[waveGroupId] = new Dictionary<Enemy, int>();
+
+        Dictionary<Enemy, int> hitCounts = waveGroupEnemyHitCounts[waveGroupId];
+        if (!hitCounts.TryGetValue(enemy, out int hitCount))
+            hitCount = 0;
+
+        hitCount++;
+        hitCounts[enemy] = hitCount;
+        return hitCount;
+    }
     
     /// <summary>
     /// 记录wave造成的伤害（用于spawnAlly技能和noAttackNoCost技能）
@@ -2532,6 +2624,10 @@ public class MainGameManager : Singleton<MainGameManager>
             if (waveGroupPassedSameColorTiles.ContainsKey(waveGroupId))
             {
                 waveGroupPassedSameColorTiles.Remove(waveGroupId);
+            }
+            if (waveGroupEnemyHitCounts.ContainsKey(waveGroupId))
+            {
+                waveGroupEnemyHitCounts.Remove(waveGroupId);
             }
             
             // 记录wave group的总伤害

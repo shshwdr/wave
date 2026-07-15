@@ -304,7 +304,7 @@ public class SkillManager : Singleton<SkillManager>
     /// </summary>
     /// <param name="tilesUsed">战斗悬停时连通方块数；&lt;0 表示未知</param>
     /// <param name="battleContext">战斗中悬停：未激活条目显示灰色</param>
-    public string BuildColorAreaSkillDescriptions(IList<string> skillIdentifiers, bool showNext = false, int tilesUsed = -1, bool battleContext = false)
+    public string BuildColorAreaSkillDescriptions(IList<string> skillIdentifiers, bool showNext = false, int tilesUsed = -1, bool battleContext = false, int colorIndex = -1)
     {
         if (skillIdentifiers == null || skillIdentifiers.Count == 0)
             return "";
@@ -319,7 +319,7 @@ public class SkillManager : Singleton<SkillManager>
             if (string.IsNullOrEmpty(description))
                 continue;
 
-            if (battleContext && !IsSkillActiveForBattleDisplay(identifier, tilesUsed))
+            if (battleContext && !IsSkillActiveForBattleDisplay(identifier, tilesUsed, colorIndex))
                 lines.Add($"<color=#808080>• {description}</color>");
             else
                 lines.Add("• " + description);
@@ -332,7 +332,7 @@ public class SkillManager : Singleton<SkillManager>
     /// 战斗悬停描述：当前全局/连通状态可知时，判断技能是否“激活”
     /// （依赖具体目标敌人的技能不在此变灰）
     /// </summary>
-    private bool IsSkillActiveForBattleDisplay(string identifier, int tilesUsed)
+    private bool IsSkillActiveForBattleDisplay(string identifier, int tilesUsed, int colorIndex)
     {
         if (!CSVLoader.Instance.cardInfoMap.TryGetValue(identifier, out SkillInfo skillInfo) || skillInfo == null)
             return true;
@@ -356,6 +356,12 @@ public class SkillManager : Singleton<SkillManager>
 
             case "moreTileMoreDamage":
                 return tilesUsed > 5;
+
+            case "recreateSameColor":
+                return tilesUsed > value;
+
+            case "recreateDifferentColor":
+                return colorIndex >= 0 && MainGameManager.WasLastManualWaveColor(colorIndex);
 
             default:
                 return true;

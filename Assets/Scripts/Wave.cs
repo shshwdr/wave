@@ -49,6 +49,8 @@ public class Wave : MonoBehaviour
     private int hitEnemyCount = 0; // 已击中的敌人数量（用于damageIncreaseWhenHitMore）
     private bool hasDamageIncreaseWhenHitMore = false; // 是否有damageIncreaseWhenHitMore技能
     private int damageIncreaseWhenHitMoreValue = 0; // damageIncreaseWhenHitMore的值
+    private bool hasHitSameIncreaseDamage = false;
+    private int hitSameIncreaseDamageValue = 0;
     private bool hasAoeAttack = false; // 是否有aoeAttack技能
     private int aoeAttackValue = 0; // aoeAttack的值
     private bool hasBounty = false; // 是否有bounty技能
@@ -91,6 +93,7 @@ public class Wave : MonoBehaviour
     private bool hasBounceRandom = false;
     private int bounceRandomValue = 0;
     private int executeThresholdPercent = 0; // 斩杀线%，无技能时为 0（不斩杀）
+    private bool allowRecreateOnKill = true;
     private const float BounceEffectDuration = 0.5f;
 
     public float Duration => waveDuration; // 获取波浪持续时间
@@ -136,7 +139,7 @@ public class Wave : MonoBehaviour
     /// <summary>
     /// 初始化波浪
     /// </summary>
-    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f, bool hasPureFlag = false, int pureValueParam = 0, int tilesUsedCount = 1, bool backward = false)
+    public void Init(Vector3 spawnPosition, TileColor color, float distance = 10f, Vector2Int gridPos = default, int groupId = 0, bool firstWave = false, bool hasDamageBottomSkillFlag = false, float damageMult = 1f, bool hasPureFlag = false, int pureValueParam = 0, int tilesUsedCount = 1, bool backward = false, bool allowRecreateOnKillFlag = true)
     {
         startPosition = spawnPosition;
         travelDistance = distance;
@@ -173,6 +176,9 @@ public class Wave : MonoBehaviour
         hasBounceRandom = false;
         bounceRandomValue = 0;
         executeThresholdPercent = 0;
+        hasHitSameIncreaseDamage = false;
+        hitSameIncreaseDamageValue = 0;
+        allowRecreateOnKill = allowRecreateOnKillFlag;
         
         // 初始化波动相关变量
         columnIndex = gridPos.x; // 列索引
@@ -597,6 +603,11 @@ public class Wave : MonoBehaviour
                     hasDamageIncreaseWhenHitMore = true;
                     damageIncreaseWhenHitMoreValue = value;
                     break;
+
+                case "hitSameIncreaseDamage":
+                    hasHitSameIncreaseDamage = true;
+                    hitSameIncreaseDamageValue = value;
+                    break;
                     
                 case "aoeAttack":
                     // 对相邻敌人造成伤害
@@ -889,6 +900,9 @@ public class Wave : MonoBehaviour
                     hitEnemies.Add(enemy);
                     hitEnemyCount++; // 增加击中敌人计数
                 }
+                int sameEnemyHitCount = hasHitSameIncreaseDamage
+                    ? MainGameManager.RegisterEnemyHitForWaveGroup(waveGroupId, enemy)
+                    : 1;
                 
                 // 计算击退方向（向前移动的波浪向右击退，向后移动的波浪向左击退）
                 Vector3 direction;
@@ -912,6 +926,13 @@ public class Wave : MonoBehaviour
                     // ...
                     float increaseMultiplier = 1f + (hitEnemyCount - 1) * (damageIncreaseWhenHitMoreValue / 100f);
                     finalDamage = finalDamage * increaseMultiplier;
+                }
+
+                // 同一 wave group 内所有波浪对同一敌人的累计命中：第N次 + (N-1)*value%
+                if (hasHitSameIncreaseDamage && sameEnemyHitCount > 1)
+                {
+                    float increaseMultiplier = 1f + (sameEnemyHitCount - 1) * (hitSameIncreaseDamageValue / 100f);
+                    finalDamage *= increaseMultiplier;
                 }
                 
                 // 应用lowHP技能（对血量少于30%的敌人造成额外伤害）
@@ -1052,7 +1073,11 @@ public class Wave : MonoBehaviour
 
         bool killed = wasAlive && enemy.IsDead;
         if (killed)
+        {
             ApplyKillRewards(enemy);
+            if (applyOnHitEffects && allowRecreateOnKill)
+                MainGameManager.TryRecreateSameColorOnDirectKill(waveColor);
+        }
 
         int overkill = Mathf.Max(0, appliedDamage - healthBefore);
 
@@ -1468,6 +1493,9 @@ public class Wave : MonoBehaviour
                 hitEnemies.Add(boss);
                 hitEnemyCount++;
             }
+            int sameEnemyHitCount = hasHitSameIncreaseDamage
+                ? MainGameManager.RegisterEnemyHitForWaveGroup(waveGroupId, boss)
+                : 1;
             
             // 计算伤害（和攻击敌人一样的逻辑）
             Vector3 direction = (boss.transform.position - transform.position).normalized;
@@ -1478,6 +1506,12 @@ public class Wave : MonoBehaviour
             {
                 float increaseMultiplier = 1f + (hitEnemyCount - 1) * (damageIncreaseWhenHitMoreValue / 100f);
                 finalDamage = finalDamage * increaseMultiplier;
+            }
+
+            if (hasHitSameIncreaseDamage && sameEnemyHitCount > 1)
+            {
+                float increaseMultiplier = 1f + (sameEnemyHitCount - 1) * (hitSameIncreaseDamageValue / 100f);
+                finalDamage *= increaseMultiplier;
             }
             
             // 应用addDamageWhenPass技能

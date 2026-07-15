@@ -334,6 +334,44 @@ public class BoardManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 获取指定颜色（或排除指定颜色）的最大可用同色连通组。
+    /// </summary>
+    public List<Vector2Int> GetLargestConnectedSameColorGroup(
+        TileColor? requiredColor = null,
+        TileColor? excludedColor = null)
+    {
+        List<Vector2Int> largestGroup = new List<Vector2Int>();
+        HashSet<Vector2Int> visited = new HashSet<Vector2Int>();
+
+        for (int x = 0; x < boardWidth; x++)
+        {
+            for (int y = 0; y < boardHeight; y++)
+            {
+                Vector2Int pos = new Vector2Int(x, y);
+                if (visited.Contains(pos))
+                    continue;
+
+                TileCell tile = GetTile(pos);
+                if (tile == null || tile.IsDirty || tile.IsDisabled)
+                    continue;
+                if (requiredColor.HasValue && tile.Color != requiredColor.Value)
+                    continue;
+                if (excludedColor.HasValue && tile.Color == excludedColor.Value)
+                    continue;
+
+                List<Vector2Int> group = GetConnectedSameColorTiles(pos);
+                foreach (var groupPos in group)
+                    visited.Add(groupPos);
+
+                if (group.Count > largestGroup.Count)
+                    largestGroup = group;
+            }
+        }
+
+        return largestGroup;
+    }
+
+    /// <summary>
     /// 移除格子
     /// </summary>
     public void RemoveTile(Vector2Int gridPos)

@@ -1,7 +1,6 @@
 identifier,name,description,effect,values,start,available,maxCount,unlockLevel,price,isBattleOnly
 HealPotion,Heal Potion,Restore {0} HP.,heal,10,,1,5,0,2,0
 ShieldPotion,Shield Potion,Grant {0} shield.,shield,20,,1,5,0,3,1
-SwapMagic,Swap Magic,Swap two adjacent tiles.,swapMagic,,,1,3,0,5,1
+SwapMagic,Swap Magic,Swap two adjacent tiles.,swapMagic,,5,1,3,0,5,1
 Rainbow,Rainbow,Generate a rainbow tile,rainbow,,,,3,0,10,1
 Spawn,Spawn,"Select a color, random convert {0} tiles to the same color",,4,,,3,,8,1
-,,??????????,,,,,,,,
