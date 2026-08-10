@@ -24,16 +24,16 @@ recreateSameColorOnKill,recreateSameColorOnKill,"On direct kill, create another 
 hitSameIncreaseDamage,hitSameIncreaseDamage,Repeated hits on the same enemy gain +{0}% damage each time.,hitSameIncreaseDamage,多|攻击,,green,,20,1,3,3,7,,6,,
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,10,,,,1
-spawnAlly,Summon,Spawn ally (HP = {0}% total wave dmg).,spawnAlly,召唤,Spawn an ally on the grid with HP equal to {0}% of the total damage of this wave.,yellow,,20|40,1,3,3,10,,2,,1
+spawnAlly,Summon,Spawn ally (HP = {0}% total wave dmg).,spawnAlly,召唤,Spawn an ally on the grid with HP equal to {0}% of the total damage of this wave.,red,,20|40,1,3,3,10,,2,,1
 summonAttack,Ally Volley,"All allies fire forward, dealing damage equal to the wave’s damage.",summonAttack,召唤|攻击,"All allies fire forward, dealing damage equal to the wave’s damage.",blue,,,1,3,3,10,spawnAlly,,,1
-allyIncreaseDamage,allyIncreaseDamage,wave damage increase {0}%召唤物当前血量总和,allyIncreaseDamage,召唤,,,,100,,,,10,,,,1
-allyIncreaseShield,allyIncreaseShield,shield increase {0}%召唤物当前血量总和,allyIncreaseShield,召唤,,,,20|30,,,,10,,,,1
-allyHPIncrease,allyHPIncrease,All allies hp and max hp increase {0}% total wave dmg,allyHPIncrease,召唤,,,,10|20,,,,10,,,,1
-allyChangeColorAndUse,allyChangeColorAndUse,消除的tile与召唤物相邻时，召唤物所在的格子也会变成相同颜色消除并一起生成wave,allyChangeColorAndUse,召唤|多,,,,,,,,10,,,,1
-allyTileUse,allyTileUse,消除的tile与召唤物相邻时，召唤物所在的格子会另外独立消除并生成wave（如果和上面同时存在，先结算上面那个，等待0.5秒后结算这个）,allyTileUse,召唤|少,,,,,,,,,,,,
-allyDieIncreaseDamage,allyDieIncreaseDamage,召唤物死亡时，这个颜色本场战斗攻击力+{0}%,allyDieIncreaseDamage,召唤|攻击,,,,,,,,,,,,
-allyMoveForwardDamgeVerticle,allyMoveForwardDamgeVerticle,所有召唤物尝试向前移动，并对同列敌人造成伤害,allyMoveForwardDamgeVerticle,召唤,,,,,,,,,,,,
-killAllWithAlly,killAllWithAlly,对全场敌人造成{0}%召唤物当前血量总和，杀死所有召唤物,killAllWithAlly,,,,,,,,,,,,,
+allyIncreaseDamage,allyIncreaseDamage,wave damage increase {0}% sum of all allies hp,allyIncreaseDamage,召唤,,yellow,,50|100,,,,10,spawnAlly,,,1
+allyIncreaseShield,allyIncreaseShield,shield increase {0}% sum of all allies hp,allyIncreaseShield,召唤,,,,50|100,,,,10,spawnAlly,,,1
+allyHPIncrease,allyHPIncrease,All allies hp and max hp increase {0}% total wave dmg,allyHPIncrease,召唤,,blue,,10|20,,,,10,spawnAlly,,,1
+allyChangeColorAndUse,allyChangeColorAndUse,消除的tile与召唤物相邻时，召唤物所在的格子也会变成相同颜色消除并一起生成wave,allyChangeColorAndUse,召唤|多,,yellow,,,,,,10,spawnAlly,,,1
+allyTileUse,allyTileUse,消除的tile与召唤物相邻时，召唤物所在的格子会另外独立消除并生成wave（如果和上面同时存在，先结算上面那个，等待0.5秒后结算这个）,allyTileUse,召唤|少,,blue,,,,,,,spawnAlly,,,
+allyDieIncreaseDamage,allyDieIncreaseDamage,召唤物死亡时，这个颜色本场战斗攻击力+{0}%,allyDieIncreaseDamage,召唤|攻击,,yellow,,50,,,,,spawnAlly,,,
+allyMoveForwardDamgeVerticle,allyMoveForwardDamgeVerticle,所有召唤物尝试向前移动，并对同列敌人造成伤害,allyMoveForwardDamgeVerticle,召唤,,green,,,,,,,spawnAlly,,,
+killAllWithAlly,killAllWithAlly,对全场敌人造成{0}%召唤物当前血量总和，杀死所有召唤物,killAllWithAlly,,,blue,,50,,,,,spawnAlly,,,
 ,,,,,,,,,,,,,,,,
 noAttackNoCost,Slip,"If this wave deals no damage, you can immediately move again (once per turn).",noAttackNoCost,少,"If this wave deals no damage, you can immediately move again (once per turn).",red,,,1,4,4,10,,6,,1
 less,Color Drought, -{0}% spawn chance.,less,少,This color tile has {0}% lower chance to appear.,green,,30|50|80,1,3,3,10,,4,,1
