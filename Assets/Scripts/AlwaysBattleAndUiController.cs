@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -29,6 +30,8 @@ public class AlwaysBattleAndUiController : MonoBehaviour
         }
 
         EnsureShieldHealthBar();
+        if (playerShieldHealthBar != null)
+            playerShieldHealthBar.SetVisible(false);
     }
 
     private void Update()
@@ -125,23 +128,28 @@ public class AlwaysBattleAndUiController : MonoBehaviour
 
         int currentShield = PlayerManager.Instance.CurrentShield;
         int maxHealth = PlayerManager.Instance.MaxHealth;
+        bool showShield = currentShield > 0;
 
-        if (currentShield <= 0)
+        GameObject shieldGo = playerShieldHealthBar.gameObject;
+        if (shieldGo.name.Equals("shield", StringComparison.OrdinalIgnoreCase) == false)
         {
-            if (playerShieldHealthBar.gameObject.activeSelf)
-            {
+            Transform namedShield = FindChildByName(transform, "shield");
+            if (namedShield != null)
+                namedShield.gameObject.SetActive(showShield);
+        }
+
+        if (!showShield)
+        {
+            if (shieldGo.activeSelf)
                 playerShieldHealthBar.SetVisible(false);
-            }
 
             playerShieldBarInitialized = false;
             shieldBarDisplayMax = maxHealth;
             return;
         }
 
-        if (!playerShieldHealthBar.gameObject.activeSelf)
-        {
+        if (!shieldGo.activeSelf)
             playerShieldHealthBar.SetVisible(true);
-        }
 
         shieldBarDisplayMax = Mathf.Max(shieldBarDisplayMax, currentShield, maxHealth, 1);
         int shieldMax = shieldBarDisplayMax;
@@ -155,5 +163,23 @@ public class AlwaysBattleAndUiController : MonoBehaviour
         {
             playerShieldHealthBar.UpdateHealthBar(currentShield, shieldMax);
         }
+    }
+
+    private static Transform FindChildByName(Transform root, string name)
+    {
+        if (root == null)
+            return null;
+
+        if (root.name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            return root;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = FindChildByName(root.GetChild(i), name);
+            if (child != null)
+                return child;
+        }
+
+        return null;
     }
 }

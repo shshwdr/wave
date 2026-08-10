@@ -32,6 +32,8 @@ public class TileCell : MonoBehaviour
     private Tween bounceTween; // 当前的弹动动画
     private Vector3 originalWorldPosition; // 原始世界位置
     private bool isPressColorPulsing = false;
+    private bool hasColorPreview = false;
+    private TileColor previewColor;
     private const float PressColorPulseMinAlpha = 0.5f;
     private const float PressColorPulseMaxAlpha = 1f;
     private const float PressColorPulseDuration = 0.45f;
@@ -70,7 +72,30 @@ public class TileCell : MonoBehaviour
     /// </summary>
     public void SetColor(TileColor color)
     {
+        hasColorPreview = false;
         currentColor = color;
+        UpdateVisual();
+    }
+
+    /// <summary>
+    /// 仅预览变色，不改变实际颜色。
+    /// </summary>
+    public void SetPreviewColor(TileColor color)
+    {
+        hasColorPreview = true;
+        previewColor = color;
+        UpdateVisual();
+    }
+
+    /// <summary>
+    /// 取消预览变色，恢复实际颜色。
+    /// </summary>
+    public void ClearPreviewColor()
+    {
+        if (!hasColorPreview)
+            return;
+
+        hasColorPreview = false;
         UpdateVisual();
     }
 
@@ -87,13 +112,14 @@ public class TileCell : MonoBehaviour
     /// </summary>
     private void UpdateVisual()
     {
-        noteColor = TileColorUtil.GetBattleNoteColor(currentColor);
+        TileColor visualColor = hasColorPreview ? previewColor : currentColor;
+        noteColor = TileColorUtil.GetBattleNoteColor(visualColor);
 
         if (spriteRenderer != null)
             spriteRenderer.color = noteColor;
 
         if (note != null)
-            note.color = TileColorUtil.GetInnerBattleNoteColor(currentColor);
+            note.color = TileColorUtil.GetInnerBattleNoteColor(visualColor);
 
         if (selectHighlight != null)
         {

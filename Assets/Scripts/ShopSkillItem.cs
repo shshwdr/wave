@@ -1,11 +1,12 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// 商店技能项组件 - 显示技能信息、价格和购买按钮
 /// </summary>
-public class ShopSkillItem : MonoBehaviour
+public class ShopSkillItem : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("UI组件")]
     [SerializeField] private Image skillIconImage;
@@ -21,6 +22,8 @@ public class ShopSkillItem : MonoBehaviour
     private SkillInfo skillInfo;
     private SkillSelectMenu parentMenu;
     private bool hidePrice;
+    private bool isUpgradeOffer;
+    private int upgradeHoverRef;
     
     /// <summary>
     /// 获取技能identifier（用于外部访问）
@@ -44,6 +47,7 @@ public class ShopSkillItem : MonoBehaviour
         {
             buyButton.onClick.RemoveAllListeners();
             buyButton.onClick.AddListener(OnBuyClicked);
+            SetupUpgradeHover(buyButton.gameObject);
         }
     }
 
@@ -90,11 +94,12 @@ public class ShopSkillItem : MonoBehaviour
             priceText.gameObject.SetActive(true);
         }
 
+        isUpgradeOffer = SkillManager.Instance != null && SkillManager.Instance.HasSkill(skillInfo.identifier);
+
         // 更新购买按钮状态
         if (buyButton != null)
         {
-            bool isUpgrade = SkillManager.Instance.HasSkill(skillInfo.identifier);
-            int price = isUpgrade ? skillInfo.upgradePrice : skillInfo.buyPrice;
+            int price = isUpgradeOffer ? skillInfo.upgradePrice : skillInfo.buyPrice;
             if (RuneManager.Instance != null)
                 price = RuneManager.Instance.GetDiscountedShopPrice(price);
             
@@ -108,10 +113,17 @@ public class ShopSkillItem : MonoBehaviour
 
             if (actionText != null)
             {
-                actionText.text = hidePrice ? "GET" : (isUpgrade ? "UPGRADE" : "BUY");
+                if (isUpgradeOffer)
+                    actionText.text = "Upgrade";
+                else
+                    actionText.text = hidePrice ? "GET" : "BUY";
             }
 
             ApplyTextColors(!hidePrice && !canAfford);
+        }
+        else if (actionText != null)
+        {
+            actionText.text = isUpgradeOffer ? "Upgrade" : (hidePrice ? "GET" : "BUY");
         }
     }
 
@@ -143,6 +155,54 @@ public class ShopSkillItem : MonoBehaviour
         {
             parentMenu.BuySkill(skillInfo);
         }
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        ChangeUpgradeHover(1);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        ChangeUpgradeHover(-1);
+    }
+
+    private void OnDisable()
+    {
+        upgradeHoverRef = 0;
+        if (parentMenu != null && skillInfo != null)
+            parentMenu.SetOwnedSkillUpgradeHover(skillInfo.identifier, false);
+    }
+
+    private void ChangeUpgradeHover(int delta)
+    {
+        upgradeHoverRef = Mathf.Max(0, upgradeHoverRef + delta);
+        if (!isUpgradeOffer || parentMenu == null || skillInfo == null)
+            return;
+
+        parentMenu.SetOwnedSkillUpgradeHover(skillInfo.identifier, upgradeHoverRef > 0);
+    }
+
+    private void SetupUpgradeHover(GameObject target)
+    {
+        if (target == null)
+            return;
+
+        EventTrigger trigger = target.GetComponent<EventTrigger>();
+        if (trigger == null)
+            trigger = target.AddComponent<EventTrigger>();
+        else
+            trigger.triggers.Clear();
+
+        EventTrigger.Entry entryEnter = new EventTrigger.Entry();
+        entryEnter.eventID = EventTriggerType.PointerEnter;
+        entryEnter.callback.AddListener(_ => ChangeUpgradeHover(1));
+        trigger.triggers.Add(entryEnter);
+
+        EventTrigger.Entry entryExit = new EventTrigger.Entry();
+        entryExit.eventID = EventTriggerType.PointerExit;
+        entryExit.callback.AddListener(_ => ChangeUpgradeHover(-1));
+        trigger.triggers.Add(entryExit);
     }
 }
 

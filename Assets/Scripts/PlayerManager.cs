@@ -16,8 +16,11 @@ public class PlayerManager : Singleton<PlayerManager>
     [Header("动画")]
     public SpriteRenderAnim anim; // 玩家动画组件
 
+    [Header("护盾显示")]
+    [SerializeField] private GameObject shieldObject;
+
     private int currentHealth;
-    private int currentShield;
+    private int currentShieldValue;
     private int currentSwapCount;
     private int gold = 0; // 金币
     public int startGold = 3;
@@ -44,7 +47,15 @@ public class PlayerManager : Singleton<PlayerManager>
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
-    public int CurrentShield => currentShield;
+    public int CurrentShield
+    {
+        get => currentShieldValue;
+        private set
+        {
+            currentShieldValue = Mathf.Max(0, value);
+            UpdateShieldObjectVisibility();
+        }
+    }
     public int CurrentSwapCount => currentSwapCount;
     public int MaxSwapCount
     {
@@ -226,7 +237,7 @@ public class PlayerManager : Singleton<PlayerManager>
     {
         maxHealth = health > 0 ? health : maxHealth;
         currentHealth = maxHealth;
-        currentShield = 0;
+        CurrentShield = 0;
         
         // 根据困难模式选择基础交换次数
         int baseSwapCount = (GameDataManager.Instance != null && GameDataManager.Instance.IsInHardMode()) 
@@ -448,16 +459,16 @@ public class PlayerManager : Singleton<PlayerManager>
             return;
 
         int remaining = damage;
-        if (currentShield > 0)
+        if (CurrentShield > 0)
         {
-            int absorbed = Mathf.Min(currentShield, remaining);
-            currentShield -= absorbed;
+            int absorbed = Mathf.Min(CurrentShield, remaining);
+            CurrentShield -= absorbed;
             remaining -= absorbed;
         }
 
         if (remaining <= 0)
         {
-            Debug.Log($"护盾抵挡 {damage} 伤害，剩余护盾: {currentShield}");
+            Debug.Log($"护盾抵挡 {damage} 伤害，剩余护盾: {CurrentShield}");
             return;
         }
 
@@ -469,7 +480,7 @@ public class PlayerManager : Singleton<PlayerManager>
         // 播放受伤动画
         TryPlayHurtAnimation();
 
-        Debug.Log($"玩家受到 {remaining} 伤害（护盾抵消 {damage - remaining}），当前血量: {currentHealth}/{maxHealth}，护盾: {currentShield}");
+        Debug.Log($"玩家受到 {remaining} 伤害（护盾抵消 {damage - remaining}），当前血量: {currentHealth}/{maxHealth}，护盾: {CurrentShield}");
     }
 
     /// <summary>
@@ -497,8 +508,8 @@ public class PlayerManager : Singleton<PlayerManager>
         if (amount <= 0)
             return;
 
-        currentShield += amount;
-        Debug.Log($"获得 {amount} 护盾，当前护盾: {currentShield}");
+        CurrentShield += amount;
+        Debug.Log($"获得 {amount} 护盾，当前护盾: {CurrentShield}");
     }
 
     /// <summary>
@@ -506,7 +517,7 @@ public class PlayerManager : Singleton<PlayerManager>
     /// </summary>
     public void ClearShield()
     {
-        currentShield = 0;
+        CurrentShield = 0;
     }
 
     /// <summary>
@@ -514,7 +525,7 @@ public class PlayerManager : Singleton<PlayerManager>
     /// </summary>
     public void DecayShieldAtTurnStart()
     {
-        if (currentShield <= 0)
+        if (CurrentShield <= 0)
             return;
 
         if (RuneManager.Instance != null && RuneManager.Instance.ShouldKeepShieldAtTurnStart())
@@ -523,8 +534,44 @@ public class PlayerManager : Singleton<PlayerManager>
             return;
         }
 
-        currentShield = currentShield / 2;
-        Debug.Log($"回合开始护盾衰减，当前护盾: {currentShield}");
+        CurrentShield = CurrentShield / 2;
+        Debug.Log($"回合开始护盾衰减，当前护盾: {CurrentShield}");
+    }
+
+    private void UpdateShieldObjectVisibility()
+    {
+        EnsureShieldObject();
+        if (shieldObject != null)
+            shieldObject.SetActive(CurrentShield > 0);
+    }
+
+    private void EnsureShieldObject()
+    {
+        if (shieldObject != null)
+            return;
+
+        Transform root = anim != null ? anim.transform.root : transform;
+        Transform found = FindChildByName(root, "shield");
+        if (found != null)
+            shieldObject = found.gameObject;
+    }
+
+    private static Transform FindChildByName(Transform root, string name)
+    {
+        if (root == null)
+            return null;
+
+        if (root.name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            return root;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = FindChildByName(root.GetChild(i), name);
+            if (child != null)
+                return child;
+        }
+
+        return null;
     }
     
     /// <summary>

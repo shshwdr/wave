@@ -1131,6 +1131,17 @@ public class SkillSelectMenu : MenuBase
 
 
     /// <summary>
+    /// 商店升级项悬停时，对应已有 SkillIconUI 做放大缩小
+    /// </summary>
+    public void SetOwnedSkillUpgradeHover(string identifier, bool hover)
+    {
+        if (string.IsNullOrEmpty(identifier) || !skillIconMap.TryGetValue(identifier, out SkillIconUI icon) || icon == null)
+            return;
+
+        icon.SetUpgradeHover(hover);
+    }
+
+    /// <summary>
     /// 高亮技能图标
     /// </summary>
     private void HighlightSkill(string identifier)

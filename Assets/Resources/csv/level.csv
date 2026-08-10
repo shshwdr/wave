@@ -1,9 +1,9 @@
 ﻿enemies,startEnemyCount,gold,difficulty,bossIdentifier,turns,type,eventType,island,enemyPerRound,height
 normal|9,3,3,0,,,normal,,0,3,4
 speed|3|normal|3|speed|3|normal|3|speed|3,3,4,0,,,normal,1,0,3,4
-archer|3|normal|3|archer|3|speed|3|archer|3,3,4,0,,,normal,,0,3,4
-healer|1|normal|3|healer|1|speed|3|archer|2|healer|1,3,4,1,,,normal,1,0,3,4
-healer|1|normal|1|speed|1|archer|1|healer|1|speed|1|archer|1,3,5,1,,,normal,,0,3,4
+archer|3|normal|3|archer|3|speed|3|archer|3,3,4,1,,,normal,,0,3,4
+healer|1|normal|3|healer|1|speed|3|archer|2|healer|1|speed|3,3,4,1,,,normal,1,0,3,4
+healer|1|speed|3|healer|1|normal|3|healer|1|archer|3|healer|1,3,5,2,,,normal,,0,3,4
 fog|1|normal|2|healer|1|archer|1|fog|1|speed|1|healer|1,4,6,1,,,normal,elite,0,3,4
 hp|1|fog|1|normal|1|speed|1|archer|1|fog|1|healer|1|normal|1|archer|1|normal|1|speed|1|healer|1,4,4,1,elite,,boss,eliteAfter,0,3,6
 dirty|1|normal|2|speed|2|archer|2|healer|2|dirty|1,4,4,1,,,normal,1,1,3,4

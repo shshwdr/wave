@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
+using DG.Tweening;
 
 /// <summary>
 /// 技能图标UI组件 - 支持拖拽和悬停显示详情
@@ -21,6 +22,8 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
     private RectTransform rectTransform;
     private Canvas canvas;
     private bool isHighlighting = false;
+    private Vector3 originalScale = Vector3.one;
+    private Tween upgradeHoverTween;
 
     public string SkillIdentifier => skillIdentifier;
     public int ColorIndex => colorIndex;
@@ -40,6 +43,8 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         }
 
         // 如果没有高亮图片，创建一个
+        originalScale = transform.localScale;
+
         if (highlightImage == null)
         {
             GameObject highlightObj = new GameObject("HighlightImage");
@@ -335,6 +340,39 @@ public class SkillIconUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndD
         return darkerColor;
     }
     
+    /// <summary>
+    /// 商店升级项悬停时，已有技能图标轻微放大缩小
+    /// </summary>
+    public void SetUpgradeHover(bool hover)
+    {
+        if (upgradeHoverTween != null && upgradeHoverTween.IsActive())
+            upgradeHoverTween.Kill();
+
+        if (hover)
+        {
+            transform.localScale = originalScale;
+            upgradeHoverTween = transform.DOScale(originalScale * 1.15f, 0.4f)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+            return;
+        }
+
+        upgradeHoverTween = transform.DOScale(originalScale, 0.15f).SetEase(Ease.OutQuad);
+    }
+
+    private void OnDisable()
+    {
+        if (upgradeHoverTween != null && upgradeHoverTween.IsActive())
+            upgradeHoverTween.Kill();
+        transform.localScale = originalScale;
+    }
+
+    private void OnDestroy()
+    {
+        if (upgradeHoverTween != null && upgradeHoverTween.IsActive())
+            upgradeHoverTween.Kill();
+    }
+
     /// <summary>
     /// 开始高亮动画（fade in and out）
     /// </summary>

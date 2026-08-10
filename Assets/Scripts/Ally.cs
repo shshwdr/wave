@@ -236,21 +236,24 @@ public class Ally : Character
     }
 
     /// <summary>
-    /// 将随从移动到新的棋盘位置。
+    /// 将随从移动到新的棋盘位置，返回预计移动时间。
     /// </summary>
-    public void MoveTo(Vector2Int newGridPosition)
+    public float MoveTo(Vector2Int newGridPosition)
     {
         if (isDead || boardManager == null)
-            return;
+            return 0f;
 
         gridPosition = newGridPosition;
         Vector3 worldPosition = boardManager.GridToWorldPosition(newGridPosition);
         if (enemyManager != null)
             worldPosition += new Vector3(0, enemyManager.SpawnOffsetY, 0);
 
-        transform.DOMove(worldPosition, Mathf.Max(0.01f, moveSpeed))
+        float speed = Mathf.Max(0.01f, moveSpeed);
+        float duration = Vector3.Distance(transform.position, worldPosition) / speed;
+        transform.DOMove(worldPosition, speed)
             .SetSpeedBased()
             .SetEase(Ease.OutQuad);
+        return Mathf.Max(0f, duration);
     }
 
     /// <summary>

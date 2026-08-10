@@ -103,7 +103,9 @@ public class MainGameManager : Singleton<MainGameManager>
     
     // 高亮显示相关
     private Vector2Int lastHighlightPos = new Vector2Int(-1, -1);
+    private Vector2Int highlightSourcePos = new Vector2Int(-1, -1);
     private List<Vector2Int> highlightedTiles = new List<Vector2Int>();
+    private readonly HashSet<Vector2Int> allySkillPreviewTiles = new HashSet<Vector2Int>();
     private bool leftMouseDownInBattle;
 
     // 技能显示相关
@@ -250,6 +252,9 @@ public class MainGameManager : Singleton<MainGameManager>
     private static HashSet<int> pendingWaveGroups = new HashSet<int>(); // 等待结算完成的wave group
     private static int pendingDelayedSkillEffects = 0; // bounce 等延迟特效未完成数量
     private bool earlyTurnEndScheduled = false; // 是否已因 note 离盘而提前调度敌人回合
+    private Coroutine pendingCompleteTurnRoutine;
+    private Coroutine pendingEarlyTurnEndRoutine;
+    private int stuckProcessingFrames;
     private static bool hasLastManualWaveColor = false;
     private static TileColor lastManualWaveColor;
 
@@ -634,6 +639,17 @@ public class MainGameManager : Singleton<MainGameManager>
         noAttackNoCostTriggeredThisTurn = false; // 重置noAttackNoCost触发标志
         pendingDelayedSkillEffects = 0;
         earlyTurnEndScheduled = false;
+        stuckProcessingFrames = 0;
+        if (pendingCompleteTurnRoutine != null)
+        {
+            StopCoroutine(pendingCompleteTurnRoutine);
+            pendingCompleteTurnRoutine = null;
+        }
+        if (pendingEarlyTurnEndRoutine != null)
+        {
+            StopCoroutine(pendingEarlyTurnEndRoutine);
+            pendingEarlyTurnEndRoutine = null;
+        }
         hasLastManualWaveColor = false;
         waveGroupAllyDamageBonusPerWave.Clear();
         for (int i = 0; i < allyDeathDamageBonusByColor.Length; i++)
@@ -850,6 +866,23 @@ public class MainGameManager : Singleton<MainGameManager>
             if (currentState == GameState.Processing && pendingWaveGroups.Count > 0)
                 TryEarlyEndPlayerTurnFromWaves();
         }
+
+        if (currentState == GameState.Processing
+            && pendingWaveGroups.Count == 0
+            && pendingDelayedSkillEffects == 0)
+        {
+            stuckProcessingFrames++;
+            if (stuckProcessingFrames >= 60)
+            {
+                stuckProcessingFrames = 0;
+                Debug.LogWarning("Processing 卡住，强制进入敌人回合");
+                EndPlayerTurn();
+            }
+        }
+        else
+        {
+            stuckProcessingFrames = 0;
+        }
         
         // 如果事件菜单打开，清除高亮
         EventMenu eventMenu = FindObjectOfType<EventMenu>();
@@ -910,9 +943,10 @@ public class MainGameManager : Singleton<MainGameManager>
             Vector2Int gridPos = GetMouseGridPosition();
             if (boardManager != null && boardManager.IsValidPosition(gridPos))
             {
-                lastHighlightPos = gridPos;
-                currentHoverTilePos = gridPos;
-                UpdateHighlightTiles(gridPos);
+                Vector2Int highlightPos = ResolveHighlightSourcePos(gridPos);
+                lastHighlightPos = highlightPos;
+                currentHoverTilePos = highlightPos;
+                UpdateHighlightTiles(highlightPos);
                 StartPressColorPulseOnHighlightedTiles();
             }
         }
@@ -924,6 +958,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
             Vector2Int gridPos = GetMouseGridPosition();
             bool isValidGridPos = boardManager != null && boardManager.IsValidPosition(gridPos);
+            Vector2Int eliminatePos = ResolveHighlightSourcePos(gridPos);
 
             StopPressColorPulseOnHighlightedTiles();
             HideAllDetailPanels();
@@ -934,7 +969,7 @@ public class MainGameManager : Singleton<MainGameManager>
             if (hadBattleMouseDown && isValidGridPos)
             {
                 TryPlayPlayerAttackAnimation();
-                EliminateConnectedTiles(gridPos);
+                EliminateConnectedTiles(eliminatePos);
             }
         }
     }
@@ -993,6 +1028,14 @@ public class MainGameManager : Singleton<MainGameManager>
 
         if (gridPos == lastHighlightPos)
             return;
+
+        if (lastHighlightPos.x >= 0
+            && highlightedTiles.Contains(lastHighlightPos)
+            && highlightedTiles.Contains(gridPos))
+        {
+            lastHighlightPos = gridPos;
+            return;
+        }
 
         if (lastHighlightPos.x >= 0 && IsInSameConnectedGroup(lastHighlightPos, gridPos))
         {
@@ -1739,6 +1782,54 @@ public class MainGameManager : Singleton<MainGameManager>
                 highlightedTiles.Add(pos);
             }
         }
+
+        highlightSourcePos = mousePos;
+        ApplyAllySkillHoverPreview(connectedTiles);
+    }
+
+    /// <summary>
+    /// hover 预览 allyChangeColorAndUse / allyTileUse 会额外作用的召唤物脚下格。
+    /// </summary>
+    private void ApplyAllySkillHoverPreview(List<Vector2Int> connectedTiles)
+    {
+        if (connectedTiles == null || connectedTiles.Count == 0 || allyManager == null)
+            return;
+
+        TileCell hoverTile = boardManager.GetTile(highlightSourcePos.x >= 0 ? highlightSourcePos : connectedTiles[0]);
+        if (hoverTile == null)
+            return;
+
+        TileColor waveColor = hoverTile.Color;
+        bool hasAllyChangeColorAndUse = HasEquippedColorSkill(waveColor, "allyChangeColorAndUse", out _);
+        bool hasAllyTileUse = HasEquippedColorSkill(waveColor, "allyTileUse", out _);
+        if (!hasAllyChangeColorAndUse && !hasAllyTileUse)
+            return;
+
+        foreach (Ally ally in GetAlliesAdjacentToTiles(connectedTiles))
+        {
+            Vector2Int allyPos = ally.GridPosition;
+            if (connectedTiles.Contains(allyPos))
+                continue;
+
+            TileCell allyTile = boardManager.GetTile(allyPos);
+            if (allyTile == null || allyTile.IsDirty || allyTile.IsDisabled)
+                continue;
+
+            if (hasAllyChangeColorAndUse)
+                allyTile.SetPreviewColor(waveColor);
+
+            allyTile.SetHighlight(true);
+            if (!highlightedTiles.Contains(allyPos))
+                highlightedTiles.Add(allyPos);
+            allySkillPreviewTiles.Add(allyPos);
+        }
+    }
+
+    private Vector2Int ResolveHighlightSourcePos(Vector2Int gridPos)
+    {
+        if (allySkillPreviewTiles.Contains(gridPos) && highlightSourcePos.x >= 0)
+            return highlightSourcePos;
+        return gridPos;
     }
 
     /// <summary>
@@ -1773,9 +1864,13 @@ public class MainGameManager : Singleton<MainGameManager>
             {
                 // SetHighlight方法内部会检查是否正在被消除，如果是则不会清除高亮
                 tile.SetHighlight(false);
+                if (!tile.IsBeingDestroyed)
+                    tile.ClearPreviewColor();
             }
         }
         highlightedTiles.Clear();
+        allySkillPreviewTiles.Clear();
+        highlightSourcePos = new Vector2Int(-1, -1);
     }
 
     private bool IsInSameConnectedGroup(Vector2Int posA, Vector2Int posB)
@@ -2239,13 +2334,28 @@ public class MainGameManager : Singleton<MainGameManager>
         List<KeyValuePair<Vector2Int, TileColor>> waveSnapshot =
             new List<KeyValuePair<Vector2Int, TileColor>>(delayedWaves);
         BeginDelayedSkillEffect();
-        DOVirtual.DelayedCall(0.5f, () =>
+        bool finished = false;
+        void FinishDelayedAllyTileWaves()
         {
-            foreach (var delayedWave in waveSnapshot)
-                CreateIndependentAllyTileWave(delayedWave.Key, delayedWave.Value);
-
+            if (finished)
+                return;
+            finished = true;
             EndDelayedSkillEffect();
+        }
+
+        Tween delayTween = DOVirtual.DelayedCall(0.5f, () =>
+        {
+            try
+            {
+                foreach (var delayedWave in waveSnapshot)
+                    CreateIndependentAllyTileWave(delayedWave.Key, delayedWave.Value);
+            }
+            finally
+            {
+                FinishDelayedAllyTileWaves();
+            }
         });
+        delayTween.OnKill(FinishDelayedAllyTileWaves);
     }
 
     private void CreateIndependentAllyTileWave(Vector2Int gridPos, TileColor color)
@@ -2265,8 +2375,16 @@ public class MainGameManager : Singleton<MainGameManager>
         pendingWaveGroups.Add(groupId);
         SetAllyDamageBonusForWaveGroup(groupId, color, 1);
 
-        Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
-        CreateWave(worldPos, color, gridPos, groupId, true, false, 1f, false, 0, 1, false, false);
+        try
+        {
+            Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
+            CreateWave(worldPos, color, gridPos, groupId, true, false, 1f, false, 0, 1, false, false);
+        }
+        catch
+        {
+            OnWaveDestroyed(groupId);
+            throw;
+        }
     }
 
     private void SetAllyDamageBonusForWaveGroup(int groupId, TileColor color, int waveCount)
@@ -2797,45 +2915,42 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public static void OnWaveDestroyed(int waveGroupId)
     {
-        if (!waveGroupActiveWaveCount.ContainsKey(waveGroupId))
+        if (!waveGroupActiveWaveCount.TryGetValue(waveGroupId, out int remaining))
             return;
-            
-        waveGroupActiveWaveCount[waveGroupId]--;
-        
-        // 如果这个wave group的所有wave都完成了，记录wave group伤害并检查spawnAlly技能
-        if (waveGroupActiveWaveCount[waveGroupId] <= 0)
+
+        remaining--;
+        waveGroupActiveWaveCount[waveGroupId] = remaining;
+        if (remaining != 0)
+            return;
+
+        if (waveGroupAddDamageWhenPass.ContainsKey(waveGroupId))
+            waveGroupAddDamageWhenPass.Remove(waveGroupId);
+        if (waveGroupPassedSameColorTiles.ContainsKey(waveGroupId))
+            waveGroupPassedSameColorTiles.Remove(waveGroupId);
+        if (waveGroupEnemyHitCounts.ContainsKey(waveGroupId))
+            waveGroupEnemyHitCounts.Remove(waveGroupId);
+        waveGroupAllyDamageBonusPerWave.Remove(waveGroupId);
+
+        if (waveGroupTotalDamage.ContainsKey(waveGroupId) && waveGroupColor.ContainsKey(waveGroupId))
         {
-            if (waveGroupAddDamageWhenPass.ContainsKey(waveGroupId))
-            {
-                waveGroupAddDamageWhenPass.Remove(waveGroupId);
-            }
-            if (waveGroupPassedSameColorTiles.ContainsKey(waveGroupId))
-            {
-                waveGroupPassedSameColorTiles.Remove(waveGroupId);
-            }
-            if (waveGroupEnemyHitCounts.ContainsKey(waveGroupId))
-            {
-                waveGroupEnemyHitCounts.Remove(waveGroupId);
-            }
-            waveGroupAllyDamageBonusPerWave.Remove(waveGroupId);
-            
-            // 记录wave group的总伤害
-            if (waveGroupTotalDamage.ContainsKey(waveGroupId) && waveGroupColor.ContainsKey(waveGroupId))
-            {
-                float totalDamage = waveGroupTotalDamage[waveGroupId];
-                TileColor waveColor = waveGroupColor[waveGroupId];
-                if (StatisticsManager.Instance != null && totalDamage > 0)
-                {
-                    StatisticsManager.Instance.RecordWaveGroupDamage(waveColor, totalDamage);
-                }
-            }
-            
-            MainGameManager instance = FindObjectOfType<MainGameManager>();
-            if (instance != null)
-            {
-                instance.CheckSpawnAlly(waveGroupId);
-            }
+            float totalDamage = waveGroupTotalDamage[waveGroupId];
+            TileColor waveColor = waveGroupColor[waveGroupId];
+            if (StatisticsManager.Instance != null && totalDamage > 0)
+                StatisticsManager.Instance.RecordWaveGroupDamage(waveColor, totalDamage);
         }
+
+        MainGameManager instance = Instance;
+        if (instance != null)
+        {
+            instance.CheckSpawnAlly(waveGroupId);
+            return;
+        }
+
+        pendingWaveGroups.Remove(waveGroupId);
+        waveGroupTotalDamage.Remove(waveGroupId);
+        waveGroupActiveWaveCount.Remove(waveGroupId);
+        waveGroupColor.Remove(waveGroupId);
+        waveGroupHasDamage.Remove(waveGroupId);
     }
 
     /// <summary>
@@ -2843,106 +2958,112 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void CheckSpawnAlly(int waveGroupId)
     {
-        if (!waveGroupTotalDamage.ContainsKey(waveGroupId) || !waveGroupColor.ContainsKey(waveGroupId))
-            return;
-            
-        float totalDamage = waveGroupTotalDamage[waveGroupId];
-        TileColor waveColor = waveGroupColor[waveGroupId];
-        int colorIndex = (int)waveColor;
-        
-        // 从PlayerManager获取该颜色wave配置的技能列表，检查是否有spawnAlly技能
-        if (PlayerManager.Instance == null || SkillManager.Instance == null)
-            return;
-            
-        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
-        
-        foreach (var identifier in skillIdentifiers)
+        bool settlementHandled = false;
+        try
         {
-            if (SkillManager.Instance.HasSkill(identifier))
-            {
-                SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
-                if (skillInfo != null && skillInfo.effect == "spawnAlly")
-                {
-                    int value = SkillManager.Instance.GetSkillValue(identifier);
-                    
-                    // 计算随从血量：总伤害 * value%（value是百分比值，例如50表示50%）
-                    int allyHealth = (int)(totalDamage * (value / 100f));
-                    
-                    // 生成随从
-                    SpawnAlly(allyHealth);
-                    break;
-                }
-            }
-        }
-
-        ApplyAllyHealthIncrease(waveColor, totalDamage);
-        
-        // 检查summonAttack技能（召唤物集体向右侧发射投射物）
-        CheckSummonAttack(waveGroupId);
-        ApplyAllyMoveForwardDamage(waveGroupId, waveColor);
-        ApplyKillAllWithAlly(waveGroupId, waveColor);
-        
-        // 检查noAttackNoCost技能（如果整个wave group没有造成伤害，不进入敌人回合）
-        bool hasDamage = waveGroupHasDamage.ContainsKey(waveGroupId) && waveGroupHasDamage[waveGroupId];
-        if (!hasDamage && !noAttackNoCostTriggeredThisTurn)
-        {
-            // 检查是否有noAttackNoCost技能
-            bool hasNoAttackNoCost = false;
-            for (int i = 0; i < 4; i++)
-            {
-                List<string> skillIdentifiers2 = PlayerManager.Instance.GetWaveSkills(i);
-                foreach (var identifier in skillIdentifiers2)
-                {
-                    if (SkillManager.Instance.HasSkill(identifier))
-                    {
-                        SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
-                        if (skillInfo != null && skillInfo.effect == "noAttackNoCost")
-                        {
-                            hasNoAttackNoCost = true;
-                            break;
-                        }
-                    }
-                }
-                if (hasNoAttackNoCost) break;
-            }
-            
-            if (hasNoAttackNoCost)
-            {
-                // 标记已触发，一个回合只会触发一次
-                noAttackNoCostTriggeredThisTurn = true;
-                
-                // 清理已完成的wave group数据
-                waveGroupTotalDamage.Remove(waveGroupId);
-                waveGroupActiveWaveCount.Remove(waveGroupId);
-                waveGroupColor.Remove(waveGroupId);
-                waveGroupHasDamage.Remove(waveGroupId);
-                waveGroupAllyDamageBonusPerWave.Remove(waveGroupId);
-                pendingWaveGroups.Remove(waveGroupId);
-                
-                
-                // 不进入敌人回合，直接重置为玩家回合
-                DOVirtual.DelayedCall(0.1f, () =>
-                {
-                    isProcessing = false;
-                    currentState = GameState.PlayerTurn;
-                    Debug.Log("noAttackNoCost: 没有造成伤害，继续玩家回合");
-                });
+            if (!waveGroupTotalDamage.TryGetValue(waveGroupId, out float totalDamage)
+                || !waveGroupColor.TryGetValue(waveGroupId, out TileColor waveColor)
+                || PlayerManager.Instance == null
+                || SkillManager.Instance == null)
                 return;
+
+            int colorIndex = (int)waveColor;
+            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+
+            foreach (var identifier in skillIdentifiers)
+            {
+                if (!SkillManager.Instance.HasSkill(identifier)
+                    || CSVLoader.Instance == null
+                    || !CSVLoader.Instance.cardInfoMap.TryGetValue(identifier, out SkillInfo skillInfo)
+                    || skillInfo == null
+                    || skillInfo.effect != "spawnAlly")
+                    continue;
+
+                int value = SkillManager.Instance.GetSkillValue(identifier);
+                int allyHealth = (int)(totalDamage * (value / 100f));
+                SpawnAlly(allyHealth);
+                break;
             }
-            // 检查是否所有wave group都完成了
-            CheckAllWaveGroupsCompleted();
+
+            ApplyAllyHealthIncrease(waveColor, totalDamage);
+            CheckSummonAttack(waveGroupId);
+            ApplyAllyMoveForwardDamage(waveGroupId, waveColor, () =>
+            {
+                ApplyKillAllWithAlly(waveGroupId, waveColor);
+
+                bool skipEnemyTurn = waveGroupHasDamage.ContainsKey(waveGroupId)
+                    && !waveGroupHasDamage[waveGroupId]
+                    && !noAttackNoCostTriggeredThisTurn
+                    && HasNoAttackNoCostSkill();
+                if (skipEnemyTurn)
+                    noAttackNoCostTriggeredThisTurn = true;
+
+                FinishWaveGroupSettlement(waveGroupId, skipEnemyTurn);
+            });
+            settlementHandled = true;
         }
-        
-        // 清理已完成的wave group数据
+        finally
+        {
+            if (!settlementHandled)
+                FinishWaveGroupSettlement(waveGroupId, false);
+        }
+    }
+
+    private void FinishWaveGroupSettlement(int waveGroupId, bool skipEnemyTurn)
+    {
+        bool wasPending = pendingWaveGroups.Remove(waveGroupId);
         waveGroupTotalDamage.Remove(waveGroupId);
         waveGroupActiveWaveCount.Remove(waveGroupId);
         waveGroupColor.Remove(waveGroupId);
         waveGroupHasDamage.Remove(waveGroupId);
         waveGroupAllyDamageBonusPerWave.Remove(waveGroupId);
-        pendingWaveGroups.Remove(waveGroupId);
-        
-        // 检查是否所有wave group都完成了
+
+        if (!wasPending)
+            return;
+
+        if (skipEnemyTurn)
+        {
+            StartCoroutine(SkipEnemyTurnAfterDelay());
+            return;
+        }
+
         CheckAllWaveGroupsCompleted();
+    }
+
+    private IEnumerator SkipEnemyTurnAfterDelay()
+    {
+        yield return new WaitForSeconds(0.1f);
+        if (pendingWaveGroups.Count > 0 || pendingDelayedSkillEffects > 0)
+        {
+            CheckAllWaveGroupsCompleted();
+            yield break;
+        }
+
+        isProcessing = false;
+        earlyTurnEndScheduled = false;
+        currentState = GameState.PlayerTurn;
+        Debug.Log("noAttackNoCost: 没有造成伤害，继续玩家回合");
+    }
+
+    private bool HasNoAttackNoCostSkill()
+    {
+        if (PlayerManager.Instance == null || SkillManager.Instance == null || CSVLoader.Instance == null)
+            return false;
+
+        for (int i = 0; i < 4; i++)
+        {
+            foreach (var identifier in PlayerManager.Instance.GetWaveSkills(i))
+            {
+                if (!SkillManager.Instance.HasSkill(identifier)
+                    || !CSVLoader.Instance.cardInfoMap.TryGetValue(identifier, out SkillInfo skillInfo)
+                    || skillInfo == null
+                    || skillInfo.effect != "noAttackNoCost")
+                    continue;
+                return true;
+            }
+        }
+
+        return false;
     }
     
     /// <summary>
@@ -2964,29 +3085,36 @@ public class MainGameManager : Singleton<MainGameManager>
             return;
 
         earlyTurnEndScheduled = true;
+        if (pendingEarlyTurnEndRoutine != null)
+            StopCoroutine(pendingEarlyTurnEndRoutine);
+        pendingEarlyTurnEndRoutine = StartCoroutine(EarlyEndPlayerTurnAfterDelay());
+    }
 
-        DOVirtual.DelayedCall(0.1f, () =>
+    private IEnumerator EarlyEndPlayerTurnAfterDelay()
+    {
+        yield return new WaitForSeconds(0.1f);
+        pendingEarlyTurnEndRoutine = null;
+
+        if (currentState != GameState.Processing)
+            yield break;
+
+        if (pendingDelayedSkillEffects > 0)
         {
-            if (currentState != GameState.Processing)
-                return;
+            earlyTurnEndScheduled = false;
+            CheckAllWaveGroupsCompleted();
+            yield break;
+        }
 
-            if (pendingDelayedSkillEffects > 0)
+        if (currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle")
+        {
+            if (CheckAllTilesCleared())
             {
-                earlyTurnEndScheduled = false;
-                return;
+                CompleteLevel();
+                yield break;
             }
+        }
 
-            if (currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle")
-            {
-                if (CheckAllTilesCleared())
-                {
-                    CompleteLevel();
-                    return;
-                }
-            }
-
-            EndPlayerTurn();
-        });
+        EndPlayerTurn();
     }
 
     private bool AreAllActiveWavesReadyForTurnEnd()
@@ -3056,45 +3184,37 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void CheckAllWaveGroupsCompleted()
     {
-        // 如果还有待结算的wave group，等待
-        if (pendingWaveGroups.Count > 0)
-        {
+        if (pendingWaveGroups.Count > 0 || pendingDelayedSkillEffects > 0)
             return;
-        }
 
-        // bounce 等延迟特效未完成时等待
-        if (pendingDelayedSkillEffects > 0)
-        {
-            return;
-        }
-        
-        // 所有wave group都完成了
-        // 重置noAttackNoCost触发标志（新的玩家回合）
         noAttackNoCostTriggeredThisTurn = false;
-        
-        DOVirtual.DelayedCall(0.1f, () =>
+
+        if (pendingCompleteTurnRoutine != null)
+            StopCoroutine(pendingCompleteTurnRoutine);
+        pendingCompleteTurnRoutine = StartCoroutine(CompletePlayerTurnAfterDelay());
+    }
+
+    private IEnumerator CompletePlayerTurnAfterDelay()
+    {
+        yield return new WaitForSeconds(0.1f);
+        pendingCompleteTurnRoutine = null;
+
+        if (pendingWaveGroups.Count > 0 || pendingDelayedSkillEffects > 0)
+            yield break;
+
+        if (currentState != GameState.Processing)
+            yield break;
+
+        if (currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle")
         {
-            // 已因 note 离盘提前进入敌人回合，无需再次切换
-            if (currentState != GameState.Processing)
-                return;
-
-            if (pendingDelayedSkillEffects > 0)
-                return;
-
-            isProcessing = false;
-            
-            // 检查puzzle模式：如果所有tiles都消除了，完成关卡
-            if (currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle")
+            if (CheckAllTilesCleared())
             {
-                if (CheckAllTilesCleared())
-                {
-                    CompleteLevel();
-                    return;
-                }
+                CompleteLevel();
+                yield break;
             }
-            
-            EndPlayerTurn();
-        });
+        }
+
+        EndPlayerTurn();
     }
     
     private void ApplyAllyHealthIncrease(TileColor color, float totalWaveDamage)
@@ -3112,17 +3232,21 @@ public class MainGameManager : Singleton<MainGameManager>
             ally.IncreaseMaxHealth(healthIncrease);
     }
 
-    private void ApplyAllyMoveForwardDamage(int waveGroupId, TileColor color)
+    private void ApplyAllyMoveForwardDamage(int waveGroupId, TileColor color, System.Action onComplete)
     {
         if (allyManager == null
             || boardManager == null
             || enemyManager == null
             || !HasEquippedColorSkill(color, "allyMoveForwardDamgeVerticle", out _))
+        {
+            onComplete?.Invoke();
             return;
+        }
 
         List<Ally> allies = allyManager.GetLivingAllies();
         allies.Sort((a, b) => b.GridPosition.x.CompareTo(a.GridPosition.x));
 
+        float maxMoveDuration = 0f;
         foreach (Ally ally in allies)
         {
             Vector2Int targetPos = ally.GridPosition + Vector2Int.right;
@@ -3131,10 +3255,50 @@ public class MainGameManager : Singleton<MainGameManager>
                 || HasLivingEnemyAtPosition(targetPos))
                 continue;
 
-            ally.MoveTo(targetPos);
+            maxMoveDuration = Mathf.Max(maxMoveDuration, ally.MoveTo(targetPos));
         }
 
-        const int damage = 20; // 与 summonAttack 当前逻辑一致，使用其基础攻击力。
+        if (maxMoveDuration <= 0.001f)
+        {
+            DealAllyColumnDamage(waveGroupId, allies);
+            onComplete?.Invoke();
+            return;
+        }
+
+        StartCoroutine(FinishAllyMoveForwardAfterDelay(maxMoveDuration, waveGroupId, allies, onComplete));
+    }
+
+    private IEnumerator FinishAllyMoveForwardAfterDelay(
+        float delay,
+        int waveGroupId,
+        List<Ally> allies,
+        System.Action onComplete)
+    {
+        BeginDelayedSkillEffect();
+        try
+        {
+            yield return new WaitForSeconds(delay);
+            DealAllyColumnDamage(waveGroupId, allies);
+        }
+        finally
+        {
+            try
+            {
+                onComplete?.Invoke();
+            }
+            finally
+            {
+                EndDelayedSkillEffect();
+            }
+        }
+    }
+
+    private void DealAllyColumnDamage(int waveGroupId, List<Ally> allies)
+    {
+        if (allies == null || enemyManager == null)
+            return;
+
+        const int damage = 20;
         float totalDamage = 0f;
         foreach (Ally ally in allies)
         {
@@ -3456,10 +3620,17 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         
         Vector2Int spawnGridPos = new Vector2Int(0, spawnY);
-        
-        // 创建随从对象
+
+        if (allyPrefab == null)
+            return;
+
         GameObject allyObj = Instantiate(allyPrefab);
         Ally ally = allyObj.GetComponent<Ally>();
+        if (ally == null)
+        {
+            Destroy(allyObj);
+            return;
+        }
         
         // 设置位置
         Vector3 worldPos = boardManager.GridToWorldPosition(spawnGridPos);
@@ -3492,6 +3663,13 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     private void EndPlayerTurn()
     {
+        if (currentState == GameState.EnemyTurn
+            || currentState == GameState.LevelComplete
+            || currentState == GameState.GameOver)
+            return;
+
+        stuckProcessingFrames = 0;
+
         // 增加回合计数
         currentTurn++;
         

@@ -94,6 +94,7 @@ public class Wave : MonoBehaviour
     private int bounceRandomValue = 0;
     private int executeThresholdPercent = 0; // 斩杀线%，无技能时为 0（不斩杀）
     private bool allowRecreateOnKill = true;
+    private bool isDestroyed = false;
     private const float BounceEffectDuration = 0.5f;
 
     public float Duration => waveDuration; // 获取波浪持续时间
@@ -1168,6 +1169,14 @@ public class Wave : MonoBehaviour
             return;
 
         MainGameManager.BeginDelayedSkillEffect();
+        bool finished = false;
+        void FinishBounce()
+        {
+            if (finished)
+                return;
+            finished = true;
+            MainGameManager.EndDelayedSkillEffect();
+        }
 
         // 等当前帧其他伤害结算完再选目标并飞行
         DOVirtual.DelayedCall(0f, () =>
@@ -1175,7 +1184,7 @@ public class Wave : MonoBehaviour
             Enemy target = PickRandomLivingEnemy();
             if (target == null)
             {
-                MainGameManager.EndDelayedSkillEffect();
+                FinishBounce();
                 return;
             }
 
@@ -1195,7 +1204,7 @@ public class Wave : MonoBehaviour
                         applyAoeAndEcho: true,
                         applyOnHitEffects: false);
                 }
-                MainGameManager.EndDelayedSkillEffect();
+                FinishBounce();
             });
         });
     }
@@ -1234,13 +1243,20 @@ public class Wave : MonoBehaviour
         }
 
         GameObject effect = Instantiate(prefab, start, Quaternion.identity);
-        effect.transform.DOMove(end, BounceEffectDuration)
-            .SetEase(Ease.OutQuad)
-            .OnComplete(() =>
-            {
+        bool finished = false;
+        void FinishEffect()
+        {
+            if (finished)
+                return;
+            finished = true;
+            if (effect != null)
                 Destroy(effect);
-                onComplete?.Invoke();
-            });
+            onComplete?.Invoke();
+        }
+
+        Tween moveTween = effect.transform.DOMove(end, BounceEffectDuration).SetEase(Ease.OutQuad);
+        moveTween.OnComplete(FinishEffect);
+        moveTween.OnKill(FinishEffect);
     }
 
     private void ShowSkillEffectAt(string resourcePath, Vector3 position)
@@ -1546,6 +1562,10 @@ public class Wave : MonoBehaviour
     /// </summary>
     private void DestroyWave()
     {
+        if (isDestroyed)
+            return;
+        isDestroyed = true;
+
         isMoving = false; // 停止移动
         transform.DOKill();
         
