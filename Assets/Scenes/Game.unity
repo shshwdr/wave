@@ -552,7 +552,7 @@ SpriteRenderer:
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
-  m_Size: {x: 8.2, y: 6.2}
+  m_Size: {x: 8.2, y: 4.2}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -17069,7 +17069,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   boardWidth: 8
-  boardHeight: 6
+  boardHeight: 4
   tileSize: 0.9
   boardOffset: {x: 0, y: 0}
   tileCellPrefab: {fileID: 7948735621316735258, guid: 2e58dc54b7f6fa042b00f119cf412767, type: 3}

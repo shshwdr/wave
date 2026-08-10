@@ -48,6 +48,7 @@ public class LevelInfo
     public int level;
     public int gold;
     public int startEnemyCount;
+    public int enemyPerRound;
     public int difficulty;
     public string bossIdentifier;
     public bool hasEvent;
@@ -56,6 +57,7 @@ public class LevelInfo
     public string typeIdentifier;
     public string eventType;
     public int island;
+    public int height;
 }
 
 public class IslandInfo

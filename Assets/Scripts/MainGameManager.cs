@@ -114,6 +114,9 @@ public class MainGameManager : Singleton<MainGameManager>
     public int PlayerLevel => playerLevel;
     private int nextBattleLevelIndex = 0;
     public int NextBattleLevelIndex => nextBattleLevelIndex;
+    private int currentIslandId = 0;
+    public int CurrentIslandId => currentIslandId;
+    private int islandNonBossProgress = 0;
     private bool battleFromBossMapNode;
     private bool activeBattleFromBossMapNode;
     private MapNode activeBattleMapNode;
@@ -211,8 +214,7 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public void PlayerLevelUp()
     {
-        nextBattleLevelIndex++;
-        playerLevel = nextBattleLevelIndex;
+        AdvanceIslandBattleProgress();
         StartBattle();
     }
 
@@ -236,6 +238,11 @@ public class MainGameManager : Singleton<MainGameManager>
 
     // hitSameIncreaseDamage：同一 wave group 内对同一敌人的命中次数
     private static Dictionary<int, Dictionary<Enemy, int>> waveGroupEnemyHitCounts = new Dictionary<int, Dictionary<Enemy, int>>();
+
+    // allyIncreaseDamage：整组固定增伤平均分配到实际生成的 wave。
+    private static Dictionary<int, float> waveGroupAllyDamageBonusPerWave = new Dictionary<int, float>();
+    // allyDieIncreaseDamage：每个颜色在当前战斗内累计的永久增伤百分比。
+    private static readonly float[] allyDeathDamageBonusByColor = new float[4];
     
     // noAttackNoCost技能管理 - 跟踪每个wave group是否造成伤害
     private static Dictionary<int, bool> waveGroupHasDamage = new Dictionary<int, bool>();
@@ -261,6 +268,43 @@ public class MainGameManager : Singleton<MainGameManager>
 
         Instance.TryEarlyEndPlayerTurnFromWaves();
         Instance.CheckAllWaveGroupsCompleted();
+    }
+
+    public static float GetAllyDamageBonusPerWave(int waveGroupId)
+    {
+        return waveGroupAllyDamageBonusPerWave.TryGetValue(waveGroupId, out float bonus) ? bonus : 0f;
+    }
+
+    public static float GetAllyDeathDamageBonus(TileColor color)
+    {
+        int colorIndex = (int)color;
+        return colorIndex >= 0 && colorIndex < allyDeathDamageBonusByColor.Length
+            ? allyDeathDamageBonusByColor[colorIndex]
+            : 0f;
+    }
+
+    /// <summary>
+    /// Ally 死亡时，让所有装备了 allyDieIncreaseDamage 的颜色获得本场战斗增伤。
+    /// </summary>
+    public static void NotifyAllyDied()
+    {
+        if (PlayerManager.Instance == null || SkillManager.Instance == null || CSVLoader.Instance == null)
+            return;
+
+        for (int colorIndex = 0; colorIndex < allyDeathDamageBonusByColor.Length; colorIndex++)
+        {
+            foreach (string identifier in PlayerManager.Instance.GetWaveSkills(colorIndex))
+            {
+                if (!SkillManager.Instance.HasSkill(identifier)
+                    || !CSVLoader.Instance.cardInfoMap.TryGetValue(identifier, out SkillInfo skillInfo)
+                    || skillInfo == null
+                    || skillInfo.effect != "allyDieIncreaseDamage")
+                    continue;
+
+                allyDeathDamageBonusByColor[colorIndex] += SkillManager.Instance.GetSkillValue(identifier);
+                break;
+            }
+        }
     }
 
     private void Start()
@@ -591,6 +635,9 @@ public class MainGameManager : Singleton<MainGameManager>
         pendingDelayedSkillEffects = 0;
         earlyTurnEndScheduled = false;
         hasLastManualWaveColor = false;
+        waveGroupAllyDamageBonusPerWave.Clear();
+        for (int i = 0; i < allyDeathDamageBonusByColor.Length; i++)
+            allyDeathDamageBonusByColor[i] = 0f;
         isDragging = false;
         dragStartPos = new Vector2Int(-1, -1);
         currentHoverTilePos = new Vector2Int(-1, -1);
@@ -609,23 +656,14 @@ public class MainGameManager : Singleton<MainGameManager>
             PlayerManager.Instance.StartBattle();
         }
 
-        // 只在第一次战斗时清空棋盘并重新生成
-        if (isFirstBattle && boardManager != null)
-        {
-            boardManager.ClearBoard();
-            boardManager.InitializeBoard();
-            boardManager.GenerateRandomColors();
-            isFirstBattle = false;
-        }
-
         // 进入战斗：普通节点按进度顺序；地图 Boss 节点强制使用当前岛屿的 type=boss 关卡
         activeBattleFromBossMapNode = battleFromBossMapNode;
-        int levelIndex = nextBattleLevelIndex;
-        currentLevelInfo = LevelManager.Instance.GetLevelByIndex(levelIndex);
+        int islandId = GetBattleIslandId();
+        currentIslandId = islandId;
+        int levelIndex = -1;
 
         if (battleFromBossMapNode)
         {
-            int islandId = GetBattleIslandId();
             if (LevelManager.Instance.TryGetBossLevelForIsland(islandId, out LevelInfo bossLevel, out int bossLevelIndex))
             {
                 currentLevelInfo = bossLevel;
@@ -633,12 +671,35 @@ public class MainGameManager : Singleton<MainGameManager>
             }
             else
             {
-                Debug.LogWarning($"Boss 地图节点但岛屿 {islandId} 未配置 type=boss 的关卡，回退为顺序关卡 index={levelIndex}");
+                Debug.LogWarning($"Boss 地图节点但岛屿 {islandId} 未配置 type=boss 的关卡，回退为该岛顺序关卡");
+                LevelManager.Instance.TryGetNthNonBossLevelForIsland(islandId, islandNonBossProgress, out currentLevelInfo, out levelIndex);
+            }
+        }
+        else if (!LevelManager.Instance.TryGetNthNonBossLevelForIsland(islandId, islandNonBossProgress, out currentLevelInfo, out levelIndex))
+        {
+            Debug.LogWarning($"岛屿 {islandId} 第 {islandNonBossProgress} 个非 Boss 关不存在，尝试 Boss 关");
+            if (!LevelManager.Instance.TryGetBossLevelForIsland(islandId, out currentLevelInfo, out levelIndex))
+            {
+                currentLevelInfo = LevelManager.Instance.GetLevelByIndex(0);
+                levelIndex = 0;
             }
         }
 
+        if (levelIndex < 0)
+            levelIndex = currentLevelInfo != null ? currentLevelInfo.level : 0;
+
         activeBattleLevelIndex = levelIndex;
-        playerLevel = levelIndex;
+        nextBattleLevelIndex = levelIndex;
+
+        int levelHeight = currentLevelInfo != null ? currentLevelInfo.height : 0;
+        bool heightChanged = boardManager != null && levelHeight > 0 && boardManager.Height != levelHeight;
+        if (boardManager != null && (isFirstBattle || heightChanged))
+        {
+            boardManager.ClearBoard();
+            boardManager.InitializeBoard(-1, levelHeight > 0 ? levelHeight : -1);
+            boardManager.GenerateRandomColors();
+            isFirstBattle = false;
+        }
 
         bool isBossFight = LevelManager.IsBossLevel(currentLevelInfo);
         
@@ -1802,6 +1863,36 @@ public class MainGameManager : Singleton<MainGameManager>
         if (connectedTiles.Count == 0) // 如果没有连通格子，不执行消除
             return;
 
+        TileCell startTile = boardManager.GetTile(startPos);
+        TileColor waveColor = startTile != null ? startTile.Color : TileColor.Red;
+        List<Vector2Int> originalConnectedTiles = new List<Vector2Int>(connectedTiles);
+        bool hasAllyChangeColorAndUse = HasEquippedColorSkill(waveColor, "allyChangeColorAndUse", out _);
+        bool hasAllyTileUse = HasEquippedColorSkill(waveColor, "allyTileUse", out _);
+        Dictionary<Vector2Int, TileColor> delayedAllyTileWaves = new Dictionary<Vector2Int, TileColor>();
+
+        if ((hasAllyChangeColorAndUse || hasAllyTileUse) && allyManager != null)
+        {
+            foreach (Ally ally in GetAlliesAdjacentToTiles(originalConnectedTiles))
+            {
+                Vector2Int allyPos = ally.GridPosition;
+                TileCell allyTile = boardManager.GetTile(allyPos);
+                if (allyTile == null || allyTile.IsDirty || allyTile.IsDisabled)
+                    continue;
+
+                TileColor independentWaveColor = allyTile.Color;
+                if (hasAllyChangeColorAndUse)
+                {
+                    allyTile.SetColor(waveColor);
+                    independentWaveColor = waveColor;
+                    if (!connectedTiles.Contains(allyPos))
+                        connectedTiles.Add(allyPos);
+                }
+
+                if (hasAllyTileUse)
+                    delayedAllyTileWaves[allyPos] = independentWaveColor;
+            }
+        }
+
         // 标记正在被消除的tile，这样它们的高亮就不会被清除
         foreach (var pos in connectedTiles)
         {
@@ -1817,9 +1908,6 @@ public class MainGameManager : Singleton<MainGameManager>
         earlyTurnEndScheduled = false;
         currentState = GameState.Processing;
 
-        // 获取起始格子的颜色
-        TileCell startTile = boardManager.GetTile(startPos);
-        TileColor waveColor = startTile != null ? startTile.Color : TileColor.Red;
         int colorIndex = (int)waveColor; // TileColor枚举值：Red=0, Yellow=1, Blue=2, Green=3
         bool recreateSameColorAfterGravity = isManualWave
             && HasEquippedColorSkill(waveColor, "recreateSameColor", out string recreateSameIdentifier)
@@ -1995,6 +2083,10 @@ public class MainGameManager : Singleton<MainGameManager>
         // 如果有frontAndBack技能，需要创建两倍的wave（向前和向后）
         int waveCountMultiplier = hasFrontAndBack ? 2 : 1;
         waveGroupActiveWaveCount[currentWaveGroupId] = connectedTiles.Count * waveCountMultiplier;
+        SetAllyDamageBonusForWaveGroup(
+            currentWaveGroupId,
+            waveColor,
+            waveGroupActiveWaveCount[currentWaveGroupId]);
         
         // 记录统计：wave group生成（总共生成/消除了几次）
         if (StatisticsManager.Instance != null)
@@ -2022,6 +2114,14 @@ public class MainGameManager : Singleton<MainGameManager>
             boardManager.RemoveTile(pos);
             waveIndex++;
         }
+
+        foreach (var delayedWave in delayedAllyTileWaves)
+        {
+            // 若未被 allyChangeColorAndUse 并入主 wave，此处消耗原 Ally 脚下的 tile。
+            if (!connectedTiles.Contains(delayedWave.Key))
+                boardManager.RemoveTile(delayedWave.Key);
+        }
+        ScheduleIndependentAllyTileWaves(delayedAllyTileWaves);
         
         // shieldExplosion 先于生成护盾类技能，使用生成波前的护盾
         ApplyShieldExplosionForWaveGroup(waveColor, firstTilePos);
@@ -2034,6 +2134,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
         ApplyShieldWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
         ApplySoloShieldForWaveGroup(waveColor, tilesUsed, firstTilePos);
+        ApplyAllyShieldForWaveGroup(waveColor, firstTilePos);
 
         // 立即应用重力（与波浪移动同时进行）
         // 等待一小段时间让消除动画完成，然后开始重力
@@ -2108,6 +2209,93 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         return false;
+    }
+
+    private List<Ally> GetAlliesAdjacentToTiles(IList<Vector2Int> tilePositions)
+    {
+        List<Ally> result = new List<Ally>();
+        if (allyManager == null || tilePositions == null)
+            return result;
+
+        foreach (Ally ally in allyManager.GetLivingAllies())
+        {
+            foreach (Vector2Int tilePos in tilePositions)
+            {
+                if (!IsAdjacent(ally.GridPosition, tilePos))
+                    continue;
+
+                result.Add(ally);
+                break;
+            }
+        }
+        return result;
+    }
+
+    private void ScheduleIndependentAllyTileWaves(Dictionary<Vector2Int, TileColor> delayedWaves)
+    {
+        if (delayedWaves == null || delayedWaves.Count == 0)
+            return;
+
+        List<KeyValuePair<Vector2Int, TileColor>> waveSnapshot =
+            new List<KeyValuePair<Vector2Int, TileColor>>(delayedWaves);
+        BeginDelayedSkillEffect();
+        DOVirtual.DelayedCall(0.5f, () =>
+        {
+            foreach (var delayedWave in waveSnapshot)
+                CreateIndependentAllyTileWave(delayedWave.Key, delayedWave.Value);
+
+            EndDelayedSkillEffect();
+        });
+    }
+
+    private void CreateIndependentAllyTileWave(Vector2Int gridPos, TileColor color)
+    {
+        if (boardManager == null || wavePrefab == null)
+            return;
+
+        currentWaveGroupId++;
+        int groupId = currentWaveGroupId;
+        waveGroupTotalDamage[groupId] = 0f;
+        waveGroupActiveWaveCount[groupId] = 1;
+        waveGroupColor[groupId] = color;
+        waveGroupAddDamageWhenPass[groupId] = 0f;
+        waveGroupHasDamage[groupId] = false;
+        waveGroupPassedSameColorTiles[groupId] = new HashSet<Vector2Int>();
+        waveGroupEnemyHitCounts[groupId] = new Dictionary<Enemy, int>();
+        pendingWaveGroups.Add(groupId);
+        SetAllyDamageBonusForWaveGroup(groupId, color, 1);
+
+        Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
+        CreateWave(worldPos, color, gridPos, groupId, true, false, 1f, false, 0, 1, false, false);
+    }
+
+    private void SetAllyDamageBonusForWaveGroup(int groupId, TileColor color, int waveCount)
+    {
+        waveGroupAllyDamageBonusPerWave[groupId] = 0f;
+        if (waveCount <= 0
+            || allyManager == null
+            || !HasEquippedColorSkill(color, "allyIncreaseDamage", out string identifier))
+            return;
+
+        int value = SkillManager.Instance.GetSkillValue(identifier);
+        float groupBonus = allyManager.GetTotalCurrentHealth() * value / 100f;
+        waveGroupAllyDamageBonusPerWave[groupId] = groupBonus / waveCount;
+    }
+
+    private void ApplyAllyShieldForWaveGroup(TileColor color, Vector2Int displayPos)
+    {
+        if (PlayerManager.Instance == null
+            || allyManager == null
+            || !HasEquippedColorSkill(color, "allyIncreaseShield", out string identifier))
+            return;
+
+        int value = SkillManager.Instance.GetSkillValue(identifier);
+        int shield = Mathf.FloorToInt(allyManager.GetTotalCurrentHealth() * value / 100f);
+        if (shield <= 0)
+            return;
+
+        PlayerManager.Instance.AddShield(shield);
+        DamageNumber.CreateDamageNumber(shield, boardManager.GridToWorldPosition(displayPos), true);
     }
 
     private void CreateWaveFromLargestTileGroup(TileColor? requiredColor, TileColor? excludedColor)
@@ -2629,6 +2817,7 @@ public class MainGameManager : Singleton<MainGameManager>
             {
                 waveGroupEnemyHitCounts.Remove(waveGroupId);
             }
+            waveGroupAllyDamageBonusPerWave.Remove(waveGroupId);
             
             // 记录wave group的总伤害
             if (waveGroupTotalDamage.ContainsKey(waveGroupId) && waveGroupColor.ContainsKey(waveGroupId))
@@ -2685,9 +2874,13 @@ public class MainGameManager : Singleton<MainGameManager>
                 }
             }
         }
+
+        ApplyAllyHealthIncrease(waveColor, totalDamage);
         
         // 检查summonAttack技能（召唤物集体向右侧发射投射物）
         CheckSummonAttack(waveGroupId);
+        ApplyAllyMoveForwardDamage(waveGroupId, waveColor);
+        ApplyKillAllWithAlly(waveGroupId, waveColor);
         
         // 检查noAttackNoCost技能（如果整个wave group没有造成伤害，不进入敌人回合）
         bool hasDamage = waveGroupHasDamage.ContainsKey(waveGroupId) && waveGroupHasDamage[waveGroupId];
@@ -2723,6 +2916,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 waveGroupActiveWaveCount.Remove(waveGroupId);
                 waveGroupColor.Remove(waveGroupId);
                 waveGroupHasDamage.Remove(waveGroupId);
+                waveGroupAllyDamageBonusPerWave.Remove(waveGroupId);
                 pendingWaveGroups.Remove(waveGroupId);
                 
                 
@@ -2744,6 +2938,7 @@ public class MainGameManager : Singleton<MainGameManager>
         waveGroupActiveWaveCount.Remove(waveGroupId);
         waveGroupColor.Remove(waveGroupId);
         waveGroupHasDamage.Remove(waveGroupId);
+        waveGroupAllyDamageBonusPerWave.Remove(waveGroupId);
         pendingWaveGroups.Remove(waveGroupId);
         
         // 检查是否所有wave group都完成了
@@ -2902,6 +3097,117 @@ public class MainGameManager : Singleton<MainGameManager>
         });
     }
     
+    private void ApplyAllyHealthIncrease(TileColor color, float totalWaveDamage)
+    {
+        if (allyManager == null
+            || !HasEquippedColorSkill(color, "allyHPIncrease", out string identifier))
+            return;
+
+        int value = SkillManager.Instance.GetSkillValue(identifier);
+        int healthIncrease = Mathf.FloorToInt(totalWaveDamage * value / 100f);
+        if (healthIncrease <= 0)
+            return;
+
+        foreach (Ally ally in allyManager.GetLivingAllies())
+            ally.IncreaseMaxHealth(healthIncrease);
+    }
+
+    private void ApplyAllyMoveForwardDamage(int waveGroupId, TileColor color)
+    {
+        if (allyManager == null
+            || boardManager == null
+            || enemyManager == null
+            || !HasEquippedColorSkill(color, "allyMoveForwardDamgeVerticle", out _))
+            return;
+
+        List<Ally> allies = allyManager.GetLivingAllies();
+        allies.Sort((a, b) => b.GridPosition.x.CompareTo(a.GridPosition.x));
+
+        foreach (Ally ally in allies)
+        {
+            Vector2Int targetPos = ally.GridPosition + Vector2Int.right;
+            if (targetPos.x >= boardManager.Width
+                || allyManager.HasAllyAtPosition(targetPos)
+                || HasLivingEnemyAtPosition(targetPos))
+                continue;
+
+            ally.MoveTo(targetPos);
+        }
+
+        const int damage = 20; // 与 summonAttack 当前逻辑一致，使用其基础攻击力。
+        float totalDamage = 0f;
+        foreach (Ally ally in allies)
+        {
+            if (ally == null || ally.IsDead)
+                continue;
+
+            ally.TryPlayAtkAnimation();
+            foreach (Enemy enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy != null && !enemy.IsDead && enemy.GridPosition.x == ally.GridPosition.x)
+                    totalDamage += enemy.TakeDamage(damage, Vector3.right, false, 0, 0f);
+            }
+
+            if (currentBoss != null
+                && !currentBoss.IsDead
+                && currentBoss.GridPosition.x == ally.GridPosition.x)
+                totalDamage += currentBoss.TakeDamage(damage, Vector3.right, false, 0, 0f);
+        }
+
+        if (totalDamage > 0)
+            RecordWaveDamage(waveGroupId, totalDamage);
+    }
+
+    private bool HasLivingEnemyAtPosition(Vector2Int gridPos)
+    {
+        if (enemyManager != null)
+        {
+            foreach (Enemy enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy != null && !enemy.IsDead && enemy.GridPosition == gridPos)
+                    return true;
+            }
+        }
+
+        return currentBoss != null && !currentBoss.IsDead && currentBoss.GridPosition == gridPos;
+    }
+
+    private void ApplyKillAllWithAlly(int waveGroupId, TileColor color)
+    {
+        if (allyManager == null
+            || !HasEquippedColorSkill(color, "killAllWithAlly", out string identifier))
+            return;
+
+        List<Ally> allies = allyManager.GetLivingAllies();
+        if (allies.Count == 0)
+            return;
+
+        int value = SkillManager.Instance.GetSkillValue(identifier);
+        int currentHealthTotal = 0;
+        foreach (Ally ally in allies)
+            currentHealthTotal += ally.CurrentHealth;
+
+        int damage = Mathf.FloorToInt(currentHealthTotal * value / 100f);
+        float totalDamage = 0f;
+        if (damage > 0 && enemyManager != null)
+        {
+            foreach (Enemy enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy != null && !enemy.IsDead)
+                    totalDamage += enemy.TakeDamage(damage, Vector3.right, false, 0, damage);
+            }
+
+            if (currentBoss != null && !currentBoss.IsDead)
+                totalDamage += currentBoss.TakeDamage(damage, Vector3.right, false, 0, damage);
+        }
+
+        if (totalDamage > 0)
+            RecordWaveDamage(waveGroupId, totalDamage);
+
+        foreach (Ally ally in allies)
+            ally.Die();
+    }
+
     /// <summary>
     /// 检查并执行summonAttack技能（召唤物集体向右侧发射投射物）
     /// </summary>
@@ -3288,54 +3594,31 @@ public class MainGameManager : Singleton<MainGameManager>
                     // Boss执行技能（TakeAction）
                     currentBoss.TakeAction();
                     
-                    // 使用技能后等待0.5秒
+                    // 使用技能后等待，再执行小怪批次，最后出兵
                     DOVirtual.DelayedCall(1.2f, () =>
                     {
-                        // 然后生成新敌人（如果需要）
-                        bool normalSpawnSucceeded = false;
                         if (enemyManager != null)
                         {
-                            // 检查是否还有敌人可以生成
-                            if (enemyManager.currentSpawnIndex < enemyManager.remainingEnemies.Count)
+                            enemyManager.ExecuteEnemyTurnBatch(() =>
                             {
-                                enemyManager.SpawnEnemyEachTurn();
-                                normalSpawnSucceeded = true;
-                            }
-                        }
-                        
-                        // 如果正常生成失败（所有敌人已生成完），则从boss战敌人列表循环生成
-                        if (!normalSpawnSucceeded)
-                        {
-                            SpawnBossBattleEnemy();
-                        }
-                        
-                        // 等待一小段时间让新敌人生成完成，然后执行其他敌人批次行动
-                        DOVirtual.DelayedCall(0.2f, () =>
-                        {
-                            if (enemyManager != null)
-                            {
-                                enemyManager.ExecuteEnemyTurnBatch(() =>
+                                bool spawned = SpawnEnemiesAfterEnemyActions();
+                                float spawnWait = spawned ? Enemy.SpawnEnterDuration + 0.05f : 0.05f;
+                                DOVirtual.DelayedCall(spawnWait, () =>
                                 {
-                                    // 敌人行动完成后，检查胜利条件
-                                    DOVirtual.DelayedCall(0.1f, () =>
+                                    if (currentBoss != null && currentBoss.IsDead)
                                     {
-                                        // 检查boss是否死亡
-                                        if (currentBoss != null && currentBoss.IsDead)
-                                        {
-                                            CompleteLevel();
-                                            return;
-                                        }
-                                        
-                                        // 否则显示"Player Turn" banner，然后进入玩家回合
-                                        ShowPlayerTurnBanner();
-                                    });
+                                        CompleteLevel();
+                                        return;
+                                    }
+                                    
+                                    ShowPlayerTurnBanner();
                                 });
-                            }
-                            else
-                            {
-                                ShowPlayerTurnBanner();
-                            }
-                        });
+                            });
+                        }
+                        else
+                        {
+                            ShowPlayerTurnBanner();
+                        }
                     });
                 }
                 else
@@ -3347,30 +3630,22 @@ public class MainGameManager : Singleton<MainGameManager>
         }
         else
         {
-            // 普通战斗：先生成新敌人，然后执行敌人批次行动
+            // 普通战斗：先行动，再按 enemyPerRound 出兵
             if (enemyManager != null)
             {
-                // 先生成新敌人
-                enemyManager.SpawnEnemyEachTurn();
-                
-                // 等待一小段时间让新敌人生成完成，然后执行敌人批次行动
-                DOVirtual.DelayedCall(0.2f, () =>
+                enemyManager.ExecuteEnemyTurnBatch(() =>
                 {
-                    enemyManager.ExecuteEnemyTurnBatch(() =>
+                    bool spawned = SpawnEnemiesAfterEnemyActions();
+                    float spawnWait = spawned ? Enemy.SpawnEnterDuration + 0.05f : 0.05f;
+                    DOVirtual.DelayedCall(spawnWait, () =>
                     {
-                        // 敌人行动完成后，检查胜利条件
-                        DOVirtual.DelayedCall(0.1f, () =>
+                        if (enemyManager != null && enemyManager.CanCompleteLevel())
                         {
-                            // 检查是否可以完成关卡（所有敌人死亡且没有剩余敌人可生成）
-                            if (enemyManager != null && enemyManager.CanCompleteLevel())
-                            {
-                                CompleteLevel();
-                                return;
-                            }
-                            
-                            // 否则显示"Player Turn" banner，然后进入玩家回合
-                            ShowPlayerTurnBanner();
-                        });
+                            CompleteLevel();
+                            return;
+                        }
+                        
+                        ShowPlayerTurnBanner();
                     });
                 });
             }
@@ -3497,42 +3772,61 @@ public class MainGameManager : Singleton<MainGameManager>
     }
     
     /// <summary>
+    /// 敌人行动结束后加载新敌人
+    /// </summary>
+    private bool SpawnEnemiesAfterEnemyActions()
+    {
+        if (enemyManager == null)
+            return false;
+        
+        if (enemyManager.HasRemainingEnemiesToSpawn())
+            return enemyManager.SpawnEnemyEachTurn();
+        
+        if (currentBoss != null && !currentBoss.IsDead)
+            return SpawnBossBattleEnemy();
+        
+        return false;
+    }
+    
+    /// <summary>
     /// Boss战中每回合召唤小怪
     /// </summary>
-    private void SpawnBossBattleEnemy()
+    private bool SpawnBossBattleEnemy()
     {
-        if (currentBoss == null || currentBoss.IsDead || bossBattleEnemies.Count == 0)
-            return;
+        if (currentBoss == null || currentBoss.IsDead || bossBattleEnemies.Count == 0 || enemyManager == null)
+            return false;
+        
+        int count = enemyManager.GetEnemyPerRound();
+        bool spawned = false;
+        for (int i = 0; i < count; i++)
+        {
+            if (bossBattleEnemies.Count == 0)
+                break;
             
-        // 如果所有敌人都召唤完了，从头开始
-        if (bossBattleEnemyIndex >= bossBattleEnemies.Count)
-        {
-            bossBattleEnemyIndex = 0;
+            if (bossBattleEnemyIndex >= bossBattleEnemies.Count)
+                bossBattleEnemyIndex = 0;
+            
+            EnemySpawnInfo spawnInfo = bossBattleEnemies[bossBattleEnemyIndex];
+            bossBattleEnemyIndex++;
+            if (SpawnBossBattleEnemyFromInfo(spawnInfo.identifier))
+                spawned = true;
         }
-        
-        EnemySpawnInfo spawnInfo = bossBattleEnemies[bossBattleEnemyIndex];
-        bossBattleEnemyIndex++;
-        
-        // 每次只生成一个敌人（从spawnInfo.count中取1个）
-        if (enemyManager != null)
-        {
-            SpawnBossBattleEnemyFromInfo(spawnInfo.identifier);
-        }
+        return spawned;
     }
     
     /// <summary>
     /// 从信息生成Boss战中的敌人
     /// </summary>
-    private void SpawnBossBattleEnemyFromInfo(string identifier)
+    private bool SpawnBossBattleEnemyFromInfo(string identifier)
     {
         if (enemyManager == null || boardManager == null || string.IsNullOrEmpty(identifier))
-            return;
+            return false;
             
         // 从enemyInfoMap获取敌人信息
         if (!CSVLoader.Instance.enemyInfoMap.ContainsKey(identifier))
         {
             Debug.LogWarning($"Enemy identifier not found: {identifier}");
-            return;
+            return false;
         }
         
         EnemyInfo enemyInfo = CSVLoader.Instance.enemyInfoMap[identifier];
@@ -3548,7 +3842,7 @@ public class MainGameManager : Singleton<MainGameManager>
         if (y < 0)
         {
             Debug.LogWarning("无法找到可用的敌人生成位置");
-            return;
+            return false;
         }
         
         Vector2Int gridPos = new Vector2Int(x, y);
@@ -3582,6 +3876,8 @@ public class MainGameManager : Singleton<MainGameManager>
         
         // 添加到EnemyManager
         enemyManager.ActiveEnemies.Add(enemy);
+        enemy.PlaySpawnEnterAnimation();
+        return true;
     }
     
     /// <summary>
@@ -3810,25 +4106,25 @@ public class MainGameManager : Singleton<MainGameManager>
             return mapController.GetCurrentIslandId();
         }
 
-        LevelInfo nextLevel = LevelManager.Instance.GetLevelByIndex(nextBattleLevelIndex);
-        return nextLevel != null ? nextLevel.island : 0;
+        return currentIslandId;
     }
 
     /// <summary>
-    /// 战斗胜利后推进关卡进度（Boss 关可能早于顺序 index，需跳过以免重复）
+    /// 战斗胜利后推进岛屿内非 Boss 关进度
     /// </summary>
     private void AdvanceBattleLevelProgress()
     {
-        int completedIndex = activeBattleLevelIndex >= 0 ? activeBattleLevelIndex : nextBattleLevelIndex;
-        nextBattleLevelIndex++;
-        if (LevelManager.IsBossLevel(currentLevelInfo) && nextBattleLevelIndex <= completedIndex)
-        {
-            nextBattleLevelIndex = completedIndex + 1;
-        }
-
-        playerLevel = nextBattleLevelIndex;
+        AdvanceIslandBattleProgress();
         activeBattleLevelIndex = -1;
         activeBattleFromBossMapNode = false;
+    }
+
+    private void AdvanceIslandBattleProgress()
+    {
+        if (currentLevelInfo == null || !LevelManager.IsBossLevel(currentLevelInfo))
+            islandNonBossProgress++;
+
+        playerLevel++;
     }
 
     private bool TryHandleGameWin()
@@ -3846,21 +4142,11 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         bool isGameWin = false;
-        if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null && CSVLoader.Instance.levelInfoMap.Count > 0)
+        if (LevelManager.IsBossLevel(currentLevelInfo)
+            && LevelManager.Instance != null
+            && LevelManager.Instance.GetNextIslandId(currentLevelInfo.island) < 0)
         {
-            int maxLevel = -1;
-            foreach (var kvp in CSVLoader.Instance.levelInfoMap)
-            {
-                if (kvp.Value.level > maxLevel)
-                {
-                    maxLevel = kvp.Value.level;
-                }
-            }
-
-            if (maxLevel >= 0 && nextBattleLevelIndex > maxLevel)
-            {
-                isGameWin = true;
-            }
+            isGameWin = true;
         }
 
         if (isGameWin && GameDataManager.Instance != null)
@@ -3923,11 +4209,10 @@ public class MainGameManager : Singleton<MainGameManager>
 
         waitingForNextIslandSelection = true;
         waitingIslandId = currentLevelInfo.island;
-
-        LevelInfo nextLevel = LevelManager.Instance != null
-            ? LevelManager.Instance.GetLevelByIndex(nextBattleLevelIndex)
-            : null;
-        waitingNextIslandId = nextLevel != null ? nextLevel.island : waitingIslandId + 1;
+        int nextIsland = LevelManager.Instance != null
+            ? LevelManager.Instance.GetNextIslandId(currentLevelInfo.island)
+            : waitingIslandId + 1;
+        waitingNextIslandId = nextIsland >= 0 ? nextIsland : waitingIslandId + 1;
     }
 
     public bool ShouldShowNextIslandButton(int currentIslandId)
@@ -3948,6 +4233,8 @@ public class MainGameManager : Singleton<MainGameManager>
         waitingForNextIslandSelection = false;
         waitingIslandId = -1;
         waitingNextIslandId = -1;
+        currentIslandId = targetIslandId;
+        islandNonBossProgress = 0;
 
         mapController.ClearForcedIsland();
         mapController.EnterIslandAndReset(targetIslandId);

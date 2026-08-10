@@ -53,6 +53,19 @@ public class SpriteRenderAnim : MonoBehaviour
     }
 
     /// <summary>
+    /// 收集用于淡入淡出的可见渲染器（不含 flash）
+    /// </summary>
+    public void CollectVisualRenderers(HashSet<SpriteRenderer> into)
+    {
+        if (into == null)
+            return;
+        if (mainRender != null)
+            into.Add(mainRender);
+        if (backColorRender != null)
+            into.Add(backColorRender);
+    }
+
+    /// <summary>
     /// 播放动画
     /// </summary>
     /// <param name="sprites">sprite数组</param>

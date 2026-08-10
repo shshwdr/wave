@@ -8,33 +8,32 @@ hurtDamageIncrease,hurtDamageIncrease,damage increase {0}% if lost hp last turn,
 Boss Echo,Boss Echo,Hitting a normal enemy also deals {0}% damage to the Boss.,bossEcho,攻击|boss,,red,,50,1,3,3,10,,4,,1
 Minion Echo,Minion Echo,Hitting the Boss deals {0}% damage to a random normal enemies.,minionEcho,攻击|boss,,blue,,50,1,3,3,10,,4,,1
 bossDamage,bossDamage,Damage to Bosses +{0}%,bossDamage,攻击|boss,,blue,,100,1,3,3,10,,4,,1
-executeThresholdIncrease,executeThresholdIncrease,Execute Threshold +{0}% (Instantly executes enemies if their remaining HP is <10% after an attack). Ineffective against Bosses.,executeThresholdIncrease,攻击|斩杀,,blue,,10|20,1,3,3,3,,,,1
+executeThresholdIncrease,executeThresholdIncrease,Instantly executes enemies if their remaining HP is <{0}% after the attack. Ineffective to Bosses.,executeThresholdIncrease,攻击|斩杀,,blue,,10|20,1,3,3,3,,4,,1
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,10,,,,1
 ,,太op了改一改 - 不改了，把概率调低就好,,,,,,,,,,10,,,,1
-hitAddColor,Spread,"When this wave hits an enemy, convert one random tile to this color.",hitAddColor,多,"When this wave hits an enemy, convert one random tile to this color.",blue,,1|2,1,3,3,2,,4,,1
-more,Color Surge, +{0}% spawn chance.,more,多,This color tile has {0}% higher chance to appear.,red,,60|100|150,1,3,3,10,,4,,1
-addDamageWhenPass,Resonant,"When this wave passes a tile of the same color, its damage increases by {0}%",addDamageWhenPass,攻击|多,"When this wave passes a tile of the same color, its damage increases by {0}%",red,,30|50,1,3,3,10,,4,,1
-moreTileMoreDamage,Scale,Waves with over 5 tiles gain +{0}% damage per extra tile.,moreTileMoreDamage,多|攻击,{0}% base damage × tiles used.,red,,10|20,1,3,3,10,,6,,1
+hitAddColor,Spread,"When this wave hits an enemy, convert one random tile to this color.",hitAddColor,多,"When this wave hits an enemy, convert one random tile to this color.",blue,,1|2,1,3,3,2,,8,,1
+more,Color Surge, +{0}% spawn chance.,more,多,This color tile has {0}% higher chance to appear.,red,,60|100|150,1,3,3,7,,4,,1
+addDamageWhenPass,Resonant,"When this wave passes a tile of the same color, its damage increases by {0}%",addDamageWhenPass,攻击|多,"When this wave passes a tile of the same color, its damage increases by {0}%",red,,30|50,1,3,3,7,,4,,1
+moreTileMoreDamage,Scale,Waves with over 5 tiles gain +{0}% damage per extra tile.,moreTileMoreDamage,多|攻击,{0}% base damage × tiles used.,red,,10|20,1,3,3,7,,5,,1
 encourageMoreTiles,Mega Wave,Waves formed from more than {0} tiles deal +100% damage.,encourageMoreTiles,多|攻击,Waves formed from more than {0} tiles deal +150% damage.,yellow,,11|9,1,3,3,10,,2,,1
-All or Nothing,All or Nothing,"Waves formed from more than {0} tiles deal +100% damage, otherwise deal 50% damage",allOrNothing,多|攻击,,red,,9|7,1,3,3,10,,3,,1
-recreateSameColor,recreateSameColor,"When create wave over {0}, create another biggest wave with the same color",recreateSameColor,多|连击,,red,,10|8,1,3,3,10,,,,
-recreateDifferentColor,recreateDifferentColor,"If last wave generated was the same color, create biggest wave with a different color",recreateDifferentColor,多|连击,,blue,,,1,3,3,10,,,,
-recreateSameColorOnKill,recreateSameColorOnKill,"On direct kill, create another wave from the largest same-color group.",recreateSameColorOnKill,多|连击,,yellow,,,1,3,3,10,,,,
-hitSameIncreaseDamage,hitSameIncreaseDamage,Repeated hits on the same enemy gain +{0}% damage each time.,hitSameIncreaseDamage,多|攻击,,green,,20,1,3,3,10,,,,
+All or Nothing,All or Nothing,"Waves formed from more than {0} tiles deal +100% damage, otherwise deal 50% damage",allOrNothing,多|攻击,,red,,9|7,1,3,3,5,,3,,1
+recreateSameColor,recreateSameColor,"When create wave over {0}, create another biggest wave with the same color",recreateSameColor,多|连击,,red,,10|8,1,3,3,3,,6,,
+recreateDifferentColor,recreateDifferentColor,"If last wave generated was the same color, create biggest wave with a different color",recreateDifferentColor,多|连击,,blue,,,1,3,3,3,,6,,
+recreateSameColorOnKill,recreateSameColorOnKill,"On direct kill, create another wave from the largest same-color group.",recreateSameColorOnKill,多|连击,,yellow,,,1,3,3,3,,7,,
+hitSameIncreaseDamage,hitSameIncreaseDamage,Repeated hits on the same enemy gain +{0}% damage each time.,hitSameIncreaseDamage,多|攻击,,green,,20,1,3,3,7,,6,,
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,10,,,,1
 spawnAlly,Summon,Spawn ally (HP = {0}% total wave dmg).,spawnAlly,召唤,Spawn an ally on the grid with HP equal to {0}% of the total damage of this wave.,yellow,,20|40,1,3,3,10,,2,,1
 summonAttack,Ally Volley,"All allies fire forward, dealing damage equal to the wave’s damage.",summonAttack,召唤|攻击,"All allies fire forward, dealing damage equal to the wave’s damage.",blue,,,1,3,3,10,spawnAlly,,,1
-,,"For each ally on board, wave damage increase {0}% of the ally's hp",,召唤,,,,100,,,,10,,,,1
-,, +{0}% damage for each ally,,召唤,,,,20|30,,,,10,,,,1
-,,All allies max hp increase {0}%,,召唤,,,,,,,,10,,,,1
-,,生成的wave与召唤物相邻时，召唤物所在的格子也会变成相同颜色并被消除,,召唤|多,,,,,,,,10,,,,1
-,,生成的wave与召唤物相邻时，召唤物所在的格子会另外独立被消除（这个和上面那个应该互斥）,,召唤|少,,,,,,,,,,,,
-,,召唤物死亡时，本场战斗攻击力+{0}%,,召唤|攻击,,,,,,,,,,,,
-,,召唤物死亡时对全场怪物造成{0}点伤害,,召唤|攻击,,,,,,,,,,,,
-,,所有召唤物向前移动，并对同列敌人造成伤害,,召唤,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,
+allyIncreaseDamage,allyIncreaseDamage,wave damage increase {0}%召唤物当前血量总和,allyIncreaseDamage,召唤,,,,100,,,,10,,,,1
+allyIncreaseShield,allyIncreaseShield,shield increase {0}%召唤物当前血量总和,allyIncreaseShield,召唤,,,,20|30,,,,10,,,,1
+allyHPIncrease,allyHPIncrease,All allies hp and max hp increase {0}% total wave dmg,allyHPIncrease,召唤,,,,10|20,,,,10,,,,1
+allyChangeColorAndUse,allyChangeColorAndUse,消除的tile与召唤物相邻时，召唤物所在的格子也会变成相同颜色消除并一起生成wave,allyChangeColorAndUse,召唤|多,,,,,,,,10,,,,1
+allyTileUse,allyTileUse,消除的tile与召唤物相邻时，召唤物所在的格子会另外独立消除并生成wave（如果和上面同时存在，先结算上面那个，等待0.5秒后结算这个）,allyTileUse,召唤|少,,,,,,,,,,,,
+allyDieIncreaseDamage,allyDieIncreaseDamage,召唤物死亡时，这个颜色本场战斗攻击力+{0}%,allyDieIncreaseDamage,召唤|攻击,,,,,,,,,,,,
+allyMoveForwardDamgeVerticle,allyMoveForwardDamgeVerticle,所有召唤物尝试向前移动，并对同列敌人造成伤害,allyMoveForwardDamgeVerticle,召唤,,,,,,,,,,,,
+killAllWithAlly,killAllWithAlly,对全场敌人造成{0}%召唤物当前血量总和，杀死所有召唤物,killAllWithAlly,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,
 noAttackNoCost,Slip,"If this wave deals no damage, you can immediately move again (once per turn).",noAttackNoCost,少,"If this wave deals no damage, you can immediately move again (once per turn).",red,,,1,4,4,10,,6,,1
 less,Color Drought, -{0}% spawn chance.,less,少,This color tile has {0}% lower chance to appear.,green,,30|50|80,1,3,3,10,,4,,1
@@ -70,7 +69,7 @@ bounty,Bounty, +{0} gold on kill.,bounty,钱|击杀,Killing an enemy with this c
 ,,,,,,,,,,,,,,,,
 待定,,,,,,,,,,,,,,,,
 bounceRandom,bounceRandom,{0}% of Overkill Damage bounces to a random enemy.,bounceRandom,攻击,,blue,,100,0,,,10,,,,
-,,,,,,,,,,,,10,,,,1
+allyDieDoDamage,allyDieDoDamage,召唤物死亡时对全场怪物造成{0}%召唤物最大hp伤害,allyDieDoDamage,召唤|攻击,,,,,,,,,,,,
 ,,,,毒,,,,,,,,10,,,,1
 ,,如果击中的敌人相邻没有敌人，向最近的敌人移动,,位移,,,,,,,,10,,,,1
 ,,,,,,,,,,,,10,,,,1

@@ -241,21 +241,31 @@ public class EnemyManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 本关每回合出兵数量
+    /// </summary>
+    public int GetEnemyPerRound()
+    {
+        if (currentLevelInfo != null && currentLevelInfo.enemyPerRound > 0)
+            return currentLevelInfo.enemyPerRound;
+        return 1;
+    }
+
+    /// <summary>
     /// 生成下一个敌人（从剩余列表中）
     /// </summary>
-    private void SpawnNextEnemy()
+    private bool SpawnNextEnemy()
     {
         if (currentSpawnIndex >= remainingEnemies.Count || boardManager == null || enemyPrefab == null)
-            return;
+            return false;
 
         EnemySpawnInfo spawnInfo = remainingEnemies[currentSpawnIndex];
-        currentSpawnIndex++;
 
         // 从enemyInfoMap获取敌人信息
         if (!CSVLoader.Instance.enemyInfoMap.ContainsKey(spawnInfo.identifier))
         {
             Debug.LogWarning($"Enemy identifier not found: {spawnInfo.identifier}");
-            return;
+            currentSpawnIndex++;
+            return false;
         }
 
         EnemyInfo enemyInfo = CSVLoader.Instance.enemyInfoMap[spawnInfo.identifier];
@@ -270,9 +280,9 @@ public class EnemyManager : MonoBehaviour
         int y = FindAvailableYPosition(x, boardHeight);
         if (y < 0)
         {
-            // 如果找不到可用位置，不生成敌人
+            // 如果找不到可用位置，不消耗队列，下回合再试
             Debug.LogWarning("无法找到可用的敌人生成位置");
-            return;
+            return false;
         }
 
         Vector2Int gridPos = new Vector2Int(x, y);
@@ -305,17 +315,25 @@ public class EnemyManager : MonoBehaviour
         CreateHealthBar(enemy);
         
         activeEnemies.Add(enemy);
+        currentSpawnIndex++;
+        enemy.PlaySpawnEnterAnimation();
+        return true;
     }
 
     /// <summary>
-    /// 每回合生成一个新敌人
+    /// 每回合按 enemyPerRound 生成新敌人
     /// </summary>
-    public void SpawnEnemyEachTurn()
+    public bool SpawnEnemyEachTurn()
     {
-        if (currentSpawnIndex < remainingEnemies.Count)
+        int count = GetEnemyPerRound();
+        bool spawned = false;
+        for (int i = 0; i < count; i++)
         {
-            SpawnNextEnemy();
+            if (!SpawnNextEnemy())
+                break;
+            spawned = true;
         }
+        return spawned;
     }
 
     /// <summary>
@@ -361,14 +379,7 @@ public class EnemyManager : MonoBehaviour
         CreateHealthBar(enemy);
         
         activeEnemies.Add(enemy);
-        
-        // 移动到目标位置
-        Vector3 targetWorldPos = boardManager.GridToWorldPosition(targetGridPos);
-        targetWorldPos += new Vector3(0, spawnOffsetY, 0);
-        
-        float moveDuration = 0.5f;
-        enemyObj.transform.DOMove(targetWorldPos, moveDuration)
-            .SetEase(Ease.OutQuad);
+        enemy.PlaySpawnEnterAnimation();
     }
 
     /// <summary>
@@ -452,226 +463,124 @@ public class EnemyManager : MonoBehaviour
     }
     
     /// <summary>
-    /// 按批次执行敌人行动：先生成新敌人，然后所有移动的敌人移动，然后所有攻击的敌人攻击，然后所有使用特殊技能的敌人按技能顺序执行
+    /// 按批次执行敌人行动：全员左移 → 最左/射程内攻击 → 可用技能 → 盾兵防御。
+    /// 某阶段无人可执行则立刻进入下一阶段。新敌人在外部于本批次结束后加载。
     /// </summary>
-    /// <param name="onComplete">所有行动完成后的回调</param>
     public void ExecuteEnemyTurnBatch(System.Action onComplete = null)
     {
-        // 1. 先生成新敌人（如果需要）
-        // 注意：生成新敌人应该在外部调用，这里只处理已存在的敌人行动
-        
-        // 2. 分类敌人
-        List<Enemy> moveEnemies = new List<Enemy>();
-        List<Enemy> attackEnemies = new List<Enemy>();
+        List<Enemy> aliveEnemies = new List<Enemy>();
         List<Enemy> healEnemies = new List<Enemy>();
         List<Enemy> createFogEnemies = new List<Enemy>();
         List<Enemy> dirtyWaterEnemies = new List<Enemy>();
         List<Enemy> summonEnemies = new List<Enemy>();
-        List<Enemy> shieldEnemies = new List<Enemy>(); // shield怪物列表
+        List<Enemy> shieldEnemies = new List<Enemy>();
         
         foreach (var enemy in activeEnemies.ToList())
         {
             if (enemy == null || enemy.IsDead)
                 continue;
             
-            // 检查是否是shield怪物
-            if (enemy.IsShieldEnemy())
-            {
-                shieldEnemies.Add(enemy);
-            }
+            aliveEnemies.Add(enemy);
             
-            // 先减少冷却时间（模拟TakeAction中的冷却减少逻辑）
+            if (enemy.IsShieldEnemy())
+                shieldEnemies.Add(enemy);
+            
             enemy.ReduceCooldown();
             
-            // 检查敌人是否有主动技能且冷却完成
-            bool hasActiveSkill = enemy.HasActiveSkillReady();
-            string skillName = enemy.GetCurrentSkill();
+            if (!enemy.HasActiveSkillReady())
+                continue;
             
-            if (hasActiveSkill)
+            string skillName = enemy.GetCurrentSkill();
+            if (skillName == "heal")
             {
-                if (skillName == "heal")
-                {
-                    // 检查是否有血量不满的敌人可以治疗
-                    bool hasInjuredEnemy = HasInjuredEnemy();
-                    if (hasInjuredEnemy)
-                    {
-                        healEnemies.Add(enemy);
-                    }
-                    else
-                    {
-                        // 如果所有敌人都是满血，执行移动
-                        if (enemy.IsInAttackRange())
-                        {
-                            attackEnemies.Add(enemy);
-                        }
-                        else
-                        {
-                            moveEnemies.Add(enemy);
-                        }
-                    }
-                }
-                else if (skillName == "createFog")
-                {
-                    createFogEnemies.Add(enemy);
-                }
-                else if (skillName == "dirtyWater")
-                {
-                    dirtyWaterEnemies.Add(enemy);
-                }
-                else if (skillName != null && skillName.StartsWith("summon"))
-                {
-                    summonEnemies.Add(enemy);
-                }
-                else
-                {
-                    // 其他技能，按攻击处理
-                    if (enemy.IsInAttackRange())
-                    {
-                        attackEnemies.Add(enemy);
-                    }
-                    else
-                    {
-                        moveEnemies.Add(enemy);
-                    }
-                }
+                if (HasInjuredEnemy())
+                    healEnemies.Add(enemy);
             }
-            else
+            else if (skillName == "createFog")
             {
-                // 没有主动技能或冷却未完成，检查攻击范围
-                if (enemy.IsInAttackRange())
-                {
-                    attackEnemies.Add(enemy);
-                }
-                else
-                {
-                    moveEnemies.Add(enemy);
-                }
+                createFogEnemies.Add(enemy);
+            }
+            else if (skillName == "dirtyWater")
+            {
+                dirtyWaterEnemies.Add(enemy);
+            }
+            else if (skillName != null && skillName.StartsWith("summon"))
+            {
+                summonEnemies.Add(enemy);
             }
         }
         
-        // 3. 按顺序执行
-        float actionDelay = 0.5f; // 每个批次之间的延迟
-        float currentDelay = 0f;
-        
-        // 3.1 所有移动的敌人移动
-        if (moveEnemies.Count > 0)
-        {
-            DOVirtual.DelayedCall(currentDelay, () =>
-            {
-                foreach (var enemy in moveEnemies)
-                {
-                    if (enemy != null && !enemy.IsDead)
-                    {
-                        enemy.MoveLeft();
-                    }
-                }
-            });
-            currentDelay += 0.5f + actionDelay; // 移动持续时间 + 延迟
-        }
-        
-        // 3.2 所有攻击的敌人攻击
-        if (attackEnemies.Count > 0)
-        {
-            DOVirtual.DelayedCall(currentDelay, () =>
-            {
-                foreach (var enemy in attackEnemies)
-                {
-                    if (enemy != null && !enemy.IsDead)
-                    {
-                        enemy.AttackPlayer();
-                    }
-                }
-            });
-            currentDelay += 0.5f + actionDelay; // 攻击持续时间 + 延迟
-        }
-        
-        // 3.3 所有使用特殊技能的敌人，按技能顺序执行
-        // 3.3.1 先治疗
-        if (healEnemies.Count > 0)
-        {
-            DOVirtual.DelayedCall(currentDelay, () =>
-            {
-                foreach (var enemy in healEnemies)
-                {
-                    if (enemy != null && !enemy.IsDead)
-                    {
-                        // 如果heal技能没有可治疗的敌人，UseSkillDirectly会返回false
-                        // 但这种情况不应该发生，因为我们在分类时已经检查过了
-                        enemy.UseSkillDirectly();
-                    }
-                }
-            });
-            currentDelay += 0.5f + actionDelay;
-        }
-        
-        // 3.3.2 再生成云朵
-        if (createFogEnemies.Count > 0)
-        {
-            DOVirtual.DelayedCall(currentDelay, () =>
-            {
-                foreach (var enemy in createFogEnemies)
-                {
-                    if (enemy != null && !enemy.IsDead)
-                    {
-                        enemy.UseSkillDirectly();
-                    }
-                }
-            });
-            currentDelay += 0.5f + actionDelay;
-        }
-        
-        // 3.3.3 其他技能（dirtyWater, summon等）
-        if (dirtyWaterEnemies.Count > 0)
-        {
-            DOVirtual.DelayedCall(currentDelay, () =>
-            {
-                foreach (var enemy in dirtyWaterEnemies)
-                {
-                    if (enemy != null && !enemy.IsDead)
-                    {
-                        enemy.UseSkillDirectly();
-                    }
-                }
-            });
-            currentDelay += 0.5f + actionDelay;
-        }
-        
-        if (summonEnemies.Count > 0)
-        {
-            DOVirtual.DelayedCall(currentDelay, () =>
-            {
-                foreach (var enemy in summonEnemies)
-                {
-                    if (enemy != null && !enemy.IsDead)
-                    {
-                        enemy.UseSkillDirectly();
-                    }
-                }
-            });
-            currentDelay += 0.5f + actionDelay;
-        }
-        
-        // 3.4 shield怪物执行防御操作（在移动/攻击完成后）
-        if (shieldEnemies.Count > 0)
-        {
-            DOVirtual.DelayedCall(currentDelay, () =>
-            {
-                foreach (var enemy in shieldEnemies)
-                {
-                    if (enemy != null && !enemy.IsDead)
-                    {
-                        enemy.PerformDefense();
-                    }
-                }
-            });
-            currentDelay += 0.5f + actionDelay; // 防御动画持续时间 + 延迟
-        }
-        
-        // 4. 所有行动完成后调用回调
-        DOVirtual.DelayedCall(currentDelay, () =>
+        if (aliveEnemies.Count == 0)
         {
             onComplete?.Invoke();
-        });
+            return;
+        }
+        
+        float phaseDuration = 1f;
+        
+        RunMove();
+        return;
+        
+        void RunMove()
+        {
+            List<Enemy> movers = aliveEnemies.FindAll(e => e != null && !e.IsDead && e.CanMoveLeft());
+            if (movers.Count == 0)
+            {
+                RunAttack();
+                return;
+            }
+            
+            foreach (var enemy in movers)
+                enemy.MoveLeft();
+            DOVirtual.DelayedCall(phaseDuration, RunAttack);
+        }
+        
+        void RunAttack()
+        {
+            List<Enemy> attackers = aliveEnemies.FindAll(e => e != null && !e.IsDead && e.ShouldAttackThisTurn());
+            if (attackers.Count == 0)
+            {
+                RunHeal();
+                return;
+            }
+            
+            foreach (var enemy in attackers)
+                enemy.AttackPlayer();
+            DOVirtual.DelayedCall(phaseDuration, RunHeal);
+        }
+        
+        void RunHeal() => RunSkillPhase(healEnemies, RunFog);
+        void RunFog() => RunSkillPhase(createFogEnemies, RunDirty);
+        void RunDirty() => RunSkillPhase(dirtyWaterEnemies, RunSummon);
+        void RunSummon() => RunSkillPhase(summonEnemies, RunShield);
+        
+        void RunSkillPhase(List<Enemy> skillEnemies, System.Action next)
+        {
+            List<Enemy> ready = skillEnemies.FindAll(e => e != null && !e.IsDead);
+            if (ready.Count == 0)
+            {
+                next();
+                return;
+            }
+            
+            foreach (var enemy in ready)
+                enemy.UseSkillDirectly();
+            DOVirtual.DelayedCall(phaseDuration, () => next());
+        }
+        
+        void RunShield()
+        {
+            List<Enemy> defenders = shieldEnemies.FindAll(e => e != null && e.CanPerformDefense());
+            if (defenders.Count == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+            
+            foreach (var enemy in defenders)
+                enemy.PerformDefense();
+            DOVirtual.DelayedCall(phaseDuration, () => onComplete?.Invoke());
+        }
     }
     
     /// <summary>

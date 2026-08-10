@@ -105,17 +105,86 @@ public class LevelManager : Singleton<LevelManager>
             return false;
         }
 
-        foreach (var kvp in CSVLoader.Instance.levelInfoMap)
+        foreach (int key in CSVLoader.Instance.levelInfoMap.Keys.OrderBy(k => k))
         {
-            if (kvp.Value.island == islandId && IsBossLevel(kvp.Value))
+            LevelInfo info = CSVLoader.Instance.levelInfoMap[key];
+            if (info != null && info.island == islandId && IsBossLevel(info))
             {
-                levelInfo = kvp.Value;
-                levelIndex = kvp.Key;
+                levelInfo = info;
+                levelIndex = key;
                 return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 按 CSV 顺序取指定岛屿的第 n 个非 Boss 关（n 从 0 起）
+    /// </summary>
+    public bool TryGetNthNonBossLevelForIsland(int islandId, int n, out LevelInfo levelInfo, out int levelIndex)
+    {
+        levelInfo = null;
+        levelIndex = -1;
+
+        if (n < 0 || CSVLoader.Instance == null || CSVLoader.Instance.levelInfoMap == null)
+        {
+            return false;
+        }
+
+        int count = 0;
+        foreach (int key in CSVLoader.Instance.levelInfoMap.Keys.OrderBy(k => k))
+        {
+            LevelInfo info = CSVLoader.Instance.levelInfoMap[key];
+            if (info == null || info.island != islandId || IsBossLevel(info))
+                continue;
+
+            if (count == n)
+            {
+                levelInfo = info;
+                levelIndex = key;
+                return true;
+            }
+
+            count++;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 下一个岛屿 id，没有则返回 -1
+    /// </summary>
+    public int GetNextIslandId(int islandId)
+    {
+        int next = int.MaxValue;
+        bool found = false;
+
+        if (CSVLoader.Instance != null && CSVLoader.Instance.levelInfoMap != null)
+        {
+            foreach (var info in CSVLoader.Instance.levelInfoMap.Values)
+            {
+                if (info != null && info.island > islandId && info.island < next)
+                {
+                    next = info.island;
+                    found = true;
+                }
+            }
+        }
+
+        if (CSVLoader.Instance != null && CSVLoader.Instance.islandInfoMap != null)
+        {
+            foreach (int id in CSVLoader.Instance.islandInfoMap.Keys)
+            {
+                if (id > islandId && id < next)
+                {
+                    next = id;
+                    found = true;
+                }
+            }
+        }
+
+        return found ? next : -1;
     }
 
     /// <summary>

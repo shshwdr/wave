@@ -124,15 +124,9 @@ public class MapController : MonoBehaviour
 
     private int GetCurrentLevelIslandId()
     {
-        if (MainGameManager.Instance == null || LevelManager.Instance == null)
+        if (MainGameManager.Instance != null)
         {
-            return 0;
-        }
-
-        LevelInfo levelInfo = LevelManager.Instance.GetLevelByIndex(MainGameManager.Instance.NextBattleLevelIndex);
-        if (levelInfo != null)
-        {
-            return levelInfo.island;
+            return MainGameManager.Instance.CurrentIslandId;
         }
 
         return 0;

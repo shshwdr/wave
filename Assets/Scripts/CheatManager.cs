@@ -29,7 +29,7 @@ public class CheatManager : Singleton<CheatManager>
         HandlePuzzleEditCheats();
     }
 
-    /// <summary>R 重启场景，H 清除全局进度标识，I/O 玩家伤害/死亡，P 秒杀敌人，M 地图全开，C 加 10 金币，K 获得一半最大血量的护盾</summary>
+    /// <summary>R 重启场景，H 清除全局进度标识，I/O 玩家伤害/死亡，P 秒杀敌人，J 杀死一个召唤物，M 地图全开，C 加 10 金币，K 获得一半最大血量的护盾</summary>
     private void HandleGlobalCheats()
     {
         if (Input.GetKeyDown(KeyCode.R))
@@ -73,6 +73,14 @@ public class CheatManager : Singleton<CheatManager>
                 EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
                 enemyManager?.CheatKillAllEnemies();
             }
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.J))
+        {
+            AllyManager allyManager = FindObjectOfType<AllyManager>();
+            bool killed = allyManager != null && allyManager.KillOneAlly();
+            Debug.Log(killed ? "Cheat: 杀死一个召唤物" : "Cheat: 没有可杀死的召唤物");
             return;
         }
 

@@ -10,6 +10,35 @@ public class AllyManager : MonoBehaviour
 
     public List<Ally> ActiveAllies => activeAllies;
 
+    public int GetTotalCurrentHealth()
+    {
+        int total = 0;
+        foreach (var ally in activeAllies)
+        {
+            if (ally != null && !ally.IsDead)
+                total += ally.CurrentHealth;
+        }
+        return total;
+    }
+
+    public List<Ally> GetLivingAllies()
+    {
+        return activeAllies.FindAll(ally => ally != null && !ally.IsDead);
+    }
+
+    public bool KillOneAlly()
+    {
+        foreach (var ally in activeAllies)
+        {
+            if (ally == null || ally.IsDead)
+                continue;
+
+            ally.Die();
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// 添加随从
     /// </summary>

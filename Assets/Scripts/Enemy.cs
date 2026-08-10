@@ -53,8 +53,8 @@ public class Enemy : Character
     // Buff/Debuff系统
     private int vulnerableStacks = 0; // vulnerable层数
     
-    // 首次行动标记（每个敌人第一次行动时跳过）
-    private bool isFirstAction = true;
+
+    public const float SpawnEnterDuration = 0.45f;
 
     public int CurrentHealth => currentHealth;
     public int MaxHealth => maxHealth;
@@ -134,17 +134,6 @@ public class Enemy : Character
         
         // 初始化buff系统
         vulnerableStacks = 0;
-        
-        // 初始化首次行动标记
-        
-        if (isFirstAction && MainGameManager.Instance.IsFirstTurn())
-        {
-            isFirstAction = false;
-        }
-        else
-        {
-            isFirstAction = true;
-        }
         
         // 初始化技能系统
         if (enemyInfo != null)
@@ -595,48 +584,33 @@ public class Enemy : Character
     }
 
     /// <summary>
-    /// 向左移动（基于speed快速跳跃多次）
+    /// 本回合实际可向左移动的格数（碰撞 / 边界）
     /// </summary>
-    public void MoveLeft(float duration = 0.3f)
+    public int GetAvailableMoveSteps()
     {
         if (isDead || enemyInfo == null)
-            return;
-// 如果是第一次行动，跳过并标记为已行动过
-        if (isFirstAction)
-        {
-            isFirstAction = false;
-            return;
-        }
+            return 0;
+
         int speed = enemyInfo.speed;
         if (speed <= 0)
-            speed = 1; // 默认移动1格
+            speed = 1;
 
-        ShowSpawnEffect();
-        // 获取EnemyManager和BoardManager
         EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
-        if (boardManager == null)
-        {
-            boardManager = FindObjectOfType<BoardManager>();
-        }
-        
-        if (boardManager == null)
-            return;
+        AllyManager allyManager = FindObjectOfType<AllyManager>();
 
-        // 计算实际可以移动的步数（检查碰撞）
         int actualSteps = 0;
         for (int step = 1; step <= speed; step++)
         {
             int checkX = gridPosition.x - step;
             if (checkX < 0)
-                break; // 超出左边界
-                
-            // 检查该位置是否有其他敌人或随从
+                break;
+
             bool hasObstacle = false;
             if (enemyManager != null)
             {
                 foreach (var enemy in enemyManager.ActiveEnemies)
                 {
-                    if (enemy != null && !enemy.IsDead && enemy != this && 
+                    if (enemy != null && !enemy.IsDead && enemy != this &&
                         enemy.GridPosition.x == checkX && enemy.GridPosition.y == gridPosition.y)
                     {
                         hasObstacle = true;
@@ -644,25 +618,46 @@ public class Enemy : Character
                     }
                 }
             }
-            
-            // 检查是否有随从
-            if (!hasObstacle)
+
+            if (!hasObstacle && allyManager != null &&
+                allyManager.HasAllyAtPosition(new Vector2Int(checkX, gridPosition.y)))
             {
-                AllyManager allyManager = FindObjectOfType<AllyManager>();
-                if (allyManager != null && allyManager.HasAllyAtPosition(new Vector2Int(checkX, gridPosition.y)))
-                {
-                    hasObstacle = true;
-                }
+                hasObstacle = true;
             }
-            
+
             if (hasObstacle)
                 break;
-                
+
             actualSteps = step;
         }
-        
+
+        return actualSteps;
+    }
+
+    public bool CanMoveLeft()
+    {
+        return GetAvailableMoveSteps() > 0;
+    }
+
+    /// <summary>
+    /// 向左移动（基于speed快速跳跃多次）
+    /// </summary>
+    public void MoveLeft(float duration = 0.3f)
+    {
+        if (isDead || enemyInfo == null)
+            return;
+
+        int actualSteps = GetAvailableMoveSteps();
         if (actualSteps == 0)
-            return; // 无法移动
+            return;
+
+        ShowSpawnEffect();
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (boardManager == null)
+            boardManager = FindObjectOfType<BoardManager>();
+        
+        if (boardManager == null)
+            return;
 
         // 每次跳跃的持续时间（快速跳跃）
         float singleJumpDuration = duration / actualSteps;
@@ -719,6 +714,14 @@ public class Enemy : Character
     }
     
     /// <summary>
+    /// 本回合是否应该攻击：最左侧，或射程覆盖玩家/随从
+    /// </summary>
+    public bool ShouldAttackThisTurn()
+    {
+        return IsAtLeftEdge() || IsInAttackRange();
+    }
+
+    /// <summary>
     /// 检查是否在攻击范围内（包括随从）
     /// </summary>
     public bool IsInAttackRange()
@@ -764,14 +767,6 @@ public class Enemy : Character
     {
         if (isDead || enemyInfo == null)
             return;
-        
-        
-        // 如果是第一次行动，跳过并标记为已行动过
-        if (isFirstAction)
-        {
-            isFirstAction = false;
-            return;
-        }
             
         int damage = enemyInfo.attack;
         if (damage <= 0)
@@ -990,36 +985,22 @@ public class Enemy : Character
     }
     
     /// <summary>
-    /// 敌人行动（每回合调用）
+    /// 敌人行动（每回合调用）：移动、攻击、技能可同时发生
     /// </summary>
     public virtual void TakeAction()
     {
         if (isDead)
             return;
-        
-            
-        // 1. 检查主动技能（冷却时间>0）
-        if (skillCooldown > 0)
-        {
-            currentCooldown--;
-            if (currentCooldown <= 0)
-            {
-                // 使用主动技能
-                UseSkill();
-                currentCooldown = skillCooldown; // 重置冷却
-                return;
-            }
-        }
-        
-        // 2. 检查是否在攻击范围内
-        if (IsInAttackRange())
+
+        ReduceCooldown();
+        MoveLeft();
+        if (ShouldAttackThisTurn())
         {
             AttackPlayer();
         }
-        else
+        if (HasActiveSkillReady())
         {
-            // 3. 否则向左移动
-            MoveLeft();
+            UseSkillDirectly();
         }
     }
     
@@ -1061,13 +1042,6 @@ public class Enemy : Character
     {
         if (string.IsNullOrEmpty(currentSkill))
             return false;
-        
-        // 如果是第一次行动，跳过并标记为已行动过
-        if (isFirstAction)
-        {
-            isFirstAction = false;
-            return false;
-        }
         
         bool skillUsed = false;
         
@@ -1428,6 +1402,7 @@ public class Enemy : Character
             
             // 创建血条
             enemyManager.CreateHealthBar(newEnemy);
+            newEnemy.PlaySpawnEnterAnimation();
         }
     }
 
@@ -1688,6 +1663,61 @@ public class Enemy : Character
     public bool IsShieldEnemy()
     {
         return hasShield;
+    }
+
+    public bool CanPerformDefense()
+    {
+        return hasShield && !isDead && !hasAttackedThisTurn;
+    }
+
+    /// <summary>
+    /// 从落点格子右侧 fade in 并移入
+    /// </summary>
+    public void PlaySpawnEnterAnimation(float duration = -1f)
+    {
+        if (duration < 0f)
+            duration = SpawnEnterDuration;
+
+        if (boardManager == null)
+            boardManager = FindObjectOfType<BoardManager>();
+
+        Vector3 targetPos = transform.position;
+        float offsetX = 1f;
+        if (boardManager != null)
+        {
+            Vector3 here = boardManager.GridToWorldPosition(gridPosition);
+            Vector3 right = boardManager.GridToWorldPosition(gridPosition + Vector2Int.right);
+            offsetX = right.x - here.x;
+            if (Mathf.Approximately(offsetX, 0f))
+                offsetX = 1f;
+        }
+
+        transform.position = targetPos + Vector3.right * offsetX;
+
+        HashSet<SpriteRenderer> renderers = new HashSet<SpriteRenderer>();
+        if (spriteRenderer != null)
+            renderers.Add(spriteRenderer);
+        if (spriteRenderAnim != null)
+            spriteRenderAnim.CollectVisualRenderers(renderers);
+
+        foreach (var sr in renderers)
+        {
+            Color c = sr.color;
+            c.a = 0f;
+            sr.color = c;
+            sr.DOFade(1f, duration).SetEase(Ease.OutQuad);
+        }
+
+        if (healthBar != null)
+            healthBar.SetVisible(false);
+
+        transform.DOMove(targetPos, duration)
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() =>
+            {
+                if (healthBar != null && !isDead)
+                    healthBar.SetVisible(true);
+            });
     }
     
     /// <summary>

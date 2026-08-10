@@ -26,7 +26,8 @@ public class BoardManager : MonoBehaviour
         TileColor.Green 
     };
 
-    [Header("输入遮罩")]
+    [Header("背景与遮罩")]
+    [SerializeField] private GameObject bk;
     [SerializeField] private GameObject cover;
 
     private TileCell[,] board;
@@ -54,12 +55,21 @@ public class BoardManager : MonoBehaviour
         // 计算居中偏移
         CalculateCenterOffset();
 
+        if (bk == null)
+        {
+            Transform bkTransform = transform.Find("bk");
+            if (bkTransform != null)
+                bk = bkTransform.gameObject;
+        }
+
         if (cover == null)
         {
             Transform coverTransform = transform.Find("cover");
             if (coverTransform != null)
                 cover = coverTransform.gameObject;
         }
+
+        ApplyBackdropSize();
     }
 
     /// <summary>
@@ -85,12 +95,39 @@ public class BoardManager : MonoBehaviour
 
         // 重新计算居中偏移
         CalculateCenterOffset();
+        ApplyBackdropSize();
 
         // 清空现有棋盘
         ClearBoard();
 
         // 创建新棋盘
         board = new TileCell[boardWidth, boardHeight];
+    }
+
+    /// <summary>
+    /// 按棋盘高度调整 bk / cover 的 sliced size.height = height + 0.2
+    /// </summary>
+    public void ApplyBackdropSize()
+    {
+        float sizeHeight = boardHeight + 0.2f;
+        SetSlicedSpriteHeight(bk, sizeHeight);
+        SetSlicedSpriteHeight(cover, sizeHeight);
+    }
+
+    private static void SetSlicedSpriteHeight(GameObject target, float sizeHeight)
+    {
+        if (target == null)
+            return;
+
+        SpriteRenderer sr = target.GetComponent<SpriteRenderer>();
+        if (sr == null)
+            sr = target.GetComponentInChildren<SpriteRenderer>();
+        if (sr == null)
+            return;
+
+        Vector2 size = sr.size;
+        size.y = sizeHeight;
+        sr.size = size;
     }
 
     /// <summary>

@@ -189,6 +189,9 @@ public class Ally : Character
             return;
 
         isDead = true;
+        currentHealth = 0;
+
+        MainGameManager.NotifyAllyDied();
 
         if (RuneManager.Instance != null)
             RuneManager.Instance.TryExplodeAllyOnDeath(this);
@@ -208,7 +211,46 @@ public class Ally : Character
                     spriteRenderer.enabled = false;
                 if (allyCollider != null)
                     allyCollider.enabled = false;
+
+                AllyManager allyManager = FindObjectOfType<AllyManager>();
+                if (allyManager != null)
+                    allyManager.RemoveAlly(this);
             });
+    }
+
+    /// <summary>
+    /// 同时提高当前生命和最大生命。
+    /// </summary>
+    public void IncreaseMaxHealth(int amount)
+    {
+        if (isDead || amount <= 0)
+            return;
+
+        maxHealth += amount;
+        currentHealth += amount;
+
+        if (healthBar != null)
+            healthBar.UpdateHealthBar(currentHealth, maxHealth);
+
+        DamageNumber.CreateDamageNumber(amount, transform.position, true);
+    }
+
+    /// <summary>
+    /// 将随从移动到新的棋盘位置。
+    /// </summary>
+    public void MoveTo(Vector2Int newGridPosition)
+    {
+        if (isDead || boardManager == null)
+            return;
+
+        gridPosition = newGridPosition;
+        Vector3 worldPosition = boardManager.GridToWorldPosition(newGridPosition);
+        if (enemyManager != null)
+            worldPosition += new Vector3(0, enemyManager.SpawnOffsetY, 0);
+
+        transform.DOMove(worldPosition, Mathf.Max(0.01f, moveSpeed))
+            .SetSpeedBased()
+            .SetEase(Ease.OutQuad);
     }
 
     /// <summary>

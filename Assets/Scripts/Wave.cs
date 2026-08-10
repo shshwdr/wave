@@ -780,6 +780,9 @@ public class Wave : MonoBehaviour
             }
         }
 
+        // Ally 死亡带来的同色战斗内永久增伤。
+        damage *= 1f + MainGameManager.GetAllyDeathDamageBonus(waveColor) / 100f;
+
         // shieldBuff：按当前护盾值增加伤害（护盾值 × value%）
         foreach (var identifier in skillIdentifiers)
         {
@@ -798,6 +801,9 @@ public class Wave : MonoBehaviour
                 break;
             }
         }
+
+        // allyIncreaseDamage 按整组平均到每个实际生成的 wave，避免多格重复获得完整加成。
+        damage += MainGameManager.GetAllyDamageBonusPerWave(waveGroupId);
 
         if (RuneManager.Instance != null)
             damage *= RuneManager.Instance.GetWaveDamageMultiplier();
