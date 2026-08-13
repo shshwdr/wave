@@ -1536,6 +1536,7 @@ MonoBehaviour:
   maxSwapCount: 4
   hardModeSwapCount: 2
   anim: {fileID: 1809909357}
+  shieldObject: {fileID: 0}
   startGold: 0
 --- !u!1 &161327308
 GameObject:
@@ -17075,6 +17076,7 @@ MonoBehaviour:
   tileCellPrefab: {fileID: 7948735621316735258, guid: 2e58dc54b7f6fa042b00f119cf412767, type: 3}
   bossDisplayTilePrefab: {fileID: 7238849483890244170, guid: b31bb2f5ceb5c704291197868c88aae6, type: 3}
   availableColors: 00000000010000000200000003000000
+  bk: {fileID: 0}
   cover: {fileID: 0}
 --- !u!1 &1635722449
 GameObject:

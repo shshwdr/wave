@@ -468,6 +468,7 @@ public class PlayerManager : Singleton<PlayerManager>
 
         if (remaining <= 0)
         {
+            PlayPlayerHitEffect();
             Debug.Log($"护盾抵挡 {damage} 伤害，剩余护盾: {CurrentShield}");
             return;
         }
@@ -477,10 +478,19 @@ public class PlayerManager : Singleton<PlayerManager>
         tookHpDamageDuringEnemyTurn = true;
         FMODUnity.RuntimeManager.PlayOneShot("event:/SFX/PlayerStatus/sfx_player_hurt");
 
+        if (currentHealth > 0)
+            PlayPlayerHitEffect();
+
         // 播放受伤动画
         TryPlayHurtAnimation();
 
         Debug.Log($"玩家受到 {remaining} 伤害（护盾抵消 {damage - remaining}），当前血量: {currentHealth}/{maxHealth}，护盾: {CurrentShield}");
+    }
+
+    private void PlayPlayerHitEffect()
+    {
+        Vector3 pos = anim != null ? anim.transform.position : transform.position;
+        Character.PlayEffectAt("effect/hit", pos);
     }
 
     /// <summary>

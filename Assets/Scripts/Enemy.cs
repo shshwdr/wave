@@ -259,6 +259,7 @@ public class Enemy : Character
             isShielded = false; // 被攻击后，重置防御状态，播放普通idle
             UpdateShieldDisplay();
             DamageNumber.CreateDamageNumber(0, transform.position, false, false);
+            PlayEffectAtSelf("effect/hit");
             // 伤害被吃掉，不造成伤害
             return 0;
         }
@@ -299,8 +300,10 @@ public class Enemy : Character
         
         // 检查死亡
         bool willDie = currentHealth <= 0;
-        
-        ShowHitEffect();
+
+        if (!willDie)
+            PlayEffectAtSelf("effect/hit");
+
         // 播放受伤动画（会自动切换到idle）
         TryPlayHurtAnimation();
 
@@ -1428,6 +1431,8 @@ public class Enemy : Character
             return;
 
         isDead = true;
+
+        PlayEffectAtSelf("effect/enemyPoof");
 
         // 取消跳起动画
         if (jumpTween != null && jumpTween.IsActive())

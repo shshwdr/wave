@@ -1,6 +1,6 @@
 ﻿identifier,name,description,effect,synergy,descriptionMore,color,isStart,values,available,buyPrice,upgradePrice,weight,unlock,unlockLevel,changeToRune,shape
 damageIncrease,Damage, +{0}% damage.,damageIncrease,攻击,This wave deals +{0}% damage.,red,,50|75,1,3,3,10,,,,1
-aoeAttack,Splash,Adjacent foes take {0} damage.,aoeAttack,攻击|aoe,"When this wave hits an enemy, also deal {0} damage to adjacent enemies.",red,,50|75,1,3,3,5,,4,,1
+aoeAttack,Splash,Also deal {0}% damage to adjacent foes.,aoeAttack,攻击|aoe,"When this wave hits an enemy, also deal {0} damage to adjacent enemies.",red,,50|75,1,3,3,5,,4,,1
 criticalChance,criticalChance,Damage has {0}% critical chance (200% damage),criticalChance,攻击|暴击,,red,,20|40,1,3,3,7,,,,1
 lowHP,Execution, +{0}% damage to enemies below 30% HP.,lowHP,攻击|残血, +{0}% damage to enemies below 30% HP.,blue,,75|100,1,3,3,5,,5,,1
 highHP,First Strike, +{0}% damage to enemies at full HP.,highHP,攻击|满血, +{0}% damage to enemies at full HP.,yellow,,100|150,1,3,3,10,,,,1
@@ -14,7 +14,7 @@ executeThresholdIncrease,executeThresholdIncrease,Instantly executes enemies if 
 ,,太op了改一改 - 不改了，把概率调低就好,,,,,,,,,,10,,,,1
 hitAddColor,Spread,"When this wave hits an enemy, convert one random tile to this color.",hitAddColor,多,"When this wave hits an enemy, convert one random tile to this color.",blue,,1|2,1,3,3,2,,8,,1
 more,Color Surge, +{0}% spawn chance.,more,多,This color tile has {0}% higher chance to appear.,red,,60|100|150,1,3,3,7,,4,,1
-addDamageWhenPass,Resonant,"When this wave passes a tile of the same color, its damage increases by {0}%",addDamageWhenPass,攻击|多,"When this wave passes a tile of the same color, its damage increases by {0}%",red,,30|50,1,3,3,7,,4,,1
+addDamageWhenPass,Resonant,"When this wave passes a tile of the same color, its damage increases by {0}%",addDamageWhenPass,攻击|多,"When this wave passes a tile of the same color, its damage increases by {0}%",red,,30|50,1,3,3,7,,3,,1
 moreTileMoreDamage,Scale,Waves with over 5 tiles gain +{0}% damage per extra tile.,moreTileMoreDamage,多|攻击,{0}% base damage × tiles used.,red,,10|20,1,3,3,7,,5,,1
 encourageMoreTiles,Mega Wave,Waves formed from more than {0} tiles deal +100% damage.,encourageMoreTiles,多|攻击,Waves formed from more than {0} tiles deal +150% damage.,yellow,,11|9,1,3,3,10,,2,,1
 All or Nothing,All or Nothing,"Waves formed from more than {0} tiles deal +100% damage, otherwise deal 50% damage",allOrNothing,多|攻击,,red,,9|7,1,3,3,5,,3,,1
@@ -24,16 +24,16 @@ recreateSameColorOnKill,recreateSameColorOnKill,"On direct kill, create another 
 hitSameIncreaseDamage,hitSameIncreaseDamage,Repeated hits on the same enemy gain +{0}% damage each time.,hitSameIncreaseDamage,多|攻击,,green,,20,1,3,3,7,,6,,
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,10,,,,1
-spawnAlly,Summon,Spawn ally (HP = {0}% total wave dmg).,spawnAlly,召唤,Spawn an ally on the grid with HP equal to {0}% of the total damage of this wave.,red,,20|40,1,3,3,10,,2,,1
-summonAttack,Ally Volley,"All allies fire forward, dealing damage equal to the wave’s damage.",summonAttack,召唤|攻击,"All allies fire forward, dealing damage equal to the wave’s damage.",blue,,,1,3,3,10,spawnAlly,,,1
-allyIncreaseDamage,allyIncreaseDamage,wave damage increase {0}% sum of all allies hp,allyIncreaseDamage,召唤,,yellow,,50|100,,,,10,spawnAlly,,,1
-allyIncreaseShield,allyIncreaseShield,shield increase {0}% sum of all allies hp,allyIncreaseShield,召唤,,,,50|100,,,,10,spawnAlly,,,1
-allyHPIncrease,allyHPIncrease,All allies hp and max hp increase {0}% total wave dmg,allyHPIncrease,召唤,,blue,,10|20,,,,10,spawnAlly,,,1
-allyChangeColorAndUse,allyChangeColorAndUse,消除的tile与召唤物相邻时，召唤物所在的格子也会变成相同颜色消除并一起生成wave,allyChangeColorAndUse,召唤|多,,yellow,,,,,,10,spawnAlly,,,1
-allyTileUse,allyTileUse,消除的tile与召唤物相邻时，召唤物所在的格子会另外独立消除并生成wave（如果和上面同时存在，先结算上面那个，等待0.5秒后结算这个）,allyTileUse,召唤|少,,blue,,,,,,,spawnAlly,,,
-allyDieIncreaseDamage,allyDieIncreaseDamage,召唤物死亡时，这个颜色本场战斗攻击力+{0}%,allyDieIncreaseDamage,召唤|攻击,,yellow,,50,,,,,spawnAlly,,,
-allyMoveForwardDamgeVerticle,allyMoveForwardDamgeVerticle,所有召唤物尝试向前移动，并对同列敌人造成伤害,allyMoveForwardDamgeVerticle,召唤,,green,,,,,,,spawnAlly,,,
-killAllWithAlly,killAllWithAlly,对全场敌人造成{0}%召唤物当前血量总和，杀死所有召唤物,killAllWithAlly,,,blue,,50,,,,,spawnAlly,,,
+spawnAlly,Summon,Spawn ally (HP = {0}% total wave dmg).,spawnAlly,召唤,Spawn an ally on the grid with HP equal to {0}% of the total damage of this wave.,red,1,20|40,1,3,3,10,,2,,1
+summonAttack,Ally Volley,"All allies fire forward, dealing damage equal to the wave’s damage.",summonAttack,召唤|攻击,"All allies fire forward, dealing damage equal to the wave’s damage.",blue,0,,1,3,3,10,spawnAlly,,,1
+allyIncreaseDamage,allyIncreaseDamage,wave damage increase {0}% sum of all allies hp,allyIncreaseDamage,召唤,,yellow,0,50|100,1,3,3,10,spawnAlly,,,1
+allyIncreaseShield,allyIncreaseShield,shield increase {0}% sum of all allies hp,allyIncreaseShield,召唤,,,,50|100,1,3,3,10,spawnAlly,,,1
+allyHPIncrease,allyHPIncrease,All allies hp and max hp increase {0}% total wave dmg,allyHPIncrease,召唤,,blue,,10|20,1,3,3,10,spawnAlly,,,1
+allyChangeColorAndUse,allyChangeColorAndUse,Tiles with ally also change to this color and generate waves with them.,allyChangeColorAndUse,召唤|多,,yellow,1,,1,3,3,10,spawnAlly,,,1
+allyTileUse,allyTileUse,Tiles with ally are generate their own waves.,allyTileUse,召唤|少,,red,1,,1,3,3,10,spawnAlly,,,
+allyDieIncreaseDamage,allyDieIncreaseDamage,"When an ally dies, this color’s attack power increases by {0}% for the rest of the battle.",allyDieIncreaseDamage,召唤|攻击,,yellow,1,50,1,3,3,10,spawnAlly,,,
+allyMoveForwardDamgeVerticle,allyMoveForwardDamgeVerticle,All allies try to move forward and deal damage to nearby enemies.,allyMoveForwardDamgeVerticle,召唤,,green,1,,1,3,3,10,spawnAlly,,,
+killAllWithAlly,killAllWithAlly,"Deal damage equal to {0}% of all allies’ current total HP to all enemies, then kill all allies",killAllWithAlly,召唤,,blue,1,50,1,3,3,10,spawnAlly,7,,
 ,,,,,,,,,,,,,,,,
 noAttackNoCost,Slip,"If this wave deals no damage, you can immediately move again (once per turn).",noAttackNoCost,少,"If this wave deals no damage, you can immediately move again (once per turn).",red,,,1,4,4,10,,6,,1
 less,Color Drought, -{0}% spawn chance.,less,少,This color tile has {0}% lower chance to appear.,green,,30|50|80,1,3,3,10,,4,,1

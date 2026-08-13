@@ -25,8 +25,27 @@ public class Character : MonoBehaviour
         effect.gameObject.SetActive(true);
         //hitEffect.Play();
     }
-    
-    
+
+    /// <summary>
+    /// 在指定位置播放 Resources/effect 下的一次性特效（世界空间）。
+    /// </summary>
+    public static void PlayEffectAt(string resourcePath, Vector3 position, float destroyAfter = 2f)
+    {
+        GameObject prefab = Resources.Load<GameObject>(resourcePath);
+        if (prefab == null)
+            return;
+
+        GameObject effect = Instantiate(prefab, position, Quaternion.identity);
+        Destroy(effect, destroyAfter);
+    }
+
+    /// <summary>
+    /// 在当前位置播放 Resources/effect 下的一次性特效（世界空间，不随角色缩放/销毁）。
+    /// </summary>
+    protected void PlayEffectAtSelf(string resourcePath, float destroyAfter = 2f)
+    {
+        PlayEffectAt(resourcePath, transform.position, destroyAfter);
+    }
 }
 /// <summary>
 /// 我方随从系统 - 不会攻击，但会被敌人攻击并阻挡敌人
@@ -35,7 +54,7 @@ public class Ally : Character
 {
     [Header("属性")]
     [SerializeField] private int maxHealth = 100;
-    [SerializeField] private float moveSpeed = 1f;
+    [SerializeField] private float moveDuration = 0.25f;
 
     [Header("组件")]
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -161,8 +180,10 @@ public class Ally : Character
 
         // 检查死亡
         bool willDie = currentHealth <= 0;
-        
-        ShowHitEffect();
+
+        if (!willDie)
+            PlayEffectAtSelf("effect/hit");
+
         // 播放受伤动画（会自动切换到idle）
         TryPlayHurtAnimation();
 
@@ -190,6 +211,8 @@ public class Ally : Character
 
         isDead = true;
         currentHealth = 0;
+
+        PlayEffectAtSelf("effect/allyPoof");
 
         MainGameManager.NotifyAllyDied();
 
@@ -248,12 +271,11 @@ public class Ally : Character
         if (enemyManager != null)
             worldPosition += new Vector3(0, enemyManager.SpawnOffsetY, 0);
 
-        float speed = Mathf.Max(0.01f, moveSpeed);
-        float duration = Vector3.Distance(transform.position, worldPosition) / speed;
-        transform.DOMove(worldPosition, speed)
-            .SetSpeedBased()
+        float duration = Mathf.Max(0.05f, moveDuration);
+        transform.DOKill(false);
+        transform.DOMove(worldPosition, duration)
             .SetEase(Ease.OutQuad);
-        return Mathf.Max(0f, duration);
+        return duration;
     }
 
     /// <summary>
