@@ -107,6 +107,7 @@ public class MainGameManager : Singleton<MainGameManager>
     private List<Vector2Int> highlightedTiles = new List<Vector2Int>();
     private readonly HashSet<Vector2Int> allySkillPreviewTiles = new HashSet<Vector2Int>();
     private bool leftMouseDownInBattle;
+    private readonly List<GameObject> extraSkillDisplayPanels = new List<GameObject>();
 
     // 技能显示相关
     private TileColor currentDisplayColor = TileColor.Red;
@@ -251,6 +252,7 @@ public class MainGameManager : Singleton<MainGameManager>
     private static bool noAttackNoCostTriggeredThisTurn = false; // 一个回合只会触发一次
     private static HashSet<int> pendingWaveGroups = new HashSet<int>(); // 等待结算完成的wave group
     private static int pendingDelayedSkillEffects = 0; // bounce 等延迟特效未完成数量
+    private static bool isSceneReloading = false; // LoadScene 期间忽略跨场景回调
     private bool earlyTurnEndScheduled = false; // 是否已因 note 离盘而提前调度敌人回合
     private Coroutine pendingCompleteTurnRoutine;
     private Coroutine pendingEarlyTurnEndRoutine;
@@ -262,17 +264,46 @@ public class MainGameManager : Singleton<MainGameManager>
 
     public static void BeginDelayedSkillEffect()
     {
+        if (isSceneReloading)
+            return;
         pendingDelayedSkillEffects++;
     }
 
     public static void EndDelayedSkillEffect()
     {
+        if (isSceneReloading)
+            return;
+
         pendingDelayedSkillEffects = Mathf.Max(0, pendingDelayedSkillEffects - 1);
-        if (pendingDelayedSkillEffects > 0 || Instance == null)
+        if (pendingDelayedSkillEffects > 0 || !hasInitialized())
             return;
 
         Instance.TryEarlyEndPlayerTurnFromWaves();
         Instance.CheckAllWaveGroupsCompleted();
+    }
+
+    /// <summary>
+    /// 清空会跨 LoadScene 残留的战斗静态状态。
+    /// </summary>
+    private static void ResetStaticBattleState()
+    {
+        damageBottomTriggeredThisWave = false;
+        currentWaveGroupId = 0;
+        nextWaveDamageMultiplier = 1f;
+        waveGroupTotalDamage.Clear();
+        waveGroupActiveWaveCount.Clear();
+        waveGroupColor.Clear();
+        waveGroupAddDamageWhenPass.Clear();
+        waveGroupPassedSameColorTiles.Clear();
+        waveGroupEnemyHitCounts.Clear();
+        waveGroupAllyDamageBonusPerWave.Clear();
+        for (int i = 0; i < allyDeathDamageBonusByColor.Length; i++)
+            allyDeathDamageBonusByColor[i] = 0f;
+        waveGroupHasDamage.Clear();
+        noAttackNoCostTriggeredThisTurn = false;
+        pendingWaveGroups.Clear();
+        pendingDelayedSkillEffects = 0;
+        hasLastManualWaveColor = false;
     }
 
     public static float GetAllyDamageBonusPerWave(int waveGroupId)
@@ -293,6 +324,8 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public static void NotifyAllyDied()
     {
+        if (isSceneReloading)
+            return;
         if (PlayerManager.Instance == null || SkillManager.Instance == null || CSVLoader.Instance == null)
             return;
 
@@ -314,6 +347,9 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private void Start()
     {
+        isSceneReloading = false;
+        ResetStaticBattleState();
+
         if (mainCamera == null)
             mainCamera = Camera.main;
 
@@ -636,8 +672,7 @@ public class MainGameManager : Singleton<MainGameManager>
         // 重置游戏状态
         isProcessing = false;
         currentState = GameState.PlayerTurn;
-        noAttackNoCostTriggeredThisTurn = false; // 重置noAttackNoCost触发标志
-        pendingDelayedSkillEffects = 0;
+        ResetStaticBattleState();
         earlyTurnEndScheduled = false;
         stuckProcessingFrames = 0;
         if (pendingCompleteTurnRoutine != null)
@@ -650,10 +685,6 @@ public class MainGameManager : Singleton<MainGameManager>
             StopCoroutine(pendingEarlyTurnEndRoutine);
             pendingEarlyTurnEndRoutine = null;
         }
-        hasLastManualWaveColor = false;
-        waveGroupAllyDamageBonusPerWave.Clear();
-        for (int i = 0; i < allyDeathDamageBonusByColor.Length; i++)
-            allyDeathDamageBonusByColor[i] = 0f;
         isDragging = false;
         dragStartPos = new Vector2Int(-1, -1);
         currentHoverTilePos = new Vector2Int(-1, -1);
@@ -968,8 +999,12 @@ public class MainGameManager : Singleton<MainGameManager>
 
             if (hadBattleMouseDown && isValidGridPos)
             {
-                TryPlayPlayerAttackAnimation();
-                EliminateConnectedTiles(eliminatePos);
+                TileCell clickTile = boardManager.GetTile(eliminatePos);
+                if (clickTile != null && !clickTile.IsRainbow)
+                {
+                    TryPlayPlayerAttackAnimation();
+                    EliminateConnectedTiles(eliminatePos);
+                }
             }
         }
     }
@@ -1017,6 +1052,24 @@ public class MainGameManager : Singleton<MainGameManager>
         Vector2Int gridPos = GetMouseGridPosition();
         if (boardManager == null || !boardManager.IsValidPosition(gridPos))
         {
+            if (lastHighlightPos.x >= 0)
+            {
+                ClearHighlights();
+                lastHighlightPos = new Vector2Int(-1, -1);
+                currentHoverTilePos = new Vector2Int(-1, -1);
+            }
+            return;
+        }
+
+        TileCell hoverTile = boardManager.GetTile(gridPos);
+        if (hoverTile != null && hoverTile.IsRainbow)
+        {
+            if (highlightedTiles.Contains(gridPos))
+            {
+                lastHighlightPos = gridPos;
+                return;
+            }
+
             if (lastHighlightPos.x >= 0)
             {
                 ClearHighlights();
@@ -1267,6 +1320,11 @@ public class MainGameManager : Singleton<MainGameManager>
 
         if (skillDisplayPanel != null)
             skillDisplayPanel.SetActive(false);
+        foreach (var extraPanel in extraSkillDisplayPanels)
+        {
+            if (extraPanel != null)
+                extraPanel.SetActive(false);
+        }
         if (enemyDescriptionPanel != null)
             enemyDescriptionPanel.SetActive(false);
         if (allyDescriptionPanel != null)
@@ -1330,8 +1388,12 @@ public class MainGameManager : Singleton<MainGameManager>
 
         if (boardManager != null && boardManager.IsValidPosition(gridPos))
         {
-            TryPlayPlayerAttackAnimation();
-            EliminateConnectedTiles(gridPos);
+            TileCell touchTile = boardManager.GetTile(gridPos);
+            if (touchTile != null && !touchTile.IsRainbow)
+            {
+                TryPlayPlayerAttackAnimation();
+                EliminateConnectedTiles(gridPos);
+            }
         }
     }
     
@@ -1615,47 +1677,151 @@ public class MainGameManager : Singleton<MainGameManager>
             return;
 
         TileCell tile = boardManager.GetTile(gridPos);
-        if (tile == null)
+        if (tile == null || tile.IsRainbow)
         {
-            skillDisplayPanel.SetActive(false);
+            HideSkillDisplayPanels();
             return;
         }
 
-        // 获取当前格子的颜色
-        TileColor tileColor = tile.Color;
-        int colorIndex = (int)tileColor; // TileColor枚举值：Red=0, Yellow=1, Blue=2, Green=3
-
-        // 从PlayerManager获取该颜色wave配置的技能列表
-        if (PlayerManager.Instance != null && SkillManager.Instance != null)
+        List<SkillDisplayEntry> entries = CollectSkillDisplayEntries(gridPos);
+        if (entries.Count == 0)
         {
-            List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
-
-            if (skillIdentifiers.Count > 0)
-            {
-                int tilesUsed = boardManager.GetConnectedSameColorTiles(gridPos).Count;
-                string skillText = SkillManager.Instance.BuildColorAreaSkillDescriptions(
-                    skillIdentifiers, false, tilesUsed, true, colorIndex);
-
-                if (!string.IsNullOrEmpty(skillText))
-                {
-                    skillDisplayText.text = skillText;
-                    SetSkillPanelColorByIndex(skillDisplayPanel, colorIndex);
-                    skillDisplayPanel.SetActive(true);
-                }
-                else
-                {
-                    skillDisplayPanel.SetActive(false);
-                }
-            }
-            else
-            {
-                skillDisplayPanel.SetActive(false);
-            }
+            HideSkillDisplayPanels();
+            return;
         }
-        else
+
+        ShowSkillDisplayEntry(skillDisplayPanel, skillDisplayText, entries[0]);
+        EnsureExtraSkillDisplayPanels(entries.Count - 1);
+        for (int i = 1; i < entries.Count; i++)
         {
+            GameObject panel = extraSkillDisplayPanels[i - 1];
+            TMP_Text text = panel != null ? panel.GetComponentInChildren<TMP_Text>(true) : null;
+            ShowSkillDisplayEntry(panel, text, entries[i]);
+            LayoutSkillDisplayPanelBelow(panel, i);
+        }
+
+        for (int i = entries.Count - 1; i < extraSkillDisplayPanels.Count; i++)
+        {
+            if (extraSkillDisplayPanels[i] != null)
+                extraSkillDisplayPanels[i].SetActive(false);
+        }
+    }
+
+    private struct SkillDisplayEntry
+    {
+        public TileColor color;
+        public int tilesUsed;
+    }
+
+    private void HideSkillDisplayPanels()
+    {
+        if (skillDisplayPanel != null)
             skillDisplayPanel.SetActive(false);
+        foreach (var extraPanel in extraSkillDisplayPanels)
+        {
+            if (extraPanel != null)
+                extraPanel.SetActive(false);
         }
+    }
+
+    private void ShowSkillDisplayEntry(GameObject panel, TMP_Text text, SkillDisplayEntry entry)
+    {
+        if (panel == null || text == null || PlayerManager.Instance == null || SkillManager.Instance == null)
+        {
+            if (panel != null)
+                panel.SetActive(false);
+            return;
+        }
+
+        int colorIndex = (int)entry.color;
+        List<string> skillIdentifiers = PlayerManager.Instance.GetWaveSkills(colorIndex);
+        if (skillIdentifiers == null || skillIdentifiers.Count == 0)
+        {
+            panel.SetActive(false);
+            return;
+        }
+
+        string skillText = SkillManager.Instance.BuildColorAreaSkillDescriptions(
+            skillIdentifiers, false, entry.tilesUsed, true, colorIndex);
+        if (string.IsNullOrEmpty(skillText))
+        {
+            panel.SetActive(false);
+            return;
+        }
+
+        text.text = skillText;
+        SetSkillPanelColorByIndex(panel, colorIndex);
+        panel.SetActive(true);
+    }
+
+    private void EnsureExtraSkillDisplayPanels(int count)
+    {
+        if (skillDisplayPanel == null || count <= 0)
+            return;
+
+        while (extraSkillDisplayPanels.Count < count)
+        {
+            GameObject clone = Instantiate(skillDisplayPanel, skillDisplayPanel.transform.parent);
+            clone.name = skillDisplayPanel.name + "_extra" + extraSkillDisplayPanels.Count;
+            extraSkillDisplayPanels.Add(clone);
+        }
+    }
+
+    private void LayoutSkillDisplayPanelBelow(GameObject panel, int index)
+    {
+        if (panel == null || skillDisplayPanel == null)
+            return;
+
+        RectTransform source = skillDisplayPanel.GetComponent<RectTransform>();
+        RectTransform dest = panel.GetComponent<RectTransform>();
+        if (source == null || dest == null)
+            return;
+
+        float height = source.rect.height;
+        if (height < 1f)
+            height = Mathf.Abs(source.sizeDelta.y);
+        dest.anchoredPosition = source.anchoredPosition + new Vector2(0f, -index * (height + 8f));
+    }
+
+    private List<SkillDisplayEntry> CollectSkillDisplayEntries(Vector2Int gridPos)
+    {
+        List<SkillDisplayEntry> entries = new List<SkillDisplayEntry>();
+        if (!TryBuildLaunchPreview(gridPos, out TileLaunchPreview preview))
+            return entries;
+
+        entries.Add(new SkillDisplayEntry
+        {
+            color = preview.originColor,
+            tilesUsed = preview.originWaveTiles.Count
+        });
+
+        foreach (var kv in preview.extraByColor)
+        {
+            entries.Add(new SkillDisplayEntry
+            {
+                color = kv.Key,
+                tilesUsed = kv.Value.Count
+            });
+        }
+
+        HashSet<TileColor> listed = new HashSet<TileColor>();
+        foreach (var entry in entries)
+            listed.Add(entry.color);
+
+        foreach (var allyWave in preview.independentAllyWaves)
+        {
+            if (listed.Contains(allyWave.Value))
+                continue;
+
+            listed.Add(allyWave.Value);
+            entries.Add(new SkillDisplayEntry
+            {
+                color = allyWave.Value,
+                tilesUsed = 1
+            });
+        }
+
+        return entries;
     }
     
     /// <summary>
@@ -1768,23 +1934,33 @@ public class MainGameManager : Singleton<MainGameManager>
         if (boardManager == null || !boardManager.IsBoardInitialized)
             return;
 
-        // 获取所有连通的同色格子
-        List<Vector2Int> connectedTiles = boardManager.GetConnectedSameColorTiles(mousePos);
+        if (!TryBuildLaunchPreview(mousePos, out TileLaunchPreview preview))
+            return;
 
-        // 高亮所有连通的格子
-        foreach (var pos in connectedTiles)
-        {
-            TileCell connectedTile = boardManager.GetTile(pos);
-            if (connectedTile != null)
-            {
-                connectedTile.SetHighlight(true);
-                //connectedTile.SetHighlightColor(Color.cyan); // 使用青色高亮
-                highlightedTiles.Add(pos);
-            }
-        }
+        HighlightLaunchTiles(preview.originWaveTiles);
+        foreach (var extra in preview.extraByColor.Values)
+            HighlightLaunchTiles(extra);
+        HighlightLaunchTiles(preview.rainbows);
 
         highlightSourcePos = mousePos;
-        ApplyAllySkillHoverPreview(connectedTiles);
+        ApplyAllySkillHoverPreview(preview.baseOriginGroup);
+    }
+
+    private void HighlightLaunchTiles(List<Vector2Int> tiles)
+    {
+        if (tiles == null)
+            return;
+
+        foreach (var pos in tiles)
+        {
+            TileCell connectedTile = boardManager.GetTile(pos);
+            if (connectedTile == null)
+                continue;
+
+            connectedTile.SetHighlight(true);
+            if (!highlightedTiles.Contains(pos))
+                highlightedTiles.Add(pos);
+        }
     }
 
     /// <summary>
@@ -1813,7 +1989,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 continue;
 
             TileCell allyTile = boardManager.GetTile(allyPos);
-            if (allyTile == null || allyTile.IsDirty || allyTile.IsDisabled)
+            if (allyTile == null || allyTile.IsRainbow || allyTile.IsDirty || allyTile.IsDisabled)
                 continue;
 
             if (hasAllyChangeColorAndUse)
@@ -1828,7 +2004,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private Vector2Int ResolveHighlightSourcePos(Vector2Int gridPos)
     {
-        if (allySkillPreviewTiles.Contains(gridPos) && highlightSourcePos.x >= 0)
+        if (highlightSourcePos.x >= 0 && highlightedTiles.Contains(gridPos))
             return highlightSourcePos;
         return gridPos;
     }
@@ -1881,7 +2057,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
         TileCell tileA = boardManager.GetTile(posA);
         TileCell tileB = boardManager.GetTile(posB);
-        if (tileA == null || tileB == null || tileA.Color != tileB.Color)
+        if (tileA == null || tileB == null || tileA.IsRainbow || tileB.IsRainbow || tileA.Color != tileB.Color)
             return false;
 
         return boardManager.GetConnectedSameColorTiles(posA).Contains(posB);
@@ -1945,6 +2121,81 @@ public class MainGameManager : Singleton<MainGameManager>
         return (dx == 1 && dy == 0) || (dx == 0 && dy == 1);
     }
 
+    private class TileLaunchPreview
+    {
+        public TileColor originColor;
+        public List<Vector2Int> baseOriginGroup = new List<Vector2Int>();
+        public List<Vector2Int> originWaveTiles = new List<Vector2Int>();
+        public List<Vector2Int> rainbows = new List<Vector2Int>();
+        public Dictionary<TileColor, List<Vector2Int>> extraByColor = new Dictionary<TileColor, List<Vector2Int>>();
+        public Dictionary<Vector2Int, TileColor> independentAllyWaves = new Dictionary<Vector2Int, TileColor>();
+    }
+
+    private bool TryBuildLaunchPreview(Vector2Int startPos, out TileLaunchPreview preview)
+    {
+        preview = new TileLaunchPreview();
+        if (boardManager == null || !boardManager.IsValidPosition(startPos))
+            return false;
+
+        TileCell startTile = boardManager.GetTile(startPos);
+        if (startTile == null || startTile.IsRainbow || startTile.IsDirty || startTile.IsDisabled)
+            return false;
+
+        preview.originColor = startTile.Color;
+        preview.baseOriginGroup = boardManager.GetConnectedSameColorTiles(startPos);
+        if (preview.baseOriginGroup.Count == 0)
+            return false;
+
+        preview.originWaveTiles = new List<Vector2Int>(preview.baseOriginGroup);
+        boardManager.ExpandLaunchWithRainbows(preview.baseOriginGroup, preview.rainbows, preview.extraByColor);
+
+        if (preview.extraByColor.TryGetValue(preview.originColor, out List<Vector2Int> sameColorExtra))
+        {
+            foreach (var pos in sameColorExtra)
+            {
+                if (!preview.originWaveTiles.Contains(pos))
+                    preview.originWaveTiles.Add(pos);
+            }
+            preview.extraByColor.Remove(preview.originColor);
+        }
+
+        HashSet<Vector2Int> launching = new HashSet<Vector2Int>(preview.originWaveTiles);
+        foreach (var extra in preview.extraByColor.Values)
+        {
+            foreach (var pos in extra)
+                launching.Add(pos);
+        }
+        foreach (var rainbow in preview.rainbows)
+            launching.Add(rainbow);
+
+        bool hasAllyChangeColorAndUse = HasEquippedColorSkill(preview.originColor, "allyChangeColorAndUse", out _);
+        bool hasAllyTileUse = HasEquippedColorSkill(preview.originColor, "allyTileUse", out _);
+        if ((hasAllyChangeColorAndUse || hasAllyTileUse) && allyManager != null)
+        {
+            foreach (Ally ally in allyManager.GetLivingAllies())
+            {
+                Vector2Int allyPos = ally.GridPosition;
+                TileCell allyTile = boardManager.GetTile(allyPos);
+                if (allyTile == null || allyTile.IsRainbow || allyTile.IsDirty || allyTile.IsDisabled)
+                    continue;
+
+                bool alreadyInOriginal = preview.baseOriginGroup.Contains(allyPos);
+                TileColor independentWaveColor = allyTile.Color;
+                if (hasAllyChangeColorAndUse)
+                {
+                    independentWaveColor = preview.originColor;
+                    if (!launching.Contains(allyPos) && !preview.originWaveTiles.Contains(allyPos))
+                        preview.originWaveTiles.Add(allyPos);
+                }
+
+                if (hasAllyTileUse && !alreadyInOriginal)
+                    preview.independentAllyWaves[allyPos] = independentWaveColor;
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>
     /// 消除连通同色格子
     /// </summary>
@@ -1953,52 +2204,47 @@ public class MainGameManager : Singleton<MainGameManager>
         if (boardManager == null || (isManualWave && isProcessing))
             return;
 
-        // 获取所有连通的同色格子
-        List<Vector2Int> connectedTiles = boardManager.GetConnectedSameColorTiles(startPos);
-
-        if (connectedTiles.Count == 0) // 如果没有连通格子，不执行消除
+        if (!TryBuildLaunchPreview(startPos, out TileLaunchPreview preview))
             return;
 
-        TileCell startTile = boardManager.GetTile(startPos);
-        TileColor waveColor = startTile != null ? startTile.Color : TileColor.Red;
-        List<Vector2Int> originalConnectedTiles = new List<Vector2Int>(connectedTiles);
+        TileColor waveColor = preview.originColor;
+        List<Vector2Int> connectedTiles = preview.originWaveTiles;
         bool hasAllyChangeColorAndUse = HasEquippedColorSkill(waveColor, "allyChangeColorAndUse", out _);
-        bool hasAllyTileUse = HasEquippedColorSkill(waveColor, "allyTileUse", out _);
-        Dictionary<Vector2Int, TileColor> delayedAllyTileWaves = new Dictionary<Vector2Int, TileColor>();
+        Dictionary<Vector2Int, TileColor> delayedAllyTileWaves = preview.independentAllyWaves;
 
-        if ((hasAllyChangeColorAndUse || hasAllyTileUse) && allyManager != null)
+        if (hasAllyChangeColorAndUse && allyManager != null)
         {
             foreach (Ally ally in allyManager.GetLivingAllies())
             {
                 Vector2Int allyPos = ally.GridPosition;
                 TileCell allyTile = boardManager.GetTile(allyPos);
-                if (allyTile == null || allyTile.IsDirty || allyTile.IsDisabled)
+                if (allyTile == null || allyTile.IsRainbow || allyTile.IsDirty || allyTile.IsDisabled)
                     continue;
-
-                bool alreadyInOriginal = originalConnectedTiles.Contains(allyPos);
-                TileColor independentWaveColor = allyTile.Color;
-                if (hasAllyChangeColorAndUse)
-                {
+                if (connectedTiles.Contains(allyPos) || delayedAllyTileWaves.ContainsKey(allyPos))
                     allyTile.SetColor(waveColor);
-                    independentWaveColor = waveColor;
-                    if (!connectedTiles.Contains(allyPos))
-                        connectedTiles.Add(allyPos);
-                }
-
-                // 已在原本连通组内的格子不再额外生成
-                if (hasAllyTileUse && !alreadyInOriginal)
-                    delayedAllyTileWaves[allyPos] = independentWaveColor;
             }
         }
 
-        // 标记正在被消除的tile，这样它们的高亮就不会被清除
-        foreach (var pos in connectedTiles)
+        HashSet<Vector2Int> tilesToMark = new HashSet<Vector2Int>(connectedTiles);
+        foreach (var extra in preview.extraByColor.Values)
         {
-            TileCell tile = boardManager.GetTile(pos);
-            if (tile != null)
-            {
-                tile.MarkAsBeingDestroyed();
-            }
+            foreach (var pos in extra)
+                tilesToMark.Add(pos);
+        }
+        foreach (var rainbow in preview.rainbows)
+            tilesToMark.Add(rainbow);
+        foreach (var delayed in delayedAllyTileWaves.Keys)
+            tilesToMark.Add(delayed);
+
+        bool keepOriginAsRainbow = connectedTiles.Count == 1
+            && HasEquippedColorSkill(waveColor, "generateRainbow", out _);
+        Vector2Int rainbowKeepPos = keepOriginAsRainbow ? connectedTiles[0] : new Vector2Int(-1, -1);
+
+        foreach (var pos in tilesToMark)
+        {
+            if (keepOriginAsRainbow && pos == rainbowKeepPos)
+                continue;
+            boardManager.GetTile(pos)?.MarkAsBeingDestroyed();
         }
 
         // 标记为处理中
@@ -2181,6 +2427,7 @@ public class MainGameManager : Singleton<MainGameManager>
             CreateWavesAfterAllyAction(
                 connectedTiles,
                 delayedAllyTileWaves,
+                preview,
                 waveColor,
                 groupId,
                 hasDamageBottom,
@@ -2192,13 +2439,16 @@ public class MainGameManager : Singleton<MainGameManager>
                 firstTilePos,
                 isManualWave,
                 recreateSameColorAfterGravity,
-                recreateDifferentColorAfterGravity);
+                recreateDifferentColorAfterGravity,
+                keepOriginAsRainbow,
+                rainbowKeepPos);
         });
     }
 
     private void CreateWavesAfterAllyAction(
         List<Vector2Int> connectedTiles,
         Dictionary<Vector2Int, TileColor> delayedAllyTileWaves,
+        TileLaunchPreview preview,
         TileColor waveColor,
         int waveGroupId,
         bool hasDamageBottom,
@@ -2210,11 +2460,127 @@ public class MainGameManager : Singleton<MainGameManager>
         Vector2Int firstTilePos,
         bool isManualWave,
         bool recreateSameColorAfterGravity,
-        bool recreateDifferentColorAfterGravity)
+        bool recreateDifferentColorAfterGravity,
+        bool keepOriginAsRainbow,
+        Vector2Int rainbowKeepPos)
     {
-        if (boardManager == null)
+        if (isSceneReloading || this == null || boardManager == null)
             return;
 
+        SpawnWaveGroupTiles(
+            connectedTiles,
+            waveColor,
+            waveGroupId,
+            hasDamageBottom,
+            currentWaveDamageMultiplier,
+            hasPure,
+            pureValue,
+            tilesUsed,
+            waveCountMultiplier,
+            isManualWave,
+            keepOriginAsRainbow,
+            rainbowKeepPos);
+
+        foreach (var delayedWave in delayedAllyTileWaves)
+        {
+            if (!connectedTiles.Contains(delayedWave.Key) && !(keepOriginAsRainbow && delayedWave.Key == rainbowKeepPos))
+                boardManager.RemoveTile(delayedWave.Key);
+        }
+        ScheduleIndependentAllyTileWaves(delayedAllyTileWaves);
+
+        ApplyWaveGroupOnSpawnEffects(waveColor, firstTilePos, tilesUsed, waveGroupId);
+        ApplyColorBoardSkills(waveColor, connectedTiles, keepOriginAsRainbow, rainbowKeepPos);
+
+        foreach (var extra in preview.extraByColor)
+        {
+            if (extra.Value == null || extra.Value.Count == 0)
+                continue;
+
+            BeginNewWaveGroup(extra.Key, extra.Value.Count, out int extraGroupId, out bool extraDamageBottom,
+                out float extraMultiplier, out bool extraPure, out int extraPureValue, out int extraWaveCountMultiplier);
+            extraMultiplier = currentWaveDamageMultiplier;
+            Vector2Int extraFirst = extra.Value[0];
+            SpawnWaveGroupTiles(
+                extra.Value,
+                extra.Key,
+                extraGroupId,
+                extraDamageBottom,
+                extraMultiplier,
+                extraPure,
+                extraPureValue,
+                extra.Value.Count,
+                extraWaveCountMultiplier,
+                isManualWave,
+                false,
+                new Vector2Int(-1, -1));
+            ApplyWaveGroupOnSpawnEffects(extra.Key, extraFirst, extra.Value.Count, extraGroupId);
+            ApplyColorBoardSkills(extra.Key, extra.Value, false, new Vector2Int(-1, -1));
+        }
+
+        foreach (var rainbowPos in preview.rainbows)
+        {
+            if (keepOriginAsRainbow && rainbowPos == rainbowKeepPos)
+                continue;
+            boardManager.RemoveTile(rainbowPos);
+        }
+
+        bool isPuzzleMode = currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle";
+        DOVirtual.DelayedCall(0.3f, () =>
+        {
+            boardManager.ApplyGravity(!isPuzzleMode);
+
+            if (recreateSameColorAfterGravity)
+                CreateWaveFromLargestTileGroup(waveColor, null);
+            if (recreateDifferentColorAfterGravity)
+                CreateWaveFromLargestTileGroup(null, waveColor);
+        });
+    }
+
+    private void BeginNewWaveGroup(
+        TileColor waveColor,
+        int tileCount,
+        out int groupId,
+        out bool hasDamageBottom,
+        out float currentWaveDamageMultiplier,
+        out bool hasPure,
+        out int pureValue,
+        out int waveCountMultiplier)
+    {
+        hasDamageBottom = HasEquippedColorSkill(waveColor, "damageBottom", out _);
+        string pureId = null;
+        hasPure = tileCount == 1 && HasEquippedColorSkill(waveColor, "pure", out pureId);
+        pureValue = hasPure ? SkillManager.Instance.GetSkillValue(pureId) : 0;
+        bool hasFrontAndBack = HasEquippedColorSkill(waveColor, "frontAndBack", out _);
+        waveCountMultiplier = hasFrontAndBack ? 2 : 1;
+        currentWaveDamageMultiplier = nextWaveDamageMultiplier;
+
+        currentWaveGroupId++;
+        groupId = currentWaveGroupId;
+        damageBottomTriggeredThisWave = false;
+        waveGroupTotalDamage[groupId] = 0f;
+        waveGroupActiveWaveCount[groupId] = tileCount * waveCountMultiplier;
+        waveGroupColor[groupId] = waveColor;
+        waveGroupAddDamageWhenPass[groupId] = 0f;
+        waveGroupHasDamage[groupId] = false;
+        waveGroupPassedSameColorTiles[groupId] = new HashSet<Vector2Int>();
+        waveGroupEnemyHitCounts[groupId] = new Dictionary<Enemy, int>();
+        pendingWaveGroups.Add(groupId);
+    }
+
+    private void SpawnWaveGroupTiles(
+        List<Vector2Int> connectedTiles,
+        TileColor waveColor,
+        int waveGroupId,
+        bool hasDamageBottom,
+        float currentWaveDamageMultiplier,
+        bool hasPure,
+        int pureValue,
+        int tilesUsed,
+        int waveCountMultiplier,
+        bool isManualWave,
+        bool keepOriginAsRainbow,
+        Vector2Int rainbowKeepPos)
+    {
         waveGroupActiveWaveCount[waveGroupId] = connectedTiles.Count * waveCountMultiplier;
         SetAllyDamageBonusForWaveGroup(
             waveGroupId,
@@ -2232,23 +2598,34 @@ public class MainGameManager : Singleton<MainGameManager>
         foreach (var pos in connectedTiles)
         {
             Vector3 worldPos = boardManager.GridToWorldPosition(pos);
-            bool isFirstWave = (waveIndex == 0);
+            bool isFirstWave = waveIndex == 0;
             CreateWave(worldPos, waveColor, pos, waveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, false, isManualWave);
 
             if (waveCountMultiplier > 1)
                 CreateWave(worldPos, waveColor, pos, waveGroupId, isFirstWave, false, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, true, isManualWave);
 
-            boardManager.RemoveTile(pos);
+            if (keepOriginAsRainbow && pos == rainbowKeepPos)
+            {
+                TileCell keepTile = boardManager.GetTile(pos);
+                if (keepTile != null)
+                {
+                    keepTile.ClearBeingDestroyed();
+                    keepTile.SetHighlight(false);
+                    keepTile.SetRainbow(true);
+                    Character.PlayEffectAt("effect/allyPoof", worldPos);
+                }
+            }
+            else
+            {
+                boardManager.RemoveTile(pos);
+            }
+
             waveIndex++;
         }
+    }
 
-        foreach (var delayedWave in delayedAllyTileWaves)
-        {
-            if (!connectedTiles.Contains(delayedWave.Key))
-                boardManager.RemoveTile(delayedWave.Key);
-        }
-        ScheduleIndependentAllyTileWaves(delayedAllyTileWaves);
-
+    private void ApplyWaveGroupOnSpawnEffects(TileColor waveColor, Vector2Int firstTilePos, int tilesUsed, int waveGroupId)
+    {
         ApplyShieldExplosionForWaveGroup(waveColor, firstTilePos);
         ApplyHealWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
         ApplySoloHealForWaveGroup(waveColor, tilesUsed, firstTilePos);
@@ -2256,17 +2633,53 @@ public class MainGameManager : Singleton<MainGameManager>
         ApplySoloShieldForWaveGroup(waveColor, tilesUsed, firstTilePos);
         ApplyAllyShieldForWaveGroup(waveColor, firstTilePos);
         ApplyKillAllWithAlly(waveGroupId, waveColor);
+    }
 
-        bool isPuzzleMode = currentLevelInfo != null && currentLevelInfo.type != null && currentLevelInfo.type.ToLower() == "puzzle";
-        DOVirtual.DelayedCall(0.3f, () =>
+    private void ApplyColorBoardSkills(
+        TileColor waveColor,
+        List<Vector2Int> launchedTiles,
+        bool keepOriginAsRainbow,
+        Vector2Int rainbowKeepPos)
+    {
+        if (boardManager == null)
+            return;
+
+        HashSet<Vector2Int> launched = launchedTiles != null
+            ? new HashSet<Vector2Int>(launchedTiles)
+            : new HashSet<Vector2Int>();
+
+        if (HasEquippedColorSkill(waveColor, "removeSameColor", out _))
         {
-            boardManager.ApplyGravity(!isPuzzleMode);
+            List<Vector2Int> toRemove = boardManager.GetAllTilesOfColor(waveColor);
+            foreach (var pos in toRemove)
+            {
+                if (launched.Contains(pos))
+                    continue;
+                if (keepOriginAsRainbow && pos == rainbowKeepPos)
+                    continue;
+                Character.PlayEffectAt("effect/enemyPoof", boardManager.GridToWorldPosition(pos));
+                boardManager.RemoveTile(pos);
+            }
+        }
 
-            if (recreateSameColorAfterGravity)
-                CreateWaveFromLargestTileGroup(waveColor, null);
-            if (recreateDifferentColorAfterGravity)
-                CreateWaveFromLargestTileGroup(null, waveColor);
-        });
+        if (HasEquippedColorSkill(waveColor, "convertColorToOthers", out _))
+        {
+            List<Vector2Int> toConvert = boardManager.GetAllTilesOfColor(waveColor);
+            foreach (var pos in toConvert)
+            {
+                if (launched.Contains(pos))
+                    continue;
+                if (keepOriginAsRainbow && pos == rainbowKeepPos)
+                    continue;
+
+                TileCell tile = boardManager.GetTile(pos);
+                if (tile == null || tile.IsRainbow)
+                    continue;
+
+                Character.PlayEffectAt("effect/enemyPoof", boardManager.GridToWorldPosition(pos));
+                tile.SetColor(boardManager.GetRandomDifferentColor(waveColor));
+            }
+        }
     }
 
     /// <summary>
@@ -2346,6 +2759,9 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             try
             {
+                if (isSceneReloading || this == null)
+                    return;
+
                 foreach (var delayedWave in waveSnapshot)
                     CreateIndependentAllyTileWave(delayedWave.Key, delayedWave.Value);
             }
@@ -2359,7 +2775,7 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private void CreateIndependentAllyTileWave(Vector2Int gridPos, TileColor color)
     {
-        if (boardManager == null || wavePrefab == null)
+        if (isSceneReloading || this == null || boardManager == null)
             return;
 
         currentWaveGroupId++;
@@ -2914,6 +3330,9 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public static void OnWaveDestroyed(int waveGroupId)
     {
+        if (isSceneReloading)
+            return;
+
         if (!waveGroupActiveWaveCount.TryGetValue(waveGroupId, out int remaining))
             return;
 
@@ -2938,10 +3357,9 @@ public class MainGameManager : Singleton<MainGameManager>
                 StatisticsManager.Instance.RecordWaveGroupDamage(waveColor, totalDamage);
         }
 
-        MainGameManager instance = Instance;
-        if (instance != null)
+        if (hasInitialized())
         {
-            instance.CheckSpawnAlly(waveGroupId);
+            Instance.CheckSpawnAlly(waveGroupId);
             return;
         }
 
@@ -3279,7 +3697,8 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             try
             {
-                onComplete?.Invoke();
+                if (!isSceneReloading && this != null)
+                    onComplete?.Invoke();
             }
             finally
             {
@@ -3791,49 +4210,62 @@ public class MainGameManager : Singleton<MainGameManager>
             float bossMoveDuration = bossMoveSpeed > 0 ? 1f / bossMoveSpeed : 0.5f; // 获取boss移动速度
             float actionDelay = 0f; // 每个批次之间的延迟
             
-            // Batch 1: Boss移动
-            currentBoss.StartMove();
+            float firstDelay = 0.05f;
+            bool bossStunnedThisTurn = currentBoss.IsStunned;
+            if (bossStunnedThisTurn)
+            {
+                currentBoss.ConsumeStun();
+            }
+            else
+            {
+                currentBoss.HideExpiredStun();
+                currentBoss.StartMove();
+                firstDelay = bossMoveDuration + actionDelay;
+            }
             
             // Batch 2: Boss行动（使用技能），在移动完成后执行
-            DOVirtual.DelayedCall(bossMoveDuration + actionDelay, () =>
+            DOVirtual.DelayedCall(firstDelay, () =>
             {
-                if (currentBoss != null && !currentBoss.IsDead)
+                if (currentBoss != null && !currentBoss.IsDead && !bossStunnedThisTurn)
                 {
                     // Boss执行技能（TakeAction）
                     currentBoss.TakeAction();
+                }
+
+                float afterActionDelay = bossStunnedThisTurn ? 0.05f : 1.2f;
                     
-                    // 使用技能后等待，再执行小怪批次，最后出兵
-                    DOVirtual.DelayedCall(1.2f, () =>
-                    {
-                        if (enemyManager != null)
-                        {
-                            enemyManager.ExecuteEnemyTurnBatch(() =>
-                            {
-                                bool spawned = SpawnEnemiesAfterEnemyActions();
-                                float spawnWait = spawned ? Enemy.SpawnEnterDuration + 0.05f : 0.05f;
-                                DOVirtual.DelayedCall(spawnWait, () =>
-                                {
-                                    if (currentBoss != null && currentBoss.IsDead)
-                                    {
-                                        CompleteLevel();
-                                        return;
-                                    }
-                                    
-                                    ShowPlayerTurnBanner();
-                                });
-                            });
-                        }
-                        else
-                        {
-                            ShowPlayerTurnBanner();
-                        }
-                    });
-                }
-                else
+                // 使用技能后等待，再执行小怪批次，最后出兵
+                DOVirtual.DelayedCall(afterActionDelay, () =>
                 {
-                    // Boss已死亡，直接完成关卡
-                    CompleteLevel();                  
-                }
+                    if (currentBoss != null && currentBoss.IsDead)
+                    {
+                        CompleteLevel();
+                        return;
+                    }
+
+                    if (enemyManager != null)
+                    {
+                        enemyManager.ExecuteEnemyTurnBatch(() =>
+                        {
+                            bool spawned = SpawnEnemiesAfterEnemyActions();
+                            float spawnWait = spawned ? Enemy.SpawnEnterDuration + 0.05f : 0.05f;
+                            DOVirtual.DelayedCall(spawnWait, () =>
+                            {
+                                if (currentBoss != null && currentBoss.IsDead)
+                                {
+                                    CompleteLevel();
+                                    return;
+                                }
+                                
+                                ShowPlayerTurnBanner();
+                            });
+                        });
+                    }
+                    else
+                    {
+                        ShowPlayerTurnBanner();
+                    }
+                });
             });
         }
         else
@@ -4682,6 +5114,9 @@ public class MainGameManager : Singleton<MainGameManager>
     /// </summary>
     public void Restart()
     {
+        isSceneReloading = true;
+        ResetStaticBattleState();
+        DOTween.KillAll();
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
     
@@ -4955,8 +5390,12 @@ public class MainGameManager : Singleton<MainGameManager>
             Vector2Int gridPos = GetMouseGridPosition();
             if (boardManager != null && boardManager.IsValidPosition(gridPos))
             {
-                ClearHighlights();
-                EliminateConnectedTiles(gridPos);
+                TileCell puzzleTile = boardManager.GetTile(gridPos);
+                if (puzzleTile != null && !puzzleTile.IsRainbow)
+                {
+                    ClearHighlights();
+                    EliminateConnectedTiles(gridPos);
+                }
             }
         }
         

@@ -85,6 +85,13 @@ public class Wave : MonoBehaviour
     private bool hasMinionEcho = false; // 是否有minionEcho技能
     private int minionEchoValue = 0; // minionEcho的值
     private bool isSkillTriggeredDamage = false; // 标记当前伤害是否是技能触发的（防止技能互相触发）
+    private bool infinitePenetrate = false;
+    private bool hasDamageColumn = false;
+    private bool hasStunEnemy = false;
+    private bool hasMark = false;
+    private int markValue = 0;
+    private bool hasInstantKill = false;
+    private int instantKillValue = 0;
 
     private int criticalChancePercent = 0; // 暴击率（默认 0，加法叠加）
     private int criticalDamagePercent = 200; // 暴击伤害百分比（默认 200%，加法叠加）
@@ -180,6 +187,13 @@ public class Wave : MonoBehaviour
         hasHitSameIncreaseDamage = false;
         hitSameIncreaseDamageValue = 0;
         allowRecreateOnKill = allowRecreateOnKillFlag;
+        infinitePenetrate = false;
+        hasDamageColumn = false;
+        hasStunEnemy = false;
+        hasMark = false;
+        markValue = 0;
+        hasInstantKill = false;
+        instantKillValue = 0;
         
         // 初始化波动相关变量
         columnIndex = gridPos.x; // 列索引
@@ -575,6 +589,37 @@ public class Wave : MonoBehaviour
                 case "wavePenetrate":
                     // 穿透次数增加
                     penetrateCount = value;
+                    break;
+
+                case "damageRow":
+                    if (tilesUsed == 1)
+                        infinitePenetrate = true;
+                    break;
+
+                case "damageColumn":
+                    if (tilesUsed == 1)
+                        hasDamageColumn = true;
+                    break;
+
+                case "stunEnemy":
+                    if (tilesUsed == 1)
+                        hasStunEnemy = true;
+                    break;
+
+                case "mark":
+                    if (tilesUsed == 1)
+                    {
+                        hasMark = true;
+                        markValue = value;
+                    }
+                    break;
+
+                case "instantKill":
+                    if (tilesUsed == 1)
+                    {
+                        hasInstantKill = true;
+                        instantKillValue = value;
+                    }
                     break;
                     
                 case "hitEnemyBack":
@@ -979,6 +1024,9 @@ public class Wave : MonoBehaviour
                 {
                     enemy.AddVulnerable(targetValue);
                 }
+
+                if (hasStunEnemy && enemy != null)
+                    enemy.ApplyStun();
                 
                 //Debug.Log($"Wave hit enemy: {enemy.name}, dealing {finalDamage} damage");
                 
@@ -1000,6 +1048,13 @@ public class Wave : MonoBehaviour
                     allowBounce: true,
                     applyAoeAndEcho: true,
                     applyOnHitEffects: true);
+
+                // mark 只提高之后受到的伤害，本次命中不吃加成
+                if (hasMark && enemy != null && !enemy.IsDead)
+                    enemy.AddMark(markValue);
+
+                if (hasDamageColumn)
+                    ApplyDamageColumn(enemy, finalDamage);
                 
                 // 应用hitAddColor技能（击中敌人时改变场上tile颜色）
                 if (hasHitAddColor && boardManager != null)
@@ -1015,12 +1070,12 @@ public class Wave : MonoBehaviour
                 }
                 
                 // 如果没有穿透能力或穿透次数为0，销毁波浪
-                if (penetrateCount <= 0)
+                if (!infinitePenetrate && penetrateCount <= 0)
                 {
                     DestroyWave();
                 }
                 // 穿透次数减1
-                if (penetrateCount > 0)
+                if (!infinitePenetrate && penetrateCount > 0)
                 {
                     penetrateCount--;
                 }
@@ -1077,6 +1132,7 @@ public class Wave : MonoBehaviour
             (int)finalDamage, direction, shouldKnockback, knockbackTiles, redWaveBaseDamage, isCritical);
 
         TryExecuteEnemy(enemy);
+        TryInstantKill(enemy);
 
         bool killed = wasAlive && enemy.IsDead;
         if (killed)
@@ -1142,6 +1198,49 @@ public class Wave : MonoBehaviour
 
         ShowSkillEffectAt("effect/execution", enemy.transform.position);
         enemy.KillByExecute();
+    }
+
+    private void TryInstantKill(Enemy enemy)
+    {
+        if (enemy == null)
+            return;
+        if (enemy is Boss)
+            return;
+        if (!hasInstantKill || instantKillValue <= 0)
+            return;
+        if (UnityEngine.Random.Range(0, 100) >= instantKillValue)
+            return;
+
+        ShowSkillEffectAt("effect/execution", enemy.transform.position);
+        if (!enemy.IsDead)
+            enemy.KillByExecute();
+    }
+
+    private void ApplyDamageColumn(Enemy mainTarget, float rawDamage)
+    {
+        if (mainTarget == null)
+            return;
+
+        int columnX = mainTarget.GridPosition.x;
+        float redWaveBaseDamage = GetRedWaveBaseDamage(rawDamage);
+
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (enemyManager != null)
+        {
+            foreach (var enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy == null || enemy.IsDead || enemy == mainTarget || enemy is Boss)
+                    continue;
+                if (enemy.GridPosition.x != columnX)
+                    continue;
+
+                enemy.TakeDamage((int)rawDamage, Vector3.right, false, 0, redWaveBaseDamage);
+            }
+        }
+
+        Boss boss = MainGameManager.GetCurrentBoss();
+        if (boss != null && !boss.IsDead && boss != mainTarget && boss.GridPosition.x == columnX)
+            boss.TakeDamage((int)rawDamage, Vector3.right, false, 0, redWaveBaseDamage);
     }
 
     private void ApplyKillRewards(Enemy enemy)
@@ -1544,6 +1643,9 @@ public class Wave : MonoBehaviour
             }
 
             float redWaveBaseDamage = GetRedWaveBaseDamage(finalDamage);
+            if (hasStunEnemy)
+                boss.ApplyStun();
+
             ApplyDamageAndFollowUps(
                 boss,
                 finalDamage,
@@ -1554,6 +1656,12 @@ public class Wave : MonoBehaviour
                 allowBounce: true,
                 applyAoeAndEcho: true,
                 applyOnHitEffects: true);
+
+            if (hasMark && boss != null && !boss.IsDead)
+                boss.AddMark(markValue);
+
+            if (hasDamageColumn)
+                ApplyDamageColumn(boss, finalDamage);
         }
     }
     

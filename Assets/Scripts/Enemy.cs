@@ -23,6 +23,7 @@ public class Enemy : Character
     [SerializeField] private EnemyHealthBar healthBar;
     [SerializeField] private GameObject shieldObject; // 盾牌显示对象（shield敌人使用）
     [SerializeField] protected SpriteRenderAnim spriteRenderAnim; // Sprite动画组件
+    [SerializeField] private Transform statusTransform;
     
     
 
@@ -70,6 +71,7 @@ public class Enemy : Character
             enemyCollider = GetComponentInChildren<Collider2D>();
         if (spriteRenderAnim == null)
             spriteRenderAnim = GetComponentInChildren<SpriteRenderAnim>();
+        BindStatusTransform();
         
         // 确保敌人有Collider2D和Rigidbody2D（用于碰撞检测）
         if (enemyCollider == null)
@@ -97,6 +99,20 @@ public class Enemy : Character
             rb.isKinematic = true;
             rb.gravityScale = 0;
         }
+
+        BindStatusTransform();
+    }
+
+    private void BindStatusTransform()
+    {
+        if (statusTransform == null)
+        {
+            Transform found = transform.Find("status");
+            if (found != null)
+                statusTransform = found;
+        }
+
+        Status.BindStatusParent(statusTransform);
     }
 
     /// <summary>
@@ -134,6 +150,8 @@ public class Enemy : Character
         
         // 初始化buff系统
         vulnerableStacks = 0;
+        BindStatusTransform();
+        Status.ResetAll();
         
         // 初始化技能系统
         if (enemyInfo != null)
@@ -282,6 +300,9 @@ public class Enemy : Character
             float vulnerableMultiplier = 1f + (vulnerableStacks * 0.05f);
             damage = Mathf.RoundToInt(damage * vulnerableMultiplier);
         }
+
+        if (Status.MarkStacks > 0)
+            damage = Mathf.RoundToInt(damage * Status.MarkDamageMultiplier);
 
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);
@@ -994,6 +1015,13 @@ public class Enemy : Character
     {
         if (isDead)
             return;
+        if (IsStunned)
+        {
+            ConsumeStun();
+            return;
+        }
+
+        HideExpiredStun();
 
         ReduceCooldown();
         MoveLeft();
@@ -1569,6 +1597,28 @@ public class Enemy : Character
         }
     }
     
+    public bool IsStunned => Status.IsStunned;
+
+    public void ApplyStun()
+    {
+        Status.ApplyStun();
+    }
+
+    public void ConsumeStun()
+    {
+        Status.ConsumeStun();
+    }
+
+    public void HideExpiredStun()
+    {
+        Status.HideExpiredStun();
+    }
+
+    public void AddMark(int percentPerStack)
+    {
+        Status.AddMark(percentPerStack);
+    }
+
     /// <summary>
     /// 添加vulnerable debuff
     /// </summary>

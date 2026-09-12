@@ -324,8 +324,8 @@ public class BoardManager : MonoBehaviour
             return connected;
         }
         
-        // 如果起始tile是dirty或disabled，不能参与wave生成
-        if (startTile.IsDirty || startTile.IsDisabled)
+        // 彩虹块不能作为连通起点，也不能并进同色组
+        if (startTile.IsRainbow || startTile.IsDirty || startTile.IsDisabled)
         {
             return connected;
         }
@@ -359,7 +359,7 @@ public class BoardManager : MonoBehaviour
 
                 TileCell tile = GetTile(next);
                 // dirty或disabled的tile不能参与wave生成
-                if (tile != null && tile.Color == targetColor && !tile.IsDirty && !tile.IsDisabled)
+                if (tile != null && !tile.IsRainbow && tile.Color == targetColor && !tile.IsDirty && !tile.IsDisabled)
                 {
                     visited.Add(next);
                     queue.Enqueue(next);
@@ -389,7 +389,7 @@ public class BoardManager : MonoBehaviour
                     continue;
 
                 TileCell tile = GetTile(pos);
-                if (tile == null || tile.IsDirty || tile.IsDisabled)
+                if (tile == null || tile.IsRainbow || tile.IsDirty || tile.IsDisabled)
                     continue;
                 if (requiredColor.HasValue && tile.Color != requiredColor.Value)
                     continue;
@@ -406,6 +406,136 @@ public class BoardManager : MonoBehaviour
         }
 
         return largestGroup;
+    }
+
+    private static readonly Vector2Int[] CardinalDirections = new Vector2Int[]
+    {
+        new Vector2Int(0, 1),
+        new Vector2Int(0, -1),
+        new Vector2Int(-1, 0),
+        new Vector2Int(1, 0)
+    };
+
+    /// <summary>
+    /// 从起点同色组出发，把直接相邻的彩虹及其四邻中最大的一组同色扩展并入发射集。彩虹不连锁。
+    /// </summary>
+    public void ExpandLaunchWithRainbows(
+        List<Vector2Int> originGroup,
+        List<Vector2Int> rainbowsToRemove,
+        Dictionary<TileColor, List<Vector2Int>> extraTilesByColor)
+    {
+        rainbowsToRemove.Clear();
+        extraTilesByColor.Clear();
+        if (originGroup == null || originGroup.Count == 0)
+            return;
+
+        HashSet<Vector2Int> originSet = new HashSet<Vector2Int>(originGroup);
+        HashSet<Vector2Int> adjacentRainbows = new HashSet<Vector2Int>();
+
+        foreach (var pos in originGroup)
+        {
+            foreach (var dir in CardinalDirections)
+            {
+                Vector2Int next = pos + dir;
+                TileCell tile = GetTile(next);
+                if (tile != null && tile.IsRainbow)
+                    adjacentRainbows.Add(next);
+            }
+        }
+
+        HashSet<Vector2Int> claimedExtras = new HashSet<Vector2Int>(originSet);
+
+        foreach (var rainbowPos in adjacentRainbows)
+        {
+            List<Vector2Int> newNeighbors = new List<Vector2Int>();
+            foreach (var dir in CardinalDirections)
+            {
+                Vector2Int next = rainbowPos + dir;
+                if (originSet.Contains(next))
+                    continue;
+
+                TileCell tile = GetTile(next);
+                if (tile == null || tile.IsRainbow || tile.IsDirty || tile.IsDisabled)
+                    continue;
+
+                newNeighbors.Add(next);
+            }
+
+            // hover 组把彩虹四邻占满，彩虹接不到新块，不连也不消
+            if (newNeighbors.Count == 0)
+                continue;
+
+            List<Vector2Int> largestGroup = new List<Vector2Int>();
+            HashSet<Vector2Int> visited = new HashSet<Vector2Int>();
+            foreach (var neighbor in newNeighbors)
+            {
+                if (visited.Contains(neighbor))
+                    continue;
+
+                List<Vector2Int> group = GetConnectedSameColorTiles(neighbor);
+                foreach (var groupPos in group)
+                    visited.Add(groupPos);
+
+                if (group.Count > largestGroup.Count)
+                    largestGroup = group;
+            }
+
+            rainbowsToRemove.Add(rainbowPos);
+            if (largestGroup.Count == 0)
+                continue;
+
+            TileCell sample = GetTile(largestGroup[0]);
+            if (sample == null || sample.IsRainbow)
+                continue;
+
+            TileColor extraColor = sample.Color;
+            if (!extraTilesByColor.TryGetValue(extraColor, out List<Vector2Int> colorList))
+            {
+                colorList = new List<Vector2Int>();
+                extraTilesByColor[extraColor] = colorList;
+            }
+
+            foreach (var extraPos in largestGroup)
+            {
+                if (!claimedExtras.Add(extraPos))
+                    continue;
+                colorList.Add(extraPos);
+            }
+        }
+    }
+
+    public List<Vector2Int> GetAllTilesOfColor(TileColor color)
+    {
+        List<Vector2Int> result = new List<Vector2Int>();
+        if (board == null)
+            return result;
+
+        for (int x = 0; x < boardWidth; x++)
+        {
+            for (int y = 0; y < boardHeight; y++)
+            {
+                TileCell tile = board[x, y];
+                if (tile != null && !tile.IsRainbow && tile.Color == color)
+                    result.Add(new Vector2Int(x, y));
+            }
+        }
+
+        return result;
+    }
+
+    public TileColor GetRandomDifferentColor(TileColor current)
+    {
+        List<TileColor> others = new List<TileColor>();
+        foreach (var color in availableColors)
+        {
+            if (color != current)
+                others.Add(color);
+        }
+
+        if (others.Count == 0)
+            return current;
+
+        return others[UnityEngine.Random.Range(0, others.Count)];
     }
 
     /// <summary>

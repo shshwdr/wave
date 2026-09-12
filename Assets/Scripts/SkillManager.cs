@@ -348,6 +348,12 @@ public class SkillManager : Singleton<SkillManager>
                 return PlayerManager.Instance != null && PlayerManager.Instance.CurrentShield > 0;
 
             case "pure":
+            case "mark":
+            case "stunEnemy":
+            case "generateRainbow":
+            case "damageColumn":
+            case "damageRow":
+            case "instantKill":
                 return tilesUsed == 1;
 
             case "encourageMoreTiles":

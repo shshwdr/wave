@@ -479,6 +479,14 @@ public class EnemyManager : MonoBehaviour
         {
             if (enemy == null || enemy.IsDead)
                 continue;
+
+            if (enemy.IsStunned)
+            {
+                enemy.ConsumeStun();
+                continue;
+            }
+
+            enemy.HideExpiredStun();
             
             aliveEnemies.Add(enemy);
             

@@ -8,6 +8,20 @@ public class Character : MonoBehaviour
     [SerializeField] protected ParticleSystem showSmoke;
     [SerializeField] protected ParticleSystem hitEffect;
 
+    private CharacterStatus characterStatus;
+
+    public CharacterStatus Status
+    {
+        get
+        {
+            if (characterStatus == null)
+                characterStatus = GetComponent<CharacterStatus>();
+            if (characterStatus == null)
+                characterStatus = gameObject.AddComponent<CharacterStatus>();
+            return characterStatus;
+        }
+    }
+
     public void ShowSpawnEffect()
     {
         var effect = Instantiate(showSmoke,transform);
@@ -119,6 +133,8 @@ public class Ally : Character
         currentHealth = maxHealth;
         isDead = false;
 
+        Status.ResetAll();
+
         if (boardManager == null)
             boardManager = FindObjectOfType<BoardManager>();
         if (enemyManager == null)
@@ -171,6 +187,9 @@ public class Ally : Character
     {
         if (isDead)
             return;
+
+        if (Status.MarkStacks > 0)
+            damage = Mathf.RoundToInt(damage * Status.MarkDamageMultiplier);
 
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);

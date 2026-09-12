@@ -20,6 +20,8 @@ public class TileCell : MonoBehaviour
     public GameObject dirtObject; // dirt的GameObject
     [Header("Disable")]
     public GameObject disableObject; // disable的GameObject
+    [Header("Rainbow")]
+    public GameObject rainbowObject;
     
     private TileColor currentColor;
     private Vector2Int gridPosition;
@@ -29,6 +31,7 @@ public class TileCell : MonoBehaviour
     private bool isDirty = false; // 是否有dirt
     private bool isDisabled = false; // 是否被禁用
     private bool isBeingDestroyed = false; // 是否正在被消除
+    private bool isRainbow = false;
     private Tween bounceTween; // 当前的弹动动画
     private Vector3 originalWorldPosition; // 原始世界位置
     private bool isPressColorPulsing = false;
@@ -50,6 +53,7 @@ public class TileCell : MonoBehaviour
     public bool IsDirty => isDirty;
     public bool IsDisabled => isDisabled;
     public bool IsBeingDestroyed => isBeingDestroyed;
+    public bool IsRainbow => isRainbow;
 
     /// <summary>
     /// 初始化格子
@@ -58,11 +62,17 @@ public class TileCell : MonoBehaviour
     {
         currentColor = color;
         gridPosition = position;
+        isRainbow = false;
+        isBeingDestroyed = false;
         
         if (spriteRenderer == null)
         {
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
+
+        ResolveRainbowObject();
+        if (rainbowObject != null)
+            rainbowObject.SetActive(false);
         
         UpdateVisual();
     }
@@ -74,6 +84,8 @@ public class TileCell : MonoBehaviour
     {
         hasColorPreview = false;
         currentColor = color;
+        if (isRainbow)
+            SetRainbow(false);
         UpdateVisual();
     }
 
@@ -160,6 +172,32 @@ public class TileCell : MonoBehaviour
         {
             SetHighlight(true);
         }
+    }
+
+    public void ClearBeingDestroyed()
+    {
+        isBeingDestroyed = false;
+    }
+
+    public void SetRainbow(bool rainbow)
+    {
+        isRainbow = rainbow;
+        if (rainbow)
+            isBeingDestroyed = false;
+
+        ResolveRainbowObject();
+        if (rainbowObject != null)
+            rainbowObject.SetActive(rainbow);
+    }
+
+    private void ResolveRainbowObject()
+    {
+        if (rainbowObject != null)
+            return;
+
+        Transform rainbowTransform = transform.Find("rainbow");
+        if (rainbowTransform != null)
+            rainbowObject = rainbowTransform.gameObject;
     }
 
     public void StartPressColorPulse()
