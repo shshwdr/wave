@@ -231,6 +231,8 @@ public class Ally : Character
         isDead = true;
         currentHealth = 0;
 
+        Status.ResetAll();
+
         PlayEffectAtSelf("effect/allyPoof");
 
         MainGameManager.NotifyAllyDied();

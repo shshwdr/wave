@@ -100,6 +100,9 @@ public class MainGameManager : Singleton<MainGameManager>
     private Vector2Int toggledSkillGridPos = new Vector2Int(-1, -1);
     private Enemy toggledEnemy;
     private Ally toggledAlly;
+    private bool skillDisplayHiddenByRightClick; // 右键隐藏技能面板后，同组悬停不再自动显示
+    private bool enemyDisplayHiddenByRightClick; // 右键隐藏敌人面板后，同一敌人悬停不再自动显示
+    private Enemy lastHoveredEnemy;
     
     // 高亮显示相关
     private Vector2Int lastHighlightPos = new Vector2Int(-1, -1);
@@ -119,7 +122,6 @@ public class MainGameManager : Singleton<MainGameManager>
     public int NextBattleLevelIndex => nextBattleLevelIndex;
     private int currentIslandId = 0;
     public int CurrentIslandId => currentIslandId;
-    private int islandNonBossProgress = 0;
     private bool battleFromBossMapNode;
     private bool activeBattleFromBossMapNode;
     private MapNode activeBattleMapNode;
@@ -703,13 +705,18 @@ public class MainGameManager : Singleton<MainGameManager>
             PlayerManager.Instance.StartBattle();
         }
 
-        // 进入战斗：普通节点按进度顺序；地图 Boss 节点强制使用当前岛屿的 type=boss 关卡
+        // 进入战斗：优先使用地图节点解锁时绑定的关卡
         activeBattleFromBossMapNode = battleFromBossMapNode;
         int islandId = GetBattleIslandId();
         currentIslandId = islandId;
         int levelIndex = -1;
 
-        if (battleFromBossMapNode)
+        if (activeBattleMapNode != null && activeBattleMapNode.HasBoundLevel)
+        {
+            currentLevelInfo = activeBattleMapNode.BoundLevelInfo;
+            levelIndex = activeBattleMapNode.BoundLevelIndex;
+        }
+        else if (battleFromBossMapNode)
         {
             if (LevelManager.Instance.TryGetBossLevelForIsland(islandId, out LevelInfo bossLevel, out int bossLevelIndex))
             {
@@ -718,18 +725,16 @@ public class MainGameManager : Singleton<MainGameManager>
             }
             else
             {
-                Debug.LogWarning($"Boss 地图节点但岛屿 {islandId} 未配置 type=boss 的关卡，回退为该岛顺序关卡");
-                LevelManager.Instance.TryGetNthNonBossLevelForIsland(islandId, islandNonBossProgress, out currentLevelInfo, out levelIndex);
-            }
-        }
-        else if (!LevelManager.Instance.TryGetNthNonBossLevelForIsland(islandId, islandNonBossProgress, out currentLevelInfo, out levelIndex))
-        {
-            Debug.LogWarning($"岛屿 {islandId} 第 {islandNonBossProgress} 个非 Boss 关不存在，尝试 Boss 关");
-            if (!LevelManager.Instance.TryGetBossLevelForIsland(islandId, out currentLevelInfo, out levelIndex))
-            {
+                Debug.LogWarning($"Boss 地图节点但岛屿 {islandId} 未配置 type=boss 的关卡");
                 currentLevelInfo = LevelManager.Instance.GetLevelByIndex(0);
                 levelIndex = 0;
             }
+        }
+        else
+        {
+            Debug.LogWarning("开战节点未绑定关卡，回退 level 0");
+            currentLevelInfo = LevelManager.Instance.GetLevelByIndex(0);
+            levelIndex = 0;
         }
 
         if (levelIndex < 0)
@@ -749,19 +754,24 @@ public class MainGameManager : Singleton<MainGameManager>
         }
 
         bool isBossFight = LevelManager.IsBossLevel(currentLevelInfo);
-        
-        // 如果是boss战斗，先显示"Boss Fight!"横幅
+        bool isEliteFight = LevelManager.IsEliteLevel(currentLevelInfo);
+
         if (isBossFight && turnBanner != null)
         {
             turnBanner.ShowBanner("Boss Fight!", () =>
             {
-                // 横幅显示完成后，继续初始化战斗
+                InitializeBattleAfterBanner();
+            });
+        }
+        else if (isEliteFight && turnBanner != null)
+        {
+            turnBanner.ShowBanner("Elite Fight!", () =>
+            {
                 InitializeBattleAfterBanner();
             });
         }
         else
         {
-            // 不是boss战斗，直接初始化
             InitializeBattleAfterBanner();
         }
     }
@@ -777,12 +787,13 @@ public class MainGameManager : Singleton<MainGameManager>
         if (currentLevelInfo != null && enemyManager != null)
         {
             enemyManager.SpawnEnemiesFromLevel(currentLevelInfo);
-            
-            // Boss 关卡：生成 Boss 实体
-            if (LevelManager.IsBossLevel(currentLevelInfo) && !string.IsNullOrEmpty(currentLevelInfo.bossIdentifier))
+
+            // Boss / Elite 关卡：生成 Boss 实体
+            bool spawnBossEntity = !string.IsNullOrEmpty(currentLevelInfo.bossIdentifier)
+                && (LevelManager.IsBossLevel(currentLevelInfo) || LevelManager.IsEliteLevel(currentLevelInfo));
+            if (spawnBossEntity)
             {
                 SpawnBoss(currentLevelInfo.bossIdentifier);
-                // 初始化boss战敌人列表
                 bossBattleEnemies = LevelManager.Instance.ParseEnemies(currentLevelInfo.enemies);
                 bossBattleEnemyIndex = 0;
             }
@@ -1017,6 +1028,9 @@ public class MainGameManager : Singleton<MainGameManager>
         if (isProcessing || isConsumableSwapMode)
         {
             ClearHighlights();
+            HideSkillDisplayPanels();
+            HideEnemyDescriptionPanel();
+            lastHoveredEnemy = null;
             return;
         }
 
@@ -1040,14 +1054,35 @@ public class MainGameManager : Singleton<MainGameManager>
 
         if (ConsumableView.IsPointerOverConsumableUI())
         {
+            if (lastHighlightPos.x >= 0 || lastHoveredEnemy != null)
+            {
+                ClearHighlights();
+                lastHighlightPos = new Vector2Int(-1, -1);
+                currentHoverTilePos = new Vector2Int(-1, -1);
+                HideSkillDisplayPanels();
+                ClearHoverEnemyDisplay();
+            }
+            return;
+        }
+
+        // 敌人优先：悬停显示信息（可在棋盘外）
+        Enemy enemyUnderMouse = GetEnemyUnderMouse();
+        if (enemyUnderMouse != null && !enemyUnderMouse.IsDead && enemyUnderMouse.EnemyInfo != null)
+        {
             if (lastHighlightPos.x >= 0)
             {
                 ClearHighlights();
                 lastHighlightPos = new Vector2Int(-1, -1);
                 currentHoverTilePos = new Vector2Int(-1, -1);
+                HideSkillDisplayPanels();
             }
+
+            RefreshHoverEnemyDisplay(enemyUnderMouse);
             return;
         }
+
+        if (lastHoveredEnemy != null)
+            ClearHoverEnemyDisplay();
 
         Vector2Int gridPos = GetMouseGridPosition();
         if (boardManager == null || !boardManager.IsValidPosition(gridPos))
@@ -1057,6 +1092,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 ClearHighlights();
                 lastHighlightPos = new Vector2Int(-1, -1);
                 currentHoverTilePos = new Vector2Int(-1, -1);
+                HideSkillDisplayPanels();
             }
             return;
         }
@@ -1075,6 +1111,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 ClearHighlights();
                 lastHighlightPos = new Vector2Int(-1, -1);
                 currentHoverTilePos = new Vector2Int(-1, -1);
+                HideSkillDisplayPanels();
             }
             return;
         }
@@ -1099,6 +1136,7 @@ public class MainGameManager : Singleton<MainGameManager>
         lastHighlightPos = gridPos;
         currentHoverTilePos = gridPos;
         UpdateHighlightTiles(gridPos);
+        RefreshHoverSkillDisplay(gridPos);
 
         if (Input.GetMouseButton(0) && !ConsumableView.IsPointerOverConsumableUI())
             StartPressColorPulseOnHighlightedTiles();
@@ -1261,17 +1299,10 @@ public class MainGameManager : Singleton<MainGameManager>
         Enemy enemy = GetEnemyUnderMouse();
         if (enemy != null && !enemy.IsDead && enemy.EnemyInfo != null)
         {
-            if (toggledEnemy == enemy && enemyDescriptionPanel != null && enemyDescriptionPanel.activeSelf)
-            {
-                HideAllDetailPanels();
-                return;
-            }
-
-            HideAllDetailPanels();
-            toggledEnemy = enemy;
-            toggledAlly = null;
-            toggledSkillGridPos = new Vector2Int(-1, -1);
-            UpdateEnemyDescription(enemy);
+            // 右键只隐藏当前敌人信息，由 hover 打开
+            enemyDisplayHiddenByRightClick = true;
+            HideEnemyDescriptionPanel();
+            toggledEnemy = null;
             return;
         }
 
@@ -1288,28 +1319,22 @@ public class MainGameManager : Singleton<MainGameManager>
             toggledAlly = ally;
             toggledEnemy = null;
             toggledSkillGridPos = new Vector2Int(-1, -1);
+            skillDisplayHiddenByRightClick = true;
+            enemyDisplayHiddenByRightClick = true;
             UpdateAllyDescription(ally);
             return;
         }
 
-        Vector2Int gridPos = GetMouseGridPosition();
-        if (boardManager != null && boardManager.IsValidPosition(gridPos))
-        {
-            if (toggledSkillGridPos == gridPos && skillDisplayPanel != null && skillDisplayPanel.activeSelf)
-            {
-                HideAllDetailPanels();
-                return;
-            }
-
-            HideAllDetailPanels();
-            toggledSkillGridPos = gridPos;
-            toggledEnemy = null;
-            toggledAlly = null;
-            UpdateSkillDisplay(gridPos);
-            return;
-        }
-
-        HideAllDetailPanels();
+        // 右键只隐藏当前技能/敌人显示，不再用于打开
+        skillDisplayHiddenByRightClick = true;
+        enemyDisplayHiddenByRightClick = true;
+        toggledSkillGridPos = new Vector2Int(-1, -1);
+        HideSkillDisplayPanels();
+        HideEnemyDescriptionPanel();
+        if (allyDescriptionPanel != null)
+            allyDescriptionPanel.SetActive(false);
+        toggledEnemy = null;
+        toggledAlly = null;
     }
 
     private void HideAllDetailPanels()
@@ -1317,6 +1342,9 @@ public class MainGameManager : Singleton<MainGameManager>
         toggledEnemy = null;
         toggledAlly = null;
         toggledSkillGridPos = new Vector2Int(-1, -1);
+        skillDisplayHiddenByRightClick = false;
+        enemyDisplayHiddenByRightClick = false;
+        lastHoveredEnemy = null;
 
         if (skillDisplayPanel != null)
             skillDisplayPanel.SetActive(false);
@@ -1335,6 +1363,60 @@ public class MainGameManager : Singleton<MainGameManager>
 
         ClearHighlights();
         lastHighlightPos = new Vector2Int(-1, -1);
+    }
+
+    private void RefreshHoverSkillDisplay(Vector2Int gridPos)
+    {
+        skillDisplayHiddenByRightClick = false;
+        enemyDisplayHiddenByRightClick = false;
+        toggledEnemy = null;
+        toggledAlly = null;
+        lastHoveredEnemy = null;
+        HideEnemyDescriptionPanel();
+        if (allyDescriptionPanel != null)
+            allyDescriptionPanel.SetActive(false);
+
+        toggledSkillGridPos = gridPos;
+        UpdateSkillDisplay(gridPos);
+    }
+
+    private void RefreshHoverEnemyDisplay(Enemy enemy)
+    {
+        if (enemy == null)
+            return;
+
+        if (lastHoveredEnemy != enemy)
+            enemyDisplayHiddenByRightClick = false;
+
+        lastHoveredEnemy = enemy;
+        toggledEnemy = enemy;
+        toggledAlly = null;
+        toggledSkillGridPos = new Vector2Int(-1, -1);
+        HideSkillDisplayPanels();
+        if (allyDescriptionPanel != null)
+            allyDescriptionPanel.SetActive(false);
+
+        if (enemyDisplayHiddenByRightClick)
+        {
+            HideEnemyDescriptionPanel();
+            return;
+        }
+
+        UpdateEnemyDescription(enemy);
+    }
+
+    private void ClearHoverEnemyDisplay()
+    {
+        lastHoveredEnemy = null;
+        toggledEnemy = null;
+        enemyDisplayHiddenByRightClick = false;
+        HideEnemyDescriptionPanel();
+    }
+
+    private void HideEnemyDescriptionPanel()
+    {
+        if (enemyDescriptionPanel != null)
+            enemyDescriptionPanel.SetActive(false);
     }
 
     /// <summary>
@@ -1663,9 +1745,40 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             sb.AppendLine(enemy.EnemyInfo.description);
         }
+
+        AppendEnemyStatusEffects(sb, enemy);
         
         enemyDescriptionText.text = sb.ToString().Replace("\\n", "\n");
         enemyDescriptionPanel.SetActive(true);
+    }
+
+    private static void AppendEnemyStatusEffects(System.Text.StringBuilder sb, Enemy enemy)
+    {
+        if (enemy == null || sb == null)
+            return;
+
+        bool hasStun = enemy.HasStunIcon;
+        int markStacks = enemy.MarkStacks;
+        if (!hasStun && markStacks <= 0)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine("<b>Status</b>");
+
+        if (hasStun)
+        {
+            if (enemy.IsStunned)
+                sb.AppendLine("• Stunned: skips its next action.");
+            else
+                sb.AppendLine("• Stunned: skipped its last action.");
+        }
+
+        if (markStacks > 0)
+        {
+            int percentPerStack = enemy.MarkPercentPerStack;
+            int totalPercent = markStacks * Mathf.Max(0, percentPerStack);
+            sb.AppendLine($"• Marked ({markStacks}): takes +{totalPercent}% damage.");
+        }
     }
 
     /// <summary>
@@ -2626,13 +2739,61 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private void ApplyWaveGroupOnSpawnEffects(TileColor waveColor, Vector2Int firstTilePos, int tilesUsed, int waveGroupId)
     {
-        ApplyShieldExplosionForWaveGroup(waveColor, firstTilePos);
         ApplyHealWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
         ApplySoloHealForWaveGroup(waveColor, tilesUsed, firstTilePos);
-        ApplyShieldWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
-        ApplySoloShieldForWaveGroup(waveColor, tilesUsed, firstTilePos);
-        ApplyAllyShieldForWaveGroup(waveColor, firstTilePos);
+        ApplySpawnShieldSkillsInEquippedOrder(waveColor, tilesUsed, firstTilePos);
         ApplyKillAllWithAlly(waveGroupId, waveColor);
+    }
+
+    /// <summary>
+    /// 出波护盾类技能按装备顺序触发，generateCurrentShield 用触发当时的护盾快照。
+    /// </summary>
+    private void ApplySpawnShieldSkillsInEquippedOrder(TileColor waveColor, int tilesUsed, Vector2Int firstTilePos)
+    {
+        if (PlayerManager.Instance == null || SkillManager.Instance == null || CSVLoader.Instance == null)
+            return;
+
+        foreach (var identifier in PlayerManager.Instance.GetWaveSkills((int)waveColor))
+        {
+            if (!SkillManager.Instance.HasSkill(identifier))
+                continue;
+            if (!CSVLoader.Instance.cardInfoMap.TryGetValue(identifier, out SkillInfo skillInfo) || skillInfo == null)
+                continue;
+
+            switch (skillInfo.effect)
+            {
+                case "shieldExplosion":
+                    ApplyShieldExplosionForWaveGroup(waveColor, firstTilePos);
+                    break;
+                case "shieldWhenSpawn":
+                    ApplyShieldWhenSpawnForWaveGroup(waveColor, tilesUsed, firstTilePos);
+                    break;
+                case "soloShield":
+                    ApplySoloShieldForWaveGroup(waveColor, tilesUsed, firstTilePos);
+                    break;
+                case "allyIncreaseShield":
+                    ApplyAllyShieldForWaveGroup(waveColor, firstTilePos);
+                    break;
+                case "generateCurrentShield":
+                    ApplyGenerateCurrentShield(waveColor, firstTilePos, identifier);
+                    break;
+            }
+        }
+    }
+
+    private void ApplyGenerateCurrentShield(TileColor waveColor, Vector2Int firstTilePos, string identifier)
+    {
+        if (PlayerManager.Instance == null)
+            return;
+
+        int value = SkillManager.Instance.GetSkillValue(identifier);
+        int snapshot = PlayerManager.Instance.CurrentShield;
+        int amount = (int)(snapshot * value / 100f);
+        if (amount <= 0)
+            return;
+
+        int added = PlayerManager.Instance.AddShieldFromColorWave(amount, waveColor);
+        DamageNumber.CreateDamageNumber(added, boardManager.GridToWorldPosition(firstTilePos), true);
     }
 
     private void ApplyColorBoardSkills(
@@ -2794,6 +2955,7 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             Vector3 worldPos = boardManager.GridToWorldPosition(gridPos);
             CreateWave(worldPos, color, gridPos, groupId, true, false, 1f, false, 0, 1, false, false);
+            ApplyWaveGroupOnSpawnEffects(color, gridPos, 1, groupId);
         }
         catch
         {
@@ -2827,8 +2989,8 @@ public class MainGameManager : Singleton<MainGameManager>
         if (shield <= 0)
             return;
 
-        PlayerManager.Instance.AddShield(shield);
-        DamageNumber.CreateDamageNumber(shield, boardManager.GridToWorldPosition(displayPos), true);
+        int added = PlayerManager.Instance.AddShieldFromColorWave(shield, color);
+        DamageNumber.CreateDamageNumber(added, boardManager.GridToWorldPosition(displayPos), true);
     }
 
     private void CreateWaveFromLargestTileGroup(TileColor? requiredColor, TileColor? excludedColor)
@@ -3065,9 +3227,9 @@ public class MainGameManager : Singleton<MainGameManager>
         int totalShield = (int)(maxHealth * shieldWhenSpawnValue / 100f * tilesUsed);
         if (totalShield > 0)
         {
-            PlayerManager.Instance.AddShield(totalShield);
+            int added = PlayerManager.Instance.AddShieldFromColorWave(totalShield, waveColor);
             Vector3 firstWavePos = boardManager.GridToWorldPosition(firstTilePos);
-            DamageNumber.CreateDamageNumber(totalShield, firstWavePos, true);
+            DamageNumber.CreateDamageNumber(added, firstWavePos, true);
         }
     }
 
@@ -3108,9 +3270,9 @@ public class MainGameManager : Singleton<MainGameManager>
         int totalShield = (int)(maxHealth * soloShieldValue / 100f);
         if (totalShield > 0)
         {
-            PlayerManager.Instance.AddShield(totalShield);
+            int added = PlayerManager.Instance.AddShieldFromColorWave(totalShield, waveColor);
             Vector3 firstWavePos = boardManager.GridToWorldPosition(firstTilePos);
-            DamageNumber.CreateDamageNumber(totalShield, firstWavePos, true);
+            DamageNumber.CreateDamageNumber(added, firstWavePos, true);
         }
     }
     
@@ -3546,6 +3708,9 @@ public class MainGameManager : Singleton<MainGameManager>
             if (!wave.HasClearedBoard())
                 return false;
             if (wave.CanStillHitBoss())
+                return false;
+            // 仍可能打到敌人时不要提前进敌人回合，否则怪物先挪列会导致 damageColumn 漏打
+            if (wave.CanStillReachLivingEnemies())
                 return false;
         }
 
@@ -4761,9 +4926,6 @@ public class MainGameManager : Singleton<MainGameManager>
 
     private void AdvanceIslandBattleProgress()
     {
-        if (currentLevelInfo == null || !LevelManager.IsBossLevel(currentLevelInfo))
-            islandNonBossProgress++;
-
         playerLevel++;
     }
 
@@ -4874,76 +5036,17 @@ public class MainGameManager : Singleton<MainGameManager>
         waitingIslandId = -1;
         waitingNextIslandId = -1;
         currentIslandId = targetIslandId;
-        islandNonBossProgress = 0;
 
         mapController.ClearForcedIsland();
         mapController.EnterIslandAndReset(targetIslandId);
     }
 
     /// <summary>
-    /// 显示事件菜单
-    /// </summary>
-    private void ShowEventMenu()
-    {
-        // 检查事件菜单是否已经显示，防止重复调用
-        EventMenu existingEventMenu = FindObjectOfType<EventMenu>();
-        if (existingEventMenu != null && existingEventMenu.IsActive)
-        {
-            Debug.LogWarning("EventMenu已经显示，跳过重复调用");
-            return;
-        }
-        
-        // 检查是否有eventType，如果没有则直接进入商店
-        if (currentLevelInfo == null || string.IsNullOrEmpty(currentLevelInfo.eventType))
-        {
-            // eventType为空，不显示事件，直接进入商店
-            ShowShopMenu();
-            return;
-        }
-        
-        EventMenu eventMenu = existingEventMenu;
-        if (eventMenu == null)
-        {
-            // 如果没有找到，创建一个新的
-            GameObject menuObj = new GameObject("EventMenu");
-            eventMenu = menuObj.AddComponent<EventMenu>();
-        }
-        
-        // 显示对应类型的事件
-        eventMenu.ShowEventByType(currentLevelInfo.eventType, () =>
-        {
-            // 事件完成后，显示商店
-            ShowShopMenu();
-        });
-    }
-    
-    /// <summary>
-    /// 显示最终事件菜单（游戏胜利后的最终event）
+    /// 游戏胜利后的结算（地图 event 节点另走 MapController）
     /// </summary>
     private void ShowFinalEventMenu()
     {
-        // 检查是否有eventType，如果没有则直接显示统计菜单
-        if (currentLevelInfo == null || string.IsNullOrEmpty(currentLevelInfo.eventType))
-        {
-            // eventType为空，不显示事件，直接显示统计菜单
-            ShowWinStatistics();
-            return;
-        }
-        
-        EventMenu eventMenu = FindObjectOfType<EventMenu>();
-        if (eventMenu == null)
-        {
-            // 如果没有找到，创建一个新的
-            GameObject menuObj = new GameObject("EventMenu");
-            eventMenu = menuObj.AddComponent<EventMenu>();
-        }
-        
-        // 显示对应类型的最终事件（isFinal = true）
-        eventMenu.ShowEventByType(currentLevelInfo.eventType, () =>
-        {
-            // 最终事件完成后，显示统计菜单
-            ShowWinStatistics();
-        }, isFinal: true);
+        ShowWinStatistics();
     }
     
     /// <summary>

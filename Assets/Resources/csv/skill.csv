@@ -15,10 +15,10 @@ executeThresholdIncrease,executeThresholdIncrease,Instantly executes enemies if 
 hitAddColor,Spread,"When this wave hits an enemy, convert one random tile to this color.",hitAddColor,多,"When this wave hits an enemy, convert one random tile to this color.",blue,,1|2,1,5,3,2,,8,,1
 more,Color Surge, +{0}% spawn chance.,more,多,This color tile has {0}% higher chance to appear.,red,,60|100|150,1,5,3,7,,4,,1
 addDamageWhenPass,Resonant,"When this wave passes a tile of the same color, its damage increases by {0}%",addDamageWhenPass,攻击|多,"When this wave passes a tile of the same color, its damage increases by {0}%",red,,30|50,1,5,3,7,,3,,1
-moreTileMoreDamage,Scale,Waves with over 5 tiles gain +{0}% damage per extra tile.,moreTileMoreDamage,多|攻击,{0}% base damage × tiles used.,red,,10|20,1,5,3,7,,5,,1
-encourageMoreTiles,Mega Wave,Waves formed from more than {0} tiles deal +100% damage.,encourageMoreTiles,多|攻击,Waves formed from more than {0} tiles deal +150% damage.,yellow,,11|9,1,5,3,10,,2,,1
-All or Nothing,All or Nothing,"Waves formed from more than {0} tiles deal +100% damage, otherwise deal 50% damage",allOrNothing,多|攻击,,red,,9|7,1,5,3,5,,3,,1
-recreateSameColor,recreateSameColor,"When create wave over {0}, create another biggest wave with the same color",recreateSameColor,多|连击,,red,,10|8,1,5,3,3,,6,,
+moreTileMoreDamage,Scale,Waves with over 5 tiles gain +{0}% damage per extra tile.,moreTileMoreDamage,多|攻击,{0}% base damage × tiles used.,red,,20|30,1,5,3,7,,5,,1
+encourageMoreTiles,Mega Wave,Waves formed from more than {0} tiles deal +100% damage.,encourageMoreTiles,多|攻击,Waves formed from more than {0} tiles deal +150% damage.,yellow,,9|7,1,5,3,10,,2,,1
+All or Nothing,All or Nothing,"Waves formed from more than {0} tiles deal +100% damage, otherwise deal 50% damage",allOrNothing,多|攻击,,red,,7|6,1,5,3,5,,3,,1
+recreateSameColor,recreateSameColor,"When create wave over {0}, create another biggest wave with the same color",recreateSameColor,多|连击,,red,,8|7,1,5,3,3,,6,,
 recreateDifferentColor,recreateDifferentColor,"If last wave generated was the same color, create biggest wave with a different color",recreateDifferentColor,多|连击,,blue,,,1,5,3,3,,6,,
 recreateSameColorOnKill,recreateSameColorOnKill,"On direct kill, create another wave from the largest same-color group.",recreateSameColorOnKill,多|连击,,yellow,,,1,5,3,3,,7,,
 hitSameIncreaseDamage,hitSameIncreaseDamage,Repeated hits on the same enemy gain +{0}% damage each time.,hitSameIncreaseDamage,多|攻击,,green,,20,1,5,3,7,,6,,
@@ -39,50 +39,49 @@ noAttackNoCost,Slip,"If this wave deals no damage, you can immediately move agai
 less,Color Drought, -{0}% spawn chance.,less,少,This color tile has {0}% lower chance to appear.,green,,30|50|80,1,5,3,10,,4,,1
 pure,Solo,1-tile wave +{0}% damage.,pure,少,"If a wave is generated from only one tile, it deals +{0}% damage.",red,,150|200,1,5,3,10,,6,,1
 buffNextDamage,Next Boost,Next wave +{0}% damage.,buffNextDamage,下一次攻击|少,,blue,,50|100,1,5,3,10,,,,1
-mark,mark,1-tile wave applies a mark on enemy that increase all later damage {0}%(can stack),mark,少,,red,,100,1,,,10,,,,1
-removeSameColor,removeSameColor,Remove all tiles of this color on board,removeSameColor,少,,green,,,1,,,10,,,,1
-convertColorToOthers,convertColorToOthers,convert all tile of this color to a different color,convertColorToOthers,少,,yellow,,,1,,,,,,,
-generateRainbow,generateRainbow,1-tile wave generate a rainbow tile on the position the tile generated,generateRainbow,少,,blue,,,1,,,,,,,
-stunEnemy,stunEnemy,1-tile wave stun hit enemy for a turn,stunEnemy,少,,red,1,,,,,,,,,
-damageColumn,damageColumn,1- tile wave do damage to the full column when hit enemy,damageColumn,少,,green,,,1,,,,,,,
-damageRow,damageRow,1- tile wave penetrate the full row when hit enemy,damageRow,少,,yellow,,,1,,,,,,,
-instantKill,instantKill,1-tile wave has {0}% chance to kill the enemy(not work on boss),instantKill,少,,blue,,20,1,,,,,,,
-,,,,,,,,50|75,,,,,,,,
+mark,mark,1-tile wave applies a mark on enemy that increase all later damage {0}%(can stack),mark,少,,red,1,100,1,5,3,10,,,,1
+removeSameColor,removeSameColor,Remove all tiles of this color on board,removeSameColor,少,,green,,,1,5,3,10,,,,1
+convertColorToOthers,convertColorToOthers,convert all tile of this color to a different color,convertColorToOthers,少,,yellow,,,1,5,3,,,,,
+generateRainbow,generateRainbow,1-tile wave generate a rainbow tile on the position the tile generated,generateRainbow,少,,red,1,,1,5,3,,,,,
+stunEnemy,stunEnemy,1-tile wave stun hit enemy for a turn,stunEnemy,少,,red,1,,1,5,3,,,,,
+damageColumn,damageColumn,1- tile wave do damage to the full column when hit enemy,damageColumn,少,,red,,,1,5,3,,,,,
+damageRow,damageRow,1- tile wave penetrate the full row when hit enemy,damageRow,少,,yellow,,,1,5,3,,,,,
+instantKill,instantKill,1 - tile wave has {0}% chance to kill the enemy(not work on boss),instantKill,少,,red,1,20,1,5,3,,,,,
+,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,10,,,,1
 ,,,,,,,,,,,,10,,,,1
 shieldWhenHit,Barrier,Shield {0}% of damage dealt.,shieldWhenHit,护盾,,red,,10|20,1,3,3,10,,,,1
-shieldWhenPass,Harmony,"When this wave passes a tile of the same color, shield {0}% of max HP",shieldWhenPass,护盾|多,"When this wave passes a tile of the same color, shield {0}% of max HP",yellow,,3|5,1,3,3,10,,4,,1
+shieldWhenPass,Harmony,"When this wave passes a tile of the same color, shield {0}% of max HP",shieldWhenPass,护盾|多,"When this wave passes a tile of the same color, shield {0}% of max HP",yellow,,3|5,1,3,3,10,,3,,1
 shieldWhenSpawn,Territorial Bastion,Shield {0}% HP × tiles used.,shieldWhenSpawn,多|护盾,"for each tile used to generate wave, shield {0}% hp",,,3|5,1,3,3,10,,3,,1
-soloShield,Snap-Shield,1-tile wave shield {0}% of HP,soloShield,少|护盾,,blue,,20|40,1,3,3,10,,5,,1
+soloShield,Snap-Shield,1-tile wave shield {0}% of HP,soloShield,少|护盾,,blue,,20|40,1,3,3,10,,3,,1
 shieldBuff,Shielded Strike,This tile's damage increase {0}% of shield value,shieldBuff,护盾|攻击,,green,,30|50,1,3,3,10,,6,,1
 shieldExplosion,Shield Burst,"When this wave generate, consume all shield and do {0}% of current shield value to all enemies ",shieldExplosion,护盾|爆发|aoe,,red,,30|50,1,3,3,10,,6,,1
-shieldDamage,shieldDamage,Deal extra {0}% of shield,shieldDamage,护盾,,green,1,50,,,,10,,,,1
-generateCurrentShield,generateCurrentShield,Generate shield equal to {0} of current shield,generateCurrentShield,护盾,,yellow,1,50,,,,,,,,
-sheildGenerationIncrease,sheildGenerationIncrease,Shield value generation increase {0}%,sheildGenerationIncrease,护盾,,blue,1,100,,,,,,,,
-lotsShield,lotsShield,"When shield value >50%, damage increase {0}%",lotsShield,护盾|攻击,,blue,,100,,,,,,,,
+shieldDamage,shieldDamage,Deal extra damage equal to {0}% current shield,shieldDamage,护盾,,green,,50,1,3,3,10,,6,,1
+generateCurrentShield,generateCurrentShield,Generate shield equal to {0}% of current shield,generateCurrentShield,护盾,,yellow,,50,1,3,3,10,,6,,
+sheildGenerationIncrease,sheildGenerationIncrease,Shield value generation increase {0}%,sheildGenerationIncrease,护盾,,blue,,100,1,3,3,10,,6,,
+lotsShield,lotsShield,"When shield value >50%, damage increase {0}%",lotsShield,护盾|攻击,,blue,,100,1,3,3,10,,6,,
 ,,,,,,,,,,,,,,,,
 特殊,,,,,,,,,,,,10,,,,1
 hitEnemyBack,Push Back,Push back {0} tiles.,hitEnemyBack,击退,"When this wave hits an enemy, push it back {0} tiles.",red,,1,1,3,3,10,,,,1
 wavePenetrate,Pierce,Penetrate {0} enemies.,wavePenetrate,穿透,This wave can penetrate {0} additional enemies.,red,,1|2,1,3,3,10,,2,,1
 frontAndBack,Backflow,Wave moves both forward and backward.,frontAndBack,前后,,yellow,,1,1,3,3,10,,2,,1
-,,convert a random tile to rainbow on kill,,击杀|彩虹,,,,,,,,10,,,,
-bounty,Bounty, +{0} gold on kill.,bounty,钱|击杀,Killing an enemy with this color grants {0} gold.,red,,1,1,6,3,10,,7,,1
-,, +{0} base damage in this battle on kill,,击杀,,,,,,,,10,,,,1
+rainbowOnKill,rainbowOnKill,convert a random tile to rainbow on kill,rainbowOnKill,击杀|彩虹,,,,,1,3,3,10,,,,
+bounty,Bounty, +{0} gold on kill.,bounty,钱|击杀,Killing an enemy with this color grants {0} gold.,red,,1,1,3,3,10,,7,,1
+baseDamageIncreaseOnKill,baseDamageIncreaseOnKill, +{0} base damage in this battle on kill,baseDamageIncreaseOnKill,击杀,,,,2,1,3,3,10,,,,1
 ,,,,,,,,,,,,,,,,
 待定,,,,,,,,,,,,,,,,
 bounceRandom,bounceRandom,{0}% of Overkill Damage bounces to a random enemy.,bounceRandom,攻击,,blue,,100,0,,,10,,,,
 allyDieDoDamage,allyDieDoDamage,召唤物死亡时对全场怪物造成{0}%召唤物最大hp伤害,allyDieDoDamage,召唤|攻击,,,,,,,,,,,,
 ,,,,毒,,,,,,,,10,,,,1
-,,如果击中的敌人相邻没有敌人，向最近的敌人移动,,位移,,,,,,,,10,,,,1
 ,,,,,,,,,,,,10,,,,1
 focus,Focus,"This wave will attack only the first enemy, damage increase {0}%",focus,专注？,"This wave will attack only the first enemy, damage increase {0}%",red,,100|200,,3,3,10,,,,1
 target,Weakness,,,,"When this wave hits an enemy, apply {0} Vulnerable. Each stack increases all damage the enemy takes by 5%.",red,,,,3,3,10,,,,1
 damageIncreaseWhenHitMore,damageIncreaseWhenHitMore,,damageIncreaseWhenHitMore,,"When hit multiple enemies with one wave, for each enemy hit, later one get {0} more damage",blue,,20|40,0,3,3,10,,,,1
 quickMove,Quick Move,{0}% chance you can move gain,quickMove,,{0}% chance you can move gain,green,,30|50,,3,3,10,,,,1
 damageBottom,damageBottom,"When hit the most right line, hit enemy on the whole right line with {0}% damage",damageBottom,,"When hit the most right line, hit enemy on the whole right line with {0}% damage",red,,100,0,3,3,10,,,,1
-,,,,,,,,,,,,10,,,,1
-,,,,,,,,,,,,10,,,,1
-,,,,,,,,,,,,10,,,,1
+,,,,,,,,,,,,,,,,1
+,,,,,,,,,,,,,,,,1
+,,,,,,,,,,,,,,,,1
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,

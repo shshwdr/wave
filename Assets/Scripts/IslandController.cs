@@ -28,6 +28,7 @@ public class IslandController : MonoBehaviour
     private bool mapInitialized;
     private bool revealAllNodesCheat;
     private Action<MapNode> nodeClickHandler;
+    private int nextBattleDifficultyIndex;
 
     public int IslandId => islandId;
     public RectTransform CharacterPos => characterPos;
@@ -47,18 +48,22 @@ public class IslandController : MonoBehaviour
 
         if (mapInitialized && !forceReset)
         {
+            // 每次打开地图都重新绑定，避免 handler/监听丢失导致“亮着点不了”
+            BindNodes();
             RefreshMapState();
             return;
         }
 
         mapInitialized = false;
         revealAllNodesCheat = false;
+        nextBattleDifficultyIndex = 0;
         ClearLines();
         unlockedNodes.Clear();
         visitedNodes.Clear();
         foreach (MapNode node in allNodes)
         {
             node.SetUsed(false);
+            node.ResetBattleAssignment();
         }
         entryNode = null;
         currentNode = null;
@@ -67,14 +72,17 @@ public class IslandController : MonoBehaviour
         SelectActiveNodes();
         BuildConnections();
         BuildNodeTypes();
-        AssignConsumableRewards();
 
         currentNode = null;
         if (entryNode != null)
         {
             unlockedNodes.Add(entryNode);
             visitedNodes.Add(entryNode);
+            AssignBattleDifficultyBatch(new List<MapNode> { entryNode });
         }
+
+        RefreshNonBattleLabels();
+        AssignConsumableRewards();
 
         mapInitialized = true;
         BindNodes();
@@ -129,12 +137,10 @@ public class IslandController : MonoBehaviour
     {
         foreach (MapNode node in allNodes)
         {
-            bool active = activeNodes.Contains(node);
-            node.OnNodeClicked -= nodeClickHandler;
-            if (active)
-            {
+            // Action 每次从方法组转换都是新实例，-= 去不掉旧监听；直接清空再绑
+            node.ClearClickListeners();
+            if (activeNodes.Contains(node) && nodeClickHandler != null)
                 node.OnNodeClicked += nodeClickHandler;
-            }
         }
     }
 
@@ -348,7 +354,8 @@ public class IslandController : MonoBehaviour
 
         foreach (MapNode node in activeNodes)
         {
-            if (!string.Equals(node.Type, "battle", StringComparison.OrdinalIgnoreCase))
+            string nodeType = (node.Type ?? string.Empty).ToLowerInvariant();
+            if (nodeType != "battle" && nodeType != "elite")
                 continue;
 
             float dropChance = GameData.Instance != null ? GameData.Instance.ConsumableDropChance : 0.5f;
@@ -526,11 +533,136 @@ public class IslandController : MonoBehaviour
             return;
         }
 
+        List<MapNode> newlyUnlockedBattles = new List<MapNode>();
         foreach (MapNode next in neighbors)
         {
+            bool alreadyUnlocked = unlockedNodes.Contains(next);
             unlockedNodes.Add(next);
             visitedNodes.Add(next);
+
+            if (!alreadyUnlocked && ConsumesBattleDifficulty(next) && !next.HasBattleDifficulty)
+                newlyUnlockedBattles.Add(next);
         }
+
+        AssignBattleDifficultyBatch(newlyUnlockedBattles);
+    }
+
+    /// <summary>
+    /// 按解锁批次给战斗节点分配 battleDifficulty，并抽好关卡绑到节点
+    /// </summary>
+    private void AssignBattleDifficultyBatch(List<MapNode> battleNodes)
+    {
+        if (battleNodes == null || battleNodes.Count == 0)
+            return;
+
+        List<MapNode> pending = new List<MapNode>();
+        foreach (MapNode node in battleNodes)
+        {
+            if (node != null && ConsumesBattleDifficulty(node) && !node.HasBattleDifficulty)
+                pending.Add(node);
+        }
+
+        if (pending.Count == 0)
+            return;
+
+        Shuffle(pending);
+        IslandInfo islandInfo = CSVLoader.Instance != null ? CSVLoader.Instance.GetIslandInfo(islandId) : null;
+
+        foreach (MapNode node in pending)
+        {
+            int difficulty = TakeNextBattleDifficulty(islandInfo);
+            node.SetBattleDifficulty(difficulty);
+
+            if (node.IsBossNode)
+            {
+                BindBossLevel(node);
+            }
+            else if (islandInfo != null && difficulty == islandInfo.eliteBattle)
+            {
+                node.SetType("elite");
+                BindEliteLevel(node);
+            }
+            else
+            {
+                BindNormalLevel(node, difficulty);
+            }
+
+            node.RefreshLabel();
+        }
+    }
+
+    private int TakeNextBattleDifficulty(IslandInfo islandInfo)
+    {
+        int index = nextBattleDifficultyIndex++;
+        if (islandInfo == null || islandInfo.battleDifficulty == null || islandInfo.battleDifficulty.Count == 0)
+        {
+            Debug.LogError($"Island {islandId}: battleDifficulty 未配置，回退难度 0");
+            return 0;
+        }
+
+        List<int> difficulties = islandInfo.battleDifficulty;
+        if (index < difficulties.Count)
+            return difficulties[index];
+
+        int fallback = difficulties[difficulties.Count - 1];
+        Debug.LogError($"Island {islandId}: battleDifficulty 数量不足(需要 index={index}, 仅有 {difficulties.Count})，用末位 {fallback} 补全");
+        return fallback;
+    }
+
+    private void BindNormalLevel(MapNode node, int difficulty)
+    {
+        if (LevelManager.Instance == null)
+            return;
+
+        if (LevelManager.Instance.TryPickNormalLevelForIsland(islandId, difficulty, out LevelInfo levelInfo, out int levelIndex))
+            node.BindLevel(levelInfo, levelIndex);
+        else
+            Debug.LogError($"Island {islandId}: 无法为 difficulty={difficulty} 抽取 normal 关卡");
+    }
+
+    private void BindEliteLevel(MapNode node)
+    {
+        if (LevelManager.Instance == null)
+            return;
+
+        if (LevelManager.Instance.TryPickEliteLevelForIsland(islandId, out LevelInfo levelInfo, out int levelIndex))
+            node.BindLevel(levelInfo, levelIndex);
+        else
+            Debug.LogError($"Island {islandId}: 无法抽取 elite 关卡");
+    }
+
+    private void BindBossLevel(MapNode node)
+    {
+        if (LevelManager.Instance == null)
+            return;
+
+        if (LevelManager.Instance.TryGetBossLevelForIsland(islandId, out LevelInfo levelInfo, out int levelIndex))
+            node.BindLevel(levelInfo, levelIndex);
+        else
+            Debug.LogError($"Island {islandId}: 无法抽取 boss 关卡");
+    }
+
+    private void RefreshNonBattleLabels()
+    {
+        foreach (MapNode node in activeNodes)
+        {
+            if (node == null)
+                continue;
+            if (ConsumesBattleDifficulty(node))
+                continue;
+            node.RefreshLabel();
+        }
+    }
+
+    private static bool ConsumesBattleDifficulty(MapNode node)
+    {
+        if (node == null)
+            return false;
+        if (node.IsBossNode)
+            return true;
+
+        string nodeType = (node.Type ?? string.Empty).ToLowerInvariant();
+        return nodeType == "battle" || nodeType == "elite";
     }
 
     private static bool IsShopNode(MapNode node)

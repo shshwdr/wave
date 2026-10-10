@@ -92,6 +92,9 @@ public class Wave : MonoBehaviour
     private int markValue = 0;
     private bool hasInstantKill = false;
     private int instantKillValue = 0;
+    private bool hasRainbowOnKill = false;
+    private bool hasBaseDamageIncreaseOnKill = false;
+    private int baseDamageIncreaseOnKillValue = 0;
 
     private int criticalChancePercent = 0; // 暴击率（默认 0，加法叠加）
     private int criticalDamagePercent = 200; // 暴击伤害百分比（默认 200%，加法叠加）
@@ -194,6 +197,9 @@ public class Wave : MonoBehaviour
         markValue = 0;
         hasInstantKill = false;
         instantKillValue = 0;
+        hasRainbowOnKill = false;
+        hasBaseDamageIncreaseOnKill = false;
+        baseDamageIncreaseOnKillValue = 0;
         
         // 初始化波动相关变量
         columnIndex = gridPos.x; // 列索引
@@ -365,6 +371,36 @@ public class Wave : MonoBehaviour
 
         return false;
     }
+
+    /// <summary>
+    /// 是否仍可能打到存活敌人（用于阻止提前进入敌人回合，避免 damageColumn 等按格子结算时怪物已挪列）
+    /// </summary>
+    public bool CanStillReachLivingEnemies()
+    {
+        if (moveBackward || !isMoving)
+            return false;
+
+        const float collisionRange = 0.5f;
+        float waveX = transform.position.x;
+
+        EnemyManager enemyManager = FindObjectOfType<EnemyManager>();
+        if (enemyManager != null)
+        {
+            foreach (var enemy in enemyManager.ActiveEnemies)
+            {
+                if (enemy == null || enemy.IsDead)
+                    continue;
+                if (enemy.transform.position.x >= waveX - collisionRange)
+                    return true;
+            }
+        }
+
+        Boss boss = MainGameManager.GetCurrentBoss();
+        if (boss != null && !boss.IsDead && boss.transform.position.x >= waveX - collisionRange)
+            return true;
+
+        return false;
+    }
     
     /// <summary>
     /// 检测并清除经过的tile的fog和dirt（只清除wave实际重叠的tile）
@@ -417,8 +453,8 @@ public class Wave : MonoBehaviour
                     {
                         int maxHealth = PlayerManager.Instance.MaxHealth;
                         int shieldValue = (int)(maxHealth * shieldWhenPassValue / 100f);
-                        PlayerManager.Instance.AddShield(shieldValue);
-                        DamageNumber.CreateDamageNumber(shieldValue, transform.position, true);
+                        int added = PlayerManager.Instance.AddShieldFromColorWave(shieldValue, waveColor);
+                        DamageNumber.CreateDamageNumber(added, transform.position, true);
                     }
                     
                     // 应用addDamageWhenPass技能（整个wave group共享，每格累加）
@@ -580,6 +616,11 @@ public class Wave : MonoBehaviour
                     // 伤害增加百分比
                     damage = damage * (1f + value / 100f);
                     break;
+
+                case "lotsShield":
+                    if (PlayerManager.Instance.CurrentShield > PlayerManager.Instance.MaxHealth * 0.5f)
+                        damage = damage * (1f + value / 100f);
+                    break;
                     
                 case "buffNextDamage":
                     // 下一个波浪伤害加成（已在MainGameManager中处理）
@@ -620,6 +661,15 @@ public class Wave : MonoBehaviour
                         hasInstantKill = true;
                         instantKillValue = value;
                     }
+                    break;
+
+                case "rainbowOnKill":
+                    hasRainbowOnKill = true;
+                    break;
+
+                case "baseDamageIncreaseOnKill":
+                    hasBaseDamageIncreaseOnKill = true;
+                    baseDamageIncreaseOnKillValue = value;
                     break;
                     
                 case "hitEnemyBack":
@@ -846,6 +896,25 @@ public class Wave : MonoBehaviour
                 }
                 break;
             }
+        }
+
+        // shieldDamage：伤害额外增加当前护盾的 value%
+        foreach (var identifier in skillIdentifiers)
+        {
+            if (!SkillManager.Instance.HasSkill(identifier))
+                continue;
+
+            SkillInfo skillInfo = CSVLoader.Instance.cardInfoMap[identifier];
+            if (skillInfo == null || skillInfo.effect != "shieldDamage")
+                continue;
+
+            int shield = PlayerManager.Instance.CurrentShield;
+            if (shield > 0)
+            {
+                int value = SkillManager.Instance.GetSkillValue(identifier);
+                damage += shield * value / 100f;
+            }
+            break;
         }
 
         // allyIncreaseDamage 按整组平均到每个实际生成的 wave，避免多格重复获得完整加成。
@@ -1170,8 +1239,8 @@ public class Wave : MonoBehaviour
             if (hasShieldWhenHit && PlayerManager.Instance != null)
             {
                 int shieldValue = (int)(finalDamage * shieldWhenHitValue / 100f);
-                PlayerManager.Instance.AddShield(shieldValue);
-                DamageNumber.CreateDamageNumber(shieldValue, transform.position, true);
+                int added = PlayerManager.Instance.AddShieldFromColorWave(shieldValue, waveColor);
+                DamageNumber.CreateDamageNumber(added, transform.position, true);
             }
         }
 
@@ -1260,6 +1329,42 @@ public class Wave : MonoBehaviour
             PlayerManager.Instance.AddTempSwapCount(exchangeValue);
             Debug.Log($"Exchange: 获得 {exchangeValue} 临时交换次数");
         }
+
+        if (hasBaseDamageIncreaseOnKill && PlayerManager.Instance != null)
+            PlayerManager.Instance.AddBattleBaseDamageFlat(baseDamageIncreaseOnKillValue);
+
+        if (hasRainbowOnKill)
+            ConvertRandomTileToRainbow();
+    }
+
+    private void ConvertRandomTileToRainbow()
+    {
+        if (boardManager == null)
+            return;
+
+        List<Vector2Int> candidates = new List<Vector2Int>();
+        for (int x = 0; x < boardManager.Width; x++)
+        {
+            for (int y = 0; y < boardManager.Height; y++)
+            {
+                Vector2Int pos = new Vector2Int(x, y);
+                TileCell tile = boardManager.GetTile(pos);
+                if (tile == null || tile.IsRainbow || tile.IsDirty || tile.IsDisabled)
+                    continue;
+                candidates.Add(pos);
+            }
+        }
+
+        if (candidates.Count == 0)
+            return;
+
+        Vector2Int targetPos = candidates[Random.Range(0, candidates.Count)];
+        TileCell targetTile = boardManager.GetTile(targetPos);
+        if (targetTile == null)
+            return;
+
+        targetTile.SetRainbow(true);
+        Character.PlayEffectAt("effect/allyPoof", boardManager.GridToWorldPosition(targetPos));
     }
 
     private void QueueBounceRandom(Vector3 startPosition, float bounceDamage)

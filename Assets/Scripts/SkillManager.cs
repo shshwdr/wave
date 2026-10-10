@@ -345,7 +345,13 @@ public class SkillManager : Singleton<SkillManager>
 
             case "shieldBuff":
             case "shieldExplosion":
+            case "shieldDamage":
+            case "generateCurrentShield":
                 return PlayerManager.Instance != null && PlayerManager.Instance.CurrentShield > 0;
+
+            case "lotsShield":
+                return PlayerManager.Instance != null
+                    && PlayerManager.Instance.CurrentShield > PlayerManager.Instance.MaxHealth * 0.5f;
 
             case "pure":
             case "mark":

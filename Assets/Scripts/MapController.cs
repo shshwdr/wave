@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -18,9 +20,12 @@ public class MapController : MonoBehaviour
     private IslandController currentIsland;
     private bool revealAllNodesCheat;
     private int forcedIslandId = -1;
+    private Action<MapNode> nodeClickHandler;
 
     private void Awake()
     {
+        nodeClickHandler = OnNodeClicked;
+
         if (nextIslandButton != null)
         {
             nextIslandButton.onClick.RemoveListener(OnNextIslandButtonClicked);
@@ -42,6 +47,7 @@ public class MapController : MonoBehaviour
     {
         InitMap();
         SetMapVisible(true);
+        ClearUiSelection();
         if (currentIsland != null)
         {
             currentIsland.RefreshNodeInteraction();
@@ -52,7 +58,14 @@ public class MapController : MonoBehaviour
 
     public void CloseMap()
     {
+        ClearUiSelection();
         SetMapVisible(false);
+    }
+
+    private static void ClearUiSelection()
+    {
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     public void InitMap(bool forceResetCurrentIsland = false)
@@ -78,7 +91,7 @@ public class MapController : MonoBehaviour
             if (isActive)
             {
                 islandControllers[i].SetRevealAllNodesCheat(revealAllNodesCheat);
-                islandControllers[i].Init(OnNodeClicked, forceResetCurrentIsland);
+                islandControllers[i].Init(nodeClickHandler ?? OnNodeClicked, forceResetCurrentIsland);
             }
         }
 
@@ -164,6 +177,10 @@ public class MapController : MonoBehaviour
             return;
         }
 
+        // 非商店节点一点击就标记已用，避免休息/事件在结算前被再次点进
+        if (nodeType != "shop")
+            currentIsland.MarkNodeCompleted(node);
+
         CloseMap();
 
         switch (nodeType)
@@ -178,7 +195,6 @@ public class MapController : MonoBehaviour
                 StartCoroutine(HandleHealNode(node));
                 return;
             default:
-                currentIsland.MarkNodeCompleted(node);
                 MainGameManager.Instance.StartBattleFromMap(node);
                 return;
         }
@@ -199,7 +215,6 @@ public class MapController : MonoBehaviour
         if (eventMenu == null)
         {
             Debug.LogWarning("MapController: 未找到EventMenu，回血节点结束后直接回地图");
-            currentIsland.MarkNodeCompleted(node);
             MainGameManager.Instance.OpenMap();
             yield break;
         }
@@ -212,7 +227,6 @@ public class MapController : MonoBehaviour
             yield return null;
         }
 
-        currentIsland.MarkNodeCompleted(node);
         MainGameManager.Instance.OpenMap();
     }
 
@@ -222,7 +236,6 @@ public class MapController : MonoBehaviour
         if (eventMenu == null)
         {
             Debug.LogWarning("MapController: 未找到EventMenu，事件节点结束后直接回地图");
-            currentIsland.MarkNodeCompleted(node);
             MainGameManager.Instance.OpenMap();
             yield break;
         }
@@ -235,7 +248,6 @@ public class MapController : MonoBehaviour
             yield return null;
         }
 
-        currentIsland.MarkNodeCompleted(node);
         MainGameManager.Instance.OpenMap();
     }
 

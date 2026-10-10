@@ -151,6 +151,8 @@ public class Enemy : Character
         // 初始化buff系统
         vulnerableStacks = 0;
         BindStatusTransform();
+        if (statusTransform != null)
+            statusTransform.gameObject.SetActive(true);
         Status.ResetAll();
         
         // 初始化技能系统
@@ -1460,6 +1462,9 @@ public class Enemy : Character
 
         isDead = true;
 
+        // 状态图标挂在敌人身上；死亡后主体只藏 sprite，必须立刻清掉 stun/mark
+        Status.ResetAll();
+
         PlayEffectAtSelf("effect/enemyPoof");
 
         // 取消跳起动画
@@ -1520,6 +1525,8 @@ public class Enemy : Character
         {
             spriteRenderAnim.gameObject.SetActive(false);
         }
+        if (statusTransform != null)
+            statusTransform.gameObject.SetActive(false);
     }
 
     private void OnDestroy()
@@ -1598,6 +1605,9 @@ public class Enemy : Character
     }
     
     public bool IsStunned => Status.IsStunned;
+    public bool HasStunIcon => Status.HasStunIcon;
+    public int MarkStacks => Status.MarkStacks;
+    public int MarkPercentPerStack => Status.MarkPercentPerStack;
 
     public void ApplyStun()
     {

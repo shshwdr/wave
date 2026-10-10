@@ -29,6 +29,9 @@ public class PlayerManager : Singleton<PlayerManager>
     // Wave基础伤害（默认20）
     private float baseWaveDamage = 20f; // 永久基础伤害
     private float tempWaveDamageBonus = 0f; // 临时伤害加成（下次战斗）
+    private float battleBaseDamageFlatBonus = 0f;
+
+    public float BattleBaseDamageFlatBonus => battleBaseDamageFlatBonus;
     
     // Boss和敌人临时效果
     private float bossDamageReduction = 0f; // Boss初始血量减少百分比（下次战斗）
@@ -343,6 +346,7 @@ public class PlayerManager : Singleton<PlayerManager>
         // 注意：不重置currentSwapCount，exchange在战斗结束时恢复
         tempSwapCount = 0; // 重置临时交换次数
         // 注意：不重置tempWaveDamageBonus，它会在战斗结束后清除
+        battleBaseDamageFlatBonus = 0f;
         tookHpDamageDuringEnemyTurn = false;
         tookHpDamageLastEnemyTurn = false;
     }
@@ -353,6 +357,7 @@ public class PlayerManager : Singleton<PlayerManager>
     public void EndBattle()
     {
         tempWaveDamageBonus = 0f;
+        battleBaseDamageFlatBonus = 0f;
         bossDamageReduction = 0f;
         enemyDamageBonus = 0f;
         ClearShield();
@@ -397,7 +402,49 @@ public class PlayerManager : Singleton<PlayerManager>
     /// </summary>
     public float GetCurrentBattleBaseDamage()
     {
-        return baseWaveDamage * (1f + tempWaveDamageBonus / 100f);
+        return (baseWaveDamage + battleBaseDamageFlatBonus) * (1f + tempWaveDamageBonus / 100f);
+    }
+
+    public void AddBattleBaseDamageFlat(float amount)
+    {
+        if (amount == 0f)
+            return;
+        battleBaseDamageFlatBonus += amount;
+    }
+
+    /// <summary>
+    /// 本色波加盾：生成量先算，再乘 (1 + 所有 sheildGenerationIncrease 加法叠加)。
+    /// </summary>
+    public int AddShieldFromColorWave(int amount, TileColor color)
+    {
+        if (amount <= 0)
+            return 0;
+
+        int bonusPercent = GetShieldGenerationIncreasePercent(color);
+        if (bonusPercent != 0)
+            amount = Mathf.RoundToInt(amount * (1f + bonusPercent / 100f));
+
+        AddShield(amount);
+        return amount;
+    }
+
+    public int GetShieldGenerationIncreasePercent(TileColor color)
+    {
+        if (SkillManager.Instance == null || CSVLoader.Instance == null)
+            return 0;
+
+        int sum = 0;
+        foreach (var identifier in GetWaveSkills((int)color))
+        {
+            if (!SkillManager.Instance.HasSkill(identifier))
+                continue;
+            if (!CSVLoader.Instance.cardInfoMap.TryGetValue(identifier, out SkillInfo skillInfo) || skillInfo == null)
+                continue;
+            if (skillInfo.effect == "sheildGenerationIncrease")
+                sum += SkillManager.Instance.GetSkillValue(identifier);
+        }
+
+        return sum;
     }
     
     /// <summary>

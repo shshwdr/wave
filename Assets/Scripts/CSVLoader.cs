@@ -50,6 +50,7 @@ public class LevelInfo
     public int startEnemyCount;
     public int enemyPerRound;
     public int difficulty;
+    public int battleDifficulty;
     public string bossIdentifier;
     public bool hasEvent;
     public int turns;
@@ -67,6 +68,8 @@ public class IslandInfo
     public int eventCount;
     public int shopCount;
     public int healCount;
+    public List<int> battleDifficulty;
+    public int eliteBattle;
 
     public int TotalNodeCount => battleCount + eventCount + shopCount + healCount;
 }

@@ -8,6 +8,7 @@ using UnityEngine;
 /// </summary>
 public class LevelManager : Singleton<LevelManager>
 {
+    private readonly HashSet<int> usedLevelKeys = new HashSet<int>();
 
     /// <summary>
     /// 获取当前关卡
@@ -19,6 +20,12 @@ public class LevelManager : Singleton<LevelManager>
     /// </summary>
     public void Init()
     {
+        ClearUsedLevels();
+    }
+
+    public void ClearUsedLevels()
+    {
+        usedLevelKeys.Clear();
     }
 
     /// <summary>
@@ -93,30 +100,79 @@ public class LevelManager : Singleton<LevelManager>
     }
 
     /// <summary>
-    /// 获取指定岛屿的 Boss 关卡（地图 Boss 节点用）
+    /// 是否为 Elite 关卡（type == elite）
+    /// </summary>
+    public static bool IsEliteLevel(LevelInfo levelInfo)
+    {
+        return levelInfo != null
+            && levelInfo.type != null
+            && levelInfo.type.Equals("elite", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsNormalBattleLevel(LevelInfo levelInfo)
+    {
+        if (levelInfo == null)
+            return false;
+        if (string.IsNullOrEmpty(levelInfo.type))
+            return true;
+        string type = levelInfo.type.ToLowerInvariant();
+        return type == "normal";
+    }
+
+    /// <summary>
+    /// 按地图节点 battleDifficulty 抽取普通关（本局尽量不重复；抽空后允许重复）
+    /// </summary>
+    public bool TryPickNormalLevelForIsland(int islandId, int battleDifficulty, out LevelInfo levelInfo, out int levelIndex)
+    {
+        levelInfo = null;
+        levelIndex = -1;
+
+        List<KeyValuePair<int, LevelInfo>> matched = CollectIslandLevels(islandId, info =>
+            IsNormalBattleLevel(info) && info.battleDifficulty == battleDifficulty);
+
+        if (matched.Count == 0)
+        {
+            int maxBattleDifficulty = GetMaxBattleDifficultyForIsland(islandId, IsNormalBattleLevel);
+            Debug.LogError($"岛屿 {islandId} 没有 battleDifficulty={battleDifficulty} 的 normal 关，回退到最大 battleDifficulty={maxBattleDifficulty}");
+            matched = CollectIslandLevels(islandId, info =>
+                IsNormalBattleLevel(info) && info.battleDifficulty == maxBattleDifficulty);
+        }
+
+        return TryPickFromCandidates(matched, out levelInfo, out levelIndex);
+    }
+
+    /// <summary>
+    /// 抽取岛屿 Elite 关；没有则回退该岛最高 battleDifficulty，并报错
+    /// </summary>
+    public bool TryPickEliteLevelForIsland(int islandId, out LevelInfo levelInfo, out int levelIndex)
+    {
+        levelInfo = null;
+        levelIndex = -1;
+
+        List<KeyValuePair<int, LevelInfo>> matched = CollectIslandLevels(islandId, IsEliteLevel);
+        if (matched.Count == 0)
+        {
+            int maxBattleDifficulty = GetMaxBattleDifficultyForIsland(islandId, info => true);
+            Debug.LogError($"岛屿 {islandId} 没有 type=elite 的关卡，回退到最大 battleDifficulty={maxBattleDifficulty}");
+            matched = CollectIslandLevels(islandId, info => info.battleDifficulty == maxBattleDifficulty);
+        }
+
+        return TryPickFromCandidates(matched, out levelInfo, out levelIndex);
+    }
+
+    /// <summary>
+    /// 获取指定岛屿的 Boss 关卡（地图 Boss 节点用，本局尽量不重复）
     /// </summary>
     public bool TryGetBossLevelForIsland(int islandId, out LevelInfo levelInfo, out int levelIndex)
     {
         levelInfo = null;
         levelIndex = -1;
 
-        if (CSVLoader.Instance == null || CSVLoader.Instance.levelInfoMap == null)
-        {
+        List<KeyValuePair<int, LevelInfo>> matched = CollectIslandLevels(islandId, IsBossLevel);
+        if (matched.Count == 0)
             return false;
-        }
 
-        foreach (int key in CSVLoader.Instance.levelInfoMap.Keys.OrderBy(k => k))
-        {
-            LevelInfo info = CSVLoader.Instance.levelInfoMap[key];
-            if (info != null && info.island == islandId && IsBossLevel(info))
-            {
-                levelInfo = info;
-                levelIndex = key;
-                return true;
-            }
-        }
-
-        return false;
+        return TryPickFromCandidates(matched, out levelInfo, out levelIndex);
     }
 
     /// <summary>
@@ -150,6 +206,50 @@ public class LevelManager : Singleton<LevelManager>
         }
 
         return false;
+    }
+
+    private List<KeyValuePair<int, LevelInfo>> CollectIslandLevels(int islandId, Func<LevelInfo, bool> predicate)
+    {
+        var result = new List<KeyValuePair<int, LevelInfo>>();
+        if (CSVLoader.Instance == null || CSVLoader.Instance.levelInfoMap == null || predicate == null)
+            return result;
+
+        foreach (int key in CSVLoader.Instance.levelInfoMap.Keys.OrderBy(k => k))
+        {
+            LevelInfo info = CSVLoader.Instance.levelInfoMap[key];
+            if (info == null || info.island != islandId || !predicate(info))
+                continue;
+            result.Add(new KeyValuePair<int, LevelInfo>(key, info));
+        }
+
+        return result;
+    }
+
+    private int GetMaxBattleDifficultyForIsland(int islandId, Func<LevelInfo, bool> predicate)
+    {
+        int max = 0;
+        foreach (var pair in CollectIslandLevels(islandId, predicate ?? (info => true)))
+        {
+            if (pair.Value.battleDifficulty > max)
+                max = pair.Value.battleDifficulty;
+        }
+        return max;
+    }
+
+    private bool TryPickFromCandidates(List<KeyValuePair<int, LevelInfo>> candidates, out LevelInfo levelInfo, out int levelIndex)
+    {
+        levelInfo = null;
+        levelIndex = -1;
+        if (candidates == null || candidates.Count == 0)
+            return false;
+
+        List<KeyValuePair<int, LevelInfo>> unused = candidates.FindAll(pair => !usedLevelKeys.Contains(pair.Key));
+        List<KeyValuePair<int, LevelInfo>> pool = unused.Count > 0 ? unused : candidates;
+        int pick = UnityEngine.Random.Range(0, pool.Count);
+        levelIndex = pool[pick].Key;
+        levelInfo = pool[pick].Value;
+        usedLevelKeys.Add(levelIndex);
+        return true;
     }
 
     /// <summary>

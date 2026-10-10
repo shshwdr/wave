@@ -25,6 +25,9 @@ public class CharacterStatus : MonoBehaviour
 
     public bool IsStunned => stunned;
     public int MarkStacks => markStacks;
+    public int MarkPercentPerStack => markPercentPerStack;
+    /// <summary>眩晕生效中，或已扣到 0 但仍保留图标的那一回合。</summary>
+    public bool HasStunIcon => stunned || stunIconPendingHide;
 
     public float MarkDamageMultiplier
     {
@@ -71,7 +74,7 @@ public class CharacterStatus : MonoBehaviour
     }
 
     /// <summary>
-    /// 因眩晕跳过本回合行动：数字减到 0，图标先留着。
+    /// 因眩晕跳过本回合行动：数字减到 0，图标再保留一回合。
     /// </summary>
     public void ConsumeStun()
     {

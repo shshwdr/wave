@@ -291,7 +291,7 @@ MonoBehaviour:
   hoverScale: 1.1
   hoverTime: 0.2
   hoverEase: 24
-  clickRotate: -10
+  clickRotate: 0
   clickScale: 0.8
   clickTime: 0.15
   clickEase: 24
