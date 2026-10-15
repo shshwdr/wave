@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,7 +31,18 @@ public class BattleResultMenu : MenuBase
     [SerializeField] private Sprite cardIcon;
     [SerializeField] private Sprite relicIcon;
 
+    [Header("Pulse Scale")]
+    [SerializeField] private RectTransform pulseScaleTargetA;
+    [SerializeField] private RectTransform pulseScaleTargetB;
+    [SerializeField] private float pulseScaleRatio = 1.15f;
+    [SerializeField] private float pulseScaleDuration = 0.6f;
+    [SerializeField] private Ease pulseScaleEase = Ease.InOutSine;
+
     private readonly List<BattleResultCell> cells = new List<BattleResultCell>();
+    private readonly List<Tween> pulseScaleTweens = new List<Tween>();
+    private Vector3 pulseScaleBaseA = Vector3.one;
+    private Vector3 pulseScaleBaseB = Vector3.one;
+    private bool pulseScaleBasesCached;
     private Action onFinished;
     private RewardData currentRewards;
     private int pendingGoldToGrant;
@@ -39,10 +51,28 @@ public class BattleResultMenu : MenuBase
     protected override void Awake()
     {
         EnsureUiBuilt();
+        CachePulseScaleBases();
         base.Awake();
 
         if (continueButton != null)
             continueButton.onClick.AddListener(OnContinueClicked);
+    }
+
+    private void OnDestroy()
+    {
+        StopPulseScales();
+    }
+
+    public override void Show(bool immediate = false)
+    {
+        base.Show(immediate);
+        StartPulseScales();
+    }
+
+    public override void Hide(bool immediate = false)
+    {
+        StopPulseScales();
+        base.Hide(immediate);
     }
 
     public void ShowRewards(RewardData rewards, Action onComplete)
@@ -55,6 +85,59 @@ public class BattleResultMenu : MenuBase
         RebuildCells();
         UpdateContinueButton();
         Show();
+    }
+
+    private void CachePulseScaleBases()
+    {
+        if (pulseScaleTargetA != null)
+            pulseScaleBaseA = pulseScaleTargetA.localScale;
+        if (pulseScaleTargetB != null)
+            pulseScaleBaseB = pulseScaleTargetB.localScale;
+        pulseScaleBasesCached = true;
+    }
+
+    private void StartPulseScales()
+    {
+        StopPulseScales();
+
+        if (!pulseScaleBasesCached)
+            CachePulseScaleBases();
+
+        StartPulseScale(pulseScaleTargetA, pulseScaleBaseA);
+        StartPulseScale(pulseScaleTargetB, pulseScaleBaseB);
+    }
+
+    private void StartPulseScale(RectTransform target, Vector3 baseScale)
+    {
+        if (target == null || pulseScaleDuration <= 0f)
+            return;
+
+        target.localScale = baseScale;
+        float ratio = Mathf.Max(0.01f, pulseScaleRatio);
+
+        Tween tween = target
+            .DOScale(baseScale * ratio, pulseScaleDuration)
+            .SetEase(pulseScaleEase)
+            .SetLoops(-1, LoopType.Yoyo)
+            .SetUpdate(true);
+
+        pulseScaleTweens.Add(tween);
+    }
+
+    private void StopPulseScales()
+    {
+        for (int i = 0; i < pulseScaleTweens.Count; i++)
+        {
+            if (pulseScaleTweens[i] != null && pulseScaleTweens[i].IsActive())
+                pulseScaleTweens[i].Kill();
+        }
+
+        pulseScaleTweens.Clear();
+
+        if (pulseScaleTargetA != null)
+            pulseScaleTargetA.localScale = pulseScaleBaseA;
+        if (pulseScaleTargetB != null)
+            pulseScaleTargetB.localScale = pulseScaleBaseB;
     }
 
     private void RebuildCells()

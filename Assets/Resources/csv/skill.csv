@@ -42,9 +42,9 @@ buffNextDamage,Next Boost,Next wave +{0}% damage.,buffNextDamage,下一次攻击
 mark,mark,1-tile wave applies a mark on enemy that increase all later damage {0}%(can stack),mark,少,,red,1,100,1,5,3,10,,,,1
 removeSameColor,removeSameColor,Remove all tiles of this color on board,removeSameColor,少,,green,,,1,5,3,10,,,,1
 convertColorToOthers,convertColorToOthers,convert all tile of this color to a different color,convertColorToOthers,少,,yellow,,,1,5,3,,,,,
-generateRainbow,generateRainbow,1-tile wave generate a rainbow tile on the position the tile generated,generateRainbow,少,,red,1,,1,5,3,,,,,
+generateRainbow,generateRainbow,1-tile wave generate a rainbow tile on the position the tile generated,generateRainbow,少,,red,,,1,5,3,,,,,
 stunEnemy,stunEnemy,1-tile wave stun hit enemy for a turn,stunEnemy,少,,red,1,,1,5,3,,,,,
-damageColumn,damageColumn,1- tile wave do damage to the full column when hit enemy,damageColumn,少,,red,,,1,5,3,,,,,
+damageColumn,damageColumn,1- tile wave do damage to the full column when hit enemy,damageColumn,少,,red,1,,1,5,3,,,,,
 damageRow,damageRow,1- tile wave penetrate the full row when hit enemy,damageRow,少,,yellow,,,1,5,3,,,,,
 instantKill,instantKill,1 - tile wave has {0}% chance to kill the enemy(not work on boss),instantKill,少,,red,1,20,1,5,3,,,,,
 ,,,,,,,,,,,,,,,,

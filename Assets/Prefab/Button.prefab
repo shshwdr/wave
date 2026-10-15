@@ -287,7 +287,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controlledGraphic: {fileID: 4568895652305219437}
-  hoverRotate: 10
+  hoverRotate: 0
   hoverScale: 1.1
   hoverTime: 0.2
   hoverEase: 24
