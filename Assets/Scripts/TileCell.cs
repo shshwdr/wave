@@ -62,7 +62,6 @@ public class TileCell : MonoBehaviour
     {
         currentColor = color;
         gridPosition = position;
-        isRainbow = false;
         isBeingDestroyed = false;
         
         if (spriteRenderer == null)
@@ -70,9 +69,7 @@ public class TileCell : MonoBehaviour
             spriteRenderer = GetComponent<SpriteRenderer>();
         }
 
-        ResolveRainbowObject();
-        if (rainbowObject != null)
-            rainbowObject.SetActive(false);
+        ClearGroundEffects();
         
         UpdateVisual();
     }
@@ -177,6 +174,17 @@ public class TileCell : MonoBehaviour
     public void ClearBeingDestroyed()
     {
         isBeingDestroyed = false;
+    }
+
+    /// <summary>
+    /// 清除战斗地面状态，同时关闭对应的视觉对象。
+    /// </summary>
+    public void ClearGroundEffects()
+    {
+        SetRainbow(false);
+        SetFog(false);
+        SetDirty(false);
+        SetDisabled(false);
     }
 
     public void SetRainbow(bool rainbow)

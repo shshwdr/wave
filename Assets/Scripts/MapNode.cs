@@ -219,7 +219,7 @@ public class MapNode : MonoBehaviour
             case "elite":
                 return hasBattleDifficulty ? $"Elite {battleDifficulty}" : "Elite";
             case "battle":
-                return hasBattleDifficulty ? $"LV {battleDifficulty}" : string.Empty;
+                return hasBattleDifficulty ? $"LV {battleDifficulty + 1}" : string.Empty;
             case "shop":
                 return "Shop";
             case "heal":

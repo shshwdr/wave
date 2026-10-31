@@ -105,6 +105,9 @@ public class Wave : MonoBehaviour
     private int executeThresholdPercent = 0; // 斩杀线%，无技能时为 0（不斩杀）
     private bool allowRecreateOnKill = true;
     private bool isDestroyed = false;
+    private static int enemySpawnGeneration;
+    private int spawnGeneration;
+    private bool IsInvalidated => spawnGeneration != enemySpawnGeneration;
     private const float BounceEffectDuration = 0.5f;
 
     public float Duration => waveDuration; // 获取波浪持续时间
@@ -113,6 +116,7 @@ public class Wave : MonoBehaviour
 
     private void Awake()
     {
+        spawnGeneration = enemySpawnGeneration;
         if (waveCollider == null)
             waveCollider = GetComponent<Collider2D>();
 
@@ -1001,6 +1005,9 @@ public class Wave : MonoBehaviour
     /// </summary>
     private void OnTriggerEnter2D(Collider2D collision)
     {
+        if (isDestroyed || IsInvalidated)
+            return;
+
         //Debug.Log($"Wave OnTriggerEnter2D: {collision.name}");
         Enemy enemy = collision.GetComponent<Enemy>();
         if (enemy == null)
@@ -1208,7 +1215,7 @@ public class Wave : MonoBehaviour
         {
             ApplyKillRewards(enemy);
             if (applyOnHitEffects && allowRecreateOnKill)
-                MainGameManager.TryRecreateSameColorOnDirectKill(waveColor);
+                MainGameManager.TryRecreateSameColorOnDirectKill(waveColor, waveGroupId);
         }
 
         int overkill = Mathf.Max(0, appliedDamage - healthBefore);
@@ -1363,6 +1370,9 @@ public class Wave : MonoBehaviour
         if (targetTile == null)
             return;
 
+        if (!MainGameManager.TryConsumeRainbowGeneration(waveGroupId))
+            return;
+
         targetTile.SetRainbow(true);
         Character.PlayEffectAt("effect/allyPoof", boardManager.GridToWorldPosition(targetPos));
     }
@@ -1385,6 +1395,11 @@ public class Wave : MonoBehaviour
         // 等当前帧其他伤害结算完再选目标并飞行
         DOVirtual.DelayedCall(0f, () =>
         {
+            if (IsInvalidated)
+            {
+                FinishBounce();
+                return;
+            }
             Enemy target = PickRandomLivingEnemy();
             if (target == null)
             {
@@ -1394,7 +1409,7 @@ public class Wave : MonoBehaviour
 
             PlayBounceEffect(startPosition, target.transform.position, () =>
             {
-                if (target != null && !target.IsDead)
+                if (!IsInvalidated && target != null && !target.IsDead)
                 {
                     float redWaveBaseDamage = GetRedWaveBaseDamage(bounceDamage);
                     ApplyDamageAndFollowUps(
@@ -1701,6 +1716,9 @@ public class Wave : MonoBehaviour
     /// </summary>
     private void CheckBossCollision()
     {
+        if (isDestroyed || IsInvalidated)
+            return;
+
         Enemy boss = MainGameManager.GetCurrentBoss() as Enemy;
         if (boss == null || boss.IsDead)
             return;
@@ -1773,6 +1791,14 @@ public class Wave : MonoBehaviour
     /// <summary>
     /// 销毁波浪
     /// </summary>
+    public static void InvalidateBeforeEnemySpawn()
+    {
+        // 先让所有旧 wave（包括已隐藏但仍有延迟弹射的 wave）失效，再完成结算。
+        enemySpawnGeneration++;
+        foreach (Wave wave in FindObjectsOfType<Wave>())
+            wave.DestroyWave();
+    }
+
     private void DestroyWave()
     {
         if (isDestroyed)
@@ -1780,6 +1806,9 @@ public class Wave : MonoBehaviour
         isDestroyed = true;
 
         isMoving = false; // 停止移动
+        CancelInvoke();
+        if (waveCollider != null)
+            waveCollider.enabled = false;
         transform.DOKill();
         
         // 通知MainGameManager这个wave已完成（用于spawnAlly技能）

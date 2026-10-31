@@ -115,7 +115,7 @@ public class ConsumableManager : Singleton<ConsumableManager>
         if (CSVLoader.Instance == null || CSVLoader.Instance.consumableInfoMap == null)
             return null;
 
-        int currentLevel = LevelManager.Instance != null ? LevelManager.Instance.CurrentLevel : 1;
+        int currentLevel = LevelManager.Instance != null ? LevelManager.Instance.CurrentLevel : 0;
         List<ConsumableInfo> candidates = CSVLoader.Instance.consumableInfoMap.Values
             .Where(info => info != null
                            && info.available

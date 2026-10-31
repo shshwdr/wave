@@ -11,9 +11,9 @@ public class LevelManager : Singleton<LevelManager>
     private readonly HashSet<int> usedLevelKeys = new HashSet<int>();
 
     /// <summary>
-    /// 获取当前关卡
+    /// 获取当前进度（开局为 0，每完成一场战斗加 1，用于 unlockLevel 判断）
     /// </summary>
-    public int CurrentLevel => MainGameManager.Instance.PlayerLevel+1;
+    public int CurrentLevel => MainGameManager.Instance.PlayerLevel;
 
     /// <summary>
     /// 初始化关卡管理器

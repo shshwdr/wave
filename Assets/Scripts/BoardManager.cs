@@ -90,15 +90,15 @@ public class BoardManager : MonoBehaviour
     /// </summary>
     public void InitializeBoard(int width = -1, int height = -1)
     {
+        // 先清理旧棋盘，再应用新尺寸，避免按新尺寸访问旧数组。
+        ClearBoard();
+
         if (width > 0) boardWidth = width;
         if (height > 0) boardHeight = height;
 
         // 重新计算居中偏移
         CalculateCenterOffset();
         ApplyBackdropSize();
-
-        // 清空现有棋盘
-        ClearBoard();
 
         // 创建新棋盘
         board = new TileCell[boardWidth, boardHeight];
@@ -137,9 +137,10 @@ public class BoardManager : MonoBehaviour
     {
         if (board != null)
         {
-            for (int x = 0; x < boardWidth; x++)
+            // 清理范围以现有数组为准，也能处理运行时配置尺寸已变化的情况。
+            for (int x = 0; x < board.GetLength(0); x++)
             {
-                for (int y = 0; y < boardHeight; y++)
+                for (int y = 0; y < board.GetLength(1); y++)
                 {
                     if (board[x, y] != null)
                     {
@@ -196,7 +197,8 @@ public class BoardManager : MonoBehaviour
                 }
                 else
                 {
-                    // 更新现有格子颜色（根据权重）
+                    // 重新生成时清除现有格子的战斗地面状态，再根据权重更新颜色。
+                    board[x, y].ClearGroundEffects();
                     TileColor randomColor = GetWeightedRandomColor();
                     board[x, y].SetColor(randomColor);
                 }

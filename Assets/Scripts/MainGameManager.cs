@@ -253,6 +253,15 @@ public class MainGameManager : Singleton<MainGameManager>
     private static Dictionary<int, bool> waveGroupHasDamage = new Dictionary<int, bool>();
     private static bool noAttackNoCostTriggeredThisTurn = false; // 一个回合只会触发一次
     private static HashSet<int> pendingWaveGroups = new HashSet<int>(); // 等待结算完成的wave group
+    // 保留到战斗结束，避免 wave 消失后的延迟击杀再次生成彩虹。
+    private static readonly HashSet<int> rainbowGeneratedWaveGroups = new HashSet<int>();
+    // 每次攻击组只能触发一次击杀连锁；新生成的攻击组拥有独立次数。
+    private static readonly HashSet<int> recreatedOnKillWaveGroups = new HashSet<int>();
+
+    public static bool TryConsumeRainbowGeneration(int waveGroupId)
+    {
+        return rainbowGeneratedWaveGroups.Add(waveGroupId);
+    }
     private static int pendingDelayedSkillEffects = 0; // bounce 等延迟特效未完成数量
     private static bool isSceneReloading = false; // LoadScene 期间忽略跨场景回调
     private bool earlyTurnEndScheduled = false; // 是否已因 note 离盘而提前调度敌人回合
@@ -293,6 +302,8 @@ public class MainGameManager : Singleton<MainGameManager>
         currentWaveGroupId = 0;
         nextWaveDamageMultiplier = 1f;
         waveGroupTotalDamage.Clear();
+        rainbowGeneratedWaveGroups.Clear();
+        recreatedOnKillWaveGroups.Clear();
         waveGroupActiveWaveCount.Clear();
         waveGroupColor.Clear();
         waveGroupAddDamageWhenPass.Clear();
@@ -2312,7 +2323,7 @@ public class MainGameManager : Singleton<MainGameManager>
     /// <summary>
     /// 消除连通同色格子
     /// </summary>
-    private void EliminateConnectedTiles(Vector2Int startPos, bool isManualWave = true)
+    private void EliminateConnectedTiles(Vector2Int startPos, bool isManualWave = true, bool allowRecreateOnKill = false)
     {
         if (boardManager == null || (isManualWave && isProcessing))
             return;
@@ -2550,7 +2561,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 tilesUsed,
                 waveCountMultiplier,
                 firstTilePos,
-                isManualWave,
+                isManualWave || allowRecreateOnKill,
                 recreateSameColorAfterGravity,
                 recreateDifferentColorAfterGravity,
                 keepOriginAsRainbow,
@@ -2571,7 +2582,7 @@ public class MainGameManager : Singleton<MainGameManager>
         int tilesUsed,
         int waveCountMultiplier,
         Vector2Int firstTilePos,
-        bool isManualWave,
+        bool allowRecreateOnKill,
         bool recreateSameColorAfterGravity,
         bool recreateDifferentColorAfterGravity,
         bool keepOriginAsRainbow,
@@ -2590,7 +2601,7 @@ public class MainGameManager : Singleton<MainGameManager>
             pureValue,
             tilesUsed,
             waveCountMultiplier,
-            isManualWave,
+            allowRecreateOnKill,
             keepOriginAsRainbow,
             rainbowKeepPos);
 
@@ -2623,7 +2634,7 @@ public class MainGameManager : Singleton<MainGameManager>
                 extraPureValue,
                 extra.Value.Count,
                 extraWaveCountMultiplier,
-                isManualWave,
+                allowRecreateOnKill,
                 false,
                 new Vector2Int(-1, -1));
             ApplyWaveGroupOnSpawnEffects(extra.Key, extraFirst, extra.Value.Count, extraGroupId);
@@ -2690,7 +2701,7 @@ public class MainGameManager : Singleton<MainGameManager>
         int pureValue,
         int tilesUsed,
         int waveCountMultiplier,
-        bool isManualWave,
+        bool allowRecreateOnKill,
         bool keepOriginAsRainbow,
         Vector2Int rainbowKeepPos)
     {
@@ -2712,10 +2723,10 @@ public class MainGameManager : Singleton<MainGameManager>
         {
             Vector3 worldPos = boardManager.GridToWorldPosition(pos);
             bool isFirstWave = waveIndex == 0;
-            CreateWave(worldPos, waveColor, pos, waveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, false, isManualWave);
+            CreateWave(worldPos, waveColor, pos, waveGroupId, isFirstWave, hasDamageBottom, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, false, allowRecreateOnKill);
 
             if (waveCountMultiplier > 1)
-                CreateWave(worldPos, waveColor, pos, waveGroupId, isFirstWave, false, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, true, isManualWave);
+                CreateWave(worldPos, waveColor, pos, waveGroupId, isFirstWave, false, currentWaveDamageMultiplier, hasPure, pureValue, tilesUsed, true, allowRecreateOnKill);
 
             if (keepOriginAsRainbow && pos == rainbowKeepPos)
             {
@@ -2724,8 +2735,11 @@ public class MainGameManager : Singleton<MainGameManager>
                 {
                     keepTile.ClearBeingDestroyed();
                     keepTile.SetHighlight(false);
-                    keepTile.SetRainbow(true);
-                    Character.PlayEffectAt("effect/allyPoof", worldPos);
+                    if (TryConsumeRainbowGeneration(waveGroupId))
+                    {
+                        keepTile.SetRainbow(true);
+                        Character.PlayEffectAt("effect/allyPoof", worldPos);
+                    }
                 }
             }
             else
@@ -2993,23 +3007,27 @@ public class MainGameManager : Singleton<MainGameManager>
         DamageNumber.CreateDamageNumber(added, boardManager.GridToWorldPosition(displayPos), true);
     }
 
-    private void CreateWaveFromLargestTileGroup(TileColor? requiredColor, TileColor? excludedColor)
+    private void CreateWaveFromLargestTileGroup(TileColor? requiredColor, TileColor? excludedColor, bool allowRecreateOnKill = false)
     {
         if (boardManager == null)
             return;
 
         List<Vector2Int> group = boardManager.GetLargestConnectedSameColorGroup(requiredColor, excludedColor);
         if (group.Count > 0)
-            EliminateConnectedTiles(group[0], false);
+            EliminateConnectedTiles(group[0], false, allowRecreateOnKill);
     }
 
-    public static void TryRecreateSameColorOnDirectKill(TileColor color)
+    public static void TryRecreateSameColorOnDirectKill(TileColor color, int waveGroupId)
     {
         MainGameManager instance = FindObjectOfType<MainGameManager>();
         if (instance == null || !instance.HasEquippedColorSkill(color, "recreateSameColorOnKill", out _))
             return;
 
-        instance.CreateWaveFromLargestTileGroup(color, null);
+        // 在生成下一次攻击前占用次数，避免同组多个 wave 或穿透击杀重复触发。
+        if (!recreatedOnKillWaveGroups.Add(waveGroupId))
+            return;
+
+        instance.CreateWaveFromLargestTileGroup(color, null, true);
     }
 
     public static bool WasLastManualWaveColor(int colorIndex)
@@ -4585,10 +4603,16 @@ public class MainGameManager : Singleton<MainGameManager>
             return false;
         
         if (enemyManager.HasRemainingEnemiesToSpawn())
+        {
+            Wave.InvalidateBeforeEnemySpawn();
             return enemyManager.SpawnEnemyEachTurn();
+        }
         
         if (currentBoss != null && !currentBoss.IsDead)
+        {
+            Wave.InvalidateBeforeEnemySpawn();
             return SpawnBossBattleEnemy();
+        }
         
         return false;
     }
@@ -5087,7 +5111,7 @@ public class MainGameManager : Singleton<MainGameManager>
     }
     
     /// <summary>
-    /// 清除战斗场景上的所有内容（敌人、ally、boss、fog、dirt等）
+    /// 清除战斗场景上的所有内容（敌人、ally、boss及所有战斗地面状态）
     /// </summary>
     private void ClearBattleScene()
     {
@@ -5120,7 +5144,7 @@ public class MainGameManager : Singleton<MainGameManager>
             allyManager.ClearAllAllies();
         }
         
-        // 清除所有fog、dirt和blockColor技能block的状态
+        // 清除所有 rainbow、fog、dirt 和 blockColor 封锁状态。
         if (boardManager != null)
         {
             for (int x = 0; x < boardManager.Width; x++)
@@ -5130,16 +5154,7 @@ public class MainGameManager : Singleton<MainGameManager>
                     TileCell tile = boardManager.GetTile(new Vector2Int(x, y));
                     if (tile != null)
                     {
-                        if (tile.HasFog)
-                        {
-                            tile.SetFog(false);
-                        }
-                        if (tile.IsDirty)
-                        {
-                            tile.SetDirty(false);
-                        }
-                        // 清除blockColor技能block的状态
-                        tile.SetDisabled(false);
+                        tile.ClearGroundEffects();
                     }
                 }
             }

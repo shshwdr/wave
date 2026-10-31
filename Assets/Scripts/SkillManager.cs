@@ -142,7 +142,7 @@ public class SkillManager : Singleton<SkillManager>
         if (CSVLoader.Instance != null && CSVLoader.Instance.cardInfoMap != null)
         {
         // 获取当前关卡等级
-        int currentLevel = 1;
+        int currentLevel = 0;
         if (LevelManager.Instance != null)
         {
             currentLevel = LevelManager.Instance.CurrentLevel;
